@@ -1,0 +1,11 @@
+.c-date-picker { width: fit-content; max-width: 100%; align-self: flex-start; }
+.c-date-picker__field { position: relative; width: fit-content; max-width: 100%; }
+.c-date-picker__field .c-text-input { width: calc(12ch + var(--a-space-16)); padding-inline-end: var(--a-size-compact); background: var(--a-color-surface); }
+.c-date-picker__trigger { position: absolute; inset-inline-end: var(--a-border-width); inset-block: var(--a-border-width); width: var(--a-size-compact); display: grid; place-items: center; border: 0; background: transparent; color: inherit; cursor: pointer; border-radius: var(--a-radius-small); }
+.c-date-picker__trigger:disabled { opacity: var(--a-state-disabled); cursor: not-allowed; }
+.c-date-picker__field:focus-within .c-text-input { box-shadow: inset 0 0 0 var(--a-border-width) var(--a-color-ink); }
+.c-calendar { width: 22rem; }
+.c-calendar__heading { justify-content: space-between; flex-wrap: nowrap; }
+.c-calendar__grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: var(--a-space-1); text-align: center; }
+.c-calendar__grid .c-button { padding: 0; min-width: 0; width: 100%; }
+.c-date-picker__trigger:focus-visible { outline: none; }

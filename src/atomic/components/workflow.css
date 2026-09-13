@@ -1,0 +1,11 @@
+.c-workflow ol { display: flex; flex-wrap: wrap; gap: var(--a-space-6); list-style: none; margin: 0; padding: 0; }
+.c-workflow__step { display: flex; align-items: center; gap: var(--a-space-3); min-height: var(--a-size-compact); padding: var(--a-space-2) 0; border: 0; background: transparent; color: var(--a-color-ink); text-align: start; cursor: pointer; }
+.c-workflow__circle { display: grid; place-items: center; position: relative; flex: none; width: var(--a-size-small); height: var(--a-size-small); border: var(--a-border-width) solid var(--a-color-ink); border-radius: var(--a-radius-pill); background: var(--a-color-surface); }
+.c-workflow__circle[data-complete] { background: var(--a-color-success); }
+.c-workflow__step[aria-current='step'] .c-workflow__circle { background: var(--a-color-accent); box-shadow: var(--a-shadow-small); }
+.c-workflow__copy { display: grid; gap: var(--a-space-1); }
+.c-workflow__step:hover:not(:disabled) .c-workflow__copy { text-decoration: underline; text-underline-offset: var(--a-space-1); }
+.c-workflow__step:disabled { opacity: var(--a-state-disabled); cursor: not-allowed; }
+.c-workflow[data-orientation='vertical'] ol { flex-direction: column; gap: var(--a-space-4); }
+.c-workflow[data-orientation='vertical'] li { position: relative; }
+.c-workflow[data-orientation='vertical'] li:not(:last-child)::before { content: ''; position: absolute; left: calc(var(--a-size-small) / 2); top: calc(50% + var(--a-size-small) / 2); bottom: calc(-1 * var(--a-space-4) - var(--a-space-3)); border-left: var(--a-border-width) solid var(--a-color-ink); }

@@ -1,0 +1,4 @@
+.c-breadcrumbs ol, .c-pagination, .c-pagination ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--a-space-2); margin: 0; padding: 0; list-style: none; }
+.c-breadcrumbs li, .c-pagination li { display: flex; align-items: center; gap: var(--a-space-2); min-width: 0; }
+.c-breadcrumbs a:hover { text-decoration-thickness: var(--a-focus-width); }
+.c-pagination .c-button { min-width: var(--a-size-compact); }

@@ -1,5 +1,0 @@
-export { Combobox } from './Combobox'
-export type { ComboboxProps } from './Combobox'
-export { MultiSelect } from './MultiSelect'
-export type { MultiSelectProps } from './MultiSelect'
-export type { SelectionControlProps, SelectionOption, SelectionValue } from './types'

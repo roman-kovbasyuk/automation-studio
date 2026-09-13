@@ -1,0 +1,3 @@
+.b-sidebar { width:20rem; max-width:100%; min-height:36rem; display:flex; flex-direction:column; justify-content:space-between; gap:var(--a-space-8); }
+.b-sidebar__header { justify-content:space-between; flex-wrap:nowrap; }
+.b-sidebar__account { margin-top:auto; }

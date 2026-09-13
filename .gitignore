@@ -9,6 +9,7 @@ Thumbs.db
 node_modules/
 dist/
 dist-library/
+dist-atomic-library/
 .worktrees/
 .superpowers/sdd/
 # Local monitoring tooling

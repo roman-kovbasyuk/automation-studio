@@ -1,6 +1,12 @@
-# UI implementation rules
+# Atomic Design rules
 
-- Use components from `src/components/design-system/` for application controls and layouts before creating new markup.
+- Dependency direction: Basics → Components → UI blocks → Screens/catalog. Lower layers never import higher layers.
+- Basics owns tokens, typography, icons and layout in `src/atomic/atoms`.
+- Components owns reusable controls and interaction behavior in `src/atomic/components`.
+- UI blocks compose only Basics and Components; do not introduce private controls or depend on another block as a building block.
+- Expose missing reusable features in the owning lower layer first. Reusing CSS classes on private markup is not component reuse.
+
+- Use components from `src/atomic/` for application controls and layouts before creating new markup.
 - If a required pattern does not exist, add it to the design-system component library first, then use that component at the product call site.
 - Keep design-system styling and interaction behavior canonical; do not create one-off tabs, buttons, menus, or form controls in screen components.
 - Reuse the existing design tokens and responsive rules. Product-specific CSS should only compose or size a shared component, not redefine its interaction model.

@@ -1,0 +1,5 @@
+.c-combobox { position: relative; }
+.c-combobox__options { position: absolute; top: calc(100% + var(--a-space-2)); left: 0; right: 0; min-width: 0; margin: 0; list-style: none; }
+.c-combobox .c-text-input { padding-inline-end: var(--a-space-12); }
+.c-combobox:has([aria-expanded='true']) .c-text-input { box-shadow: inset 0 0 0 var(--a-border-width) var(--a-color-ink); }
+.c-combobox > .a-icon { position: absolute; right: var(--a-space-4); bottom: calc((var(--a-size-control) - var(--a-icon-small)) / 2); pointer-events: none; }

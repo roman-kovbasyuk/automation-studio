@@ -1,0 +1,4 @@
+.c-attachment-area[data-dragging] { outline:var(--a-focus-width) solid var(--a-color-accent); outline-offset:var(--a-focus-offset); }
+.c-attachment-area__toolbar { justify-content:space-between; }
+.c-attachment-area__actions { margin-inline-start:auto; }
+.c-attachment-area__picker { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }

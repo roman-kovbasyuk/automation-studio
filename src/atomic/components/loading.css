@@ -1,0 +1,5 @@
+.c-spinner .a-icon { animation: c-spinner-turn var(--a-motion-spin) linear infinite; }
+@keyframes c-spinner-turn { to { transform: rotate(360deg); } }
+.c-skeleton > span { height: var(--a-space-4); border-radius: var(--a-radius-small); background: var(--a-color-canvas); }
+.c-skeleton > span:last-child { width: 65%; }
+@media (prefers-reduced-motion: reduce) { .c-spinner .a-icon { animation: none; } }

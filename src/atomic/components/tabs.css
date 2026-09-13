@@ -1,0 +1,3 @@
+.c-tabs__content { padding-block: var(--a-space-4); }
+.c-tabs__content[data-state='inactive'] { display: none; }
+.c-segmented__option[data-state='active'] { color: var(--a-color-surface); }

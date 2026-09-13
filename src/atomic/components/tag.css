@@ -1,0 +1,7 @@
+.c-tag-wrap { display: inline-flex; align-items: center; gap: var(--a-space-1); max-width: 100%; }
+.c-tag { display: inline-flex; align-items: center; gap: var(--a-space-1); min-width: 0; padding: var(--a-space-1) var(--a-space-2); border: var(--a-border-width) solid var(--a-color-ink); border-radius: var(--a-radius-pill); background: var(--a-color-surface); color: var(--a-color-ink); }
+.c-tag[data-tone='accent'] { background: var(--a-color-accent); border-color: var(--a-color-accent); }
+.c-tag[data-tone='success'] { border-color: var(--a-color-success); background: color-mix(in srgb, var(--a-color-success) 20%, var(--a-color-surface)); }
+.c-tag[data-tone='danger'] { border-color: var(--a-color-danger); background: color-mix(in srgb, var(--a-color-danger) 12%, var(--a-color-surface)); }
+.c-tag__remove { display: grid; place-items: center; flex: none; width: var(--a-space-6); height: var(--a-space-6); padding: 0; border: 0; border-radius: var(--a-radius-pill); background: transparent; color: inherit; cursor: pointer; }
+.c-tag__remove:hover { background: var(--a-color-editHighlight); }
