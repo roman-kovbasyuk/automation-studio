@@ -3,6 +3,7 @@
 .c-field-error { color: var(--a-color-danger); }
 .c-text-input-wrap { position: relative; width: 100%; min-width: 0; }
 .c-text-input { width: 100%; min-width: 0; min-height: var(--a-size-control); border: var(--a-border-width) solid var(--a-color-ink); border-radius: var(--a-radius-small); padding: var(--a-space-3) var(--a-space-4); background: var(--a-color-surface); color: var(--a-color-ink); font: var(--a-type-body-weight) var(--a-type-body-size) / var(--a-type-body-line) var(--a-font-family); caret-color: var(--a-color-ink); }
+.c-text-input[type='search']::-webkit-search-cancel-button, .c-text-input[type='search']::-webkit-search-decoration, .c-text-input[type='search']::-ms-clear { display: none; appearance: none; -webkit-appearance: none; }
 .c-text-input-wrap:has(.c-text-input__trailing) .c-text-input { padding-right: calc(var(--a-size-compact) + var(--a-space-3)); }
 .c-text-input__trailing { position: absolute; top: 50%; right: var(--a-border-width); display: grid; place-items: center; width: var(--a-size-compact); height: var(--a-size-compact); transform: translateY(-50%); color: var(--a-color-ink); pointer-events: none; }
 .c-text-input__trailing .c-button { pointer-events: auto; width: var(--a-size-compact); min-height: var(--a-size-compact); padding: var(--a-space-2); border-color: transparent; background: transparent; box-shadow: none; transform: none; }
