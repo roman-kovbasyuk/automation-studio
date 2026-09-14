@@ -3,7 +3,7 @@ import { CatalogSection as Section } from './CatalogSection'
 import { ComponentsCatalog, componentSections } from './ComponentsCatalog'
 import './catalog.css'
 import { useState } from 'react'
-import { Panel, Skeleton, Toggle, TextField } from '../components'
+import { Panel, Skeleton, Toggle, TextField, NavigationList } from '../components'
 import { UIBlocksCatalog, uiBlockSections } from './UIBlocksCatalog'
 import { IconExplorer } from './IconExplorer'
 import { useCopyMode } from './useCopyMode'
@@ -40,7 +40,7 @@ export function AtomsCatalog() {
           <Stack gap={8}>
             {navigationGroups.filter(group => group.entries.length).map(group => <Stack key={group.label} gap={2}>
               <Text variant="small" tone="secondary">{group.title}</Text>
-              <nav aria-label={group.label}><Stack gap={1}>{group.entries.map(([id, title]) => <a href={`#${id}`} key={id}>{title}</a>)}</Stack></nav>
+              <NavigationList label={group.label} items={group.entries.map(([id, title]) => ({ id, label: title, href: `#${id}` }))} />
             </Stack>)}
             {!navigationGroups.some(group => group.entries.length) && <Text role="status" variant="small">No matching sections. Try another search.</Text>}
           </Stack>

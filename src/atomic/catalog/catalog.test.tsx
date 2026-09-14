@@ -71,3 +71,12 @@ test('sidebar pins copy mode in a footer and uses the 1px navigation gap token',
   const navStack = sidebar.querySelector('.atoms-nav__scroll nav > .a-stack')
   expect(navStack).toHaveStyle('--layout-gap: var(--a-space-1)')
 })
+
+test('sidebar navigation groups compose the shared NavigationList component', () => {
+  render(<AtomsCatalog />)
+  const sidebar = screen.getByRole('complementary', { name: '' })
+  for (const label of ['Atoms sections', 'Component sections', 'UI block sections']) {
+    const navigation = within(sidebar).getByRole('navigation', { name: label })
+    expect(navigation.querySelectorAll('.c-navigation-row').length).toBeGreaterThan(0)
+  }
+})
