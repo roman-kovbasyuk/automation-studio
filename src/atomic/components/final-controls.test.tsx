@@ -23,6 +23,15 @@ test('PasswordField reveal keeps the same value and SearchField clear resets tex
   await user.click(screen.getByRole('button', { name: 'Show Password' })); expect(screen.getByLabelText('Password', { exact: true })).toHaveAttribute('type', 'text')
   await user.click(screen.getByRole('button', { name: 'Clear Search' })); expect(screen.getByRole('searchbox')).toHaveValue('')
 })
+test('SearchField shows a search glyph when empty and an unlabeled clear icon when populated', () => {
+  const { rerender } = render(<C.SearchField label="Search" value="" onChange={() => {}} />)
+  expect(screen.getByRole('searchbox')).toHaveValue('')
+  expect(screen.getByRole('searchbox').parentElement?.querySelector('[data-icon="search"]')).not.toBeNull()
+  expect(screen.queryByRole('button', { name: 'Clear Search' })).not.toBeInTheDocument()
+  rerender(<C.SearchField label="Search" value="Oslo" onChange={() => {}} />)
+  expect(screen.getByRole('button', { name: 'Clear Search' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Clear Search' }).querySelector('[data-icon="close"]')).not.toBeNull()
+})
 test('DatePicker disables its field and calendar trigger', () => {
   render(<C.DatePicker label="Start" min="2026-01-01" max="2026-12-31" disabled />)
   expect(screen.getByLabelText('Start')).toBeDisabled()
