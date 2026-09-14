@@ -31,19 +31,25 @@ export function AtomsCatalog() {
   return <AtomsRoot className="atoms-page">
     <a className="skip-link" href="#atoms-main">Skip to Atoms</a>
     <aside className="atoms-nav">
-      <Stack gap={8}>
-        <Inline><Icon name="settings" size="small" /><Heading level={1} variant="h4">Design System</Heading></Inline>
-        <Stack gap={2}>
+      <div className="atoms-nav__inner">
+        <Stack gap={8}>
+          <Inline><Icon name="settings" size="small" /><Heading level={1} variant="h4">Design System</Heading></Inline>
+          <TextField id="catalog-quick-search" type="search" label="Quick search" placeholder="Find a section…" value={navigationQuery} onChange={event => setNavigationQuery(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); setNavigationQuery('') } }} />
+        </Stack>
+        <div className="atoms-nav__scroll">
+          <Stack gap={8}>
+            {navigationGroups.filter(group => group.entries.length).map(group => <Stack key={group.label} gap={2}>
+              <Text variant="small" tone="secondary">{group.title}</Text>
+              <nav aria-label={group.label}><Stack gap={1}>{group.entries.map(([id, title]) => <a href={`#${id}`} key={id}>{title}</a>)}</Stack></nav>
+            </Stack>)}
+            {!navigationGroups.some(group => group.entries.length) && <Text role="status" variant="small">No matching sections. Try another search.</Text>}
+          </Stack>
+        </div>
+        <div className="atoms-nav__footer">
           <Toggle id="catalog-copy-mode" label="Click to copy" checked={copyMode.enabled} onChange={event => copyMode.setEnabled(event.target.checked)} />
           {copyMode.message && <Text role="status" variant="small" className="catalog-copy-status">{copyMode.message}</Text>}
-        </Stack>
-        <TextField id="catalog-quick-search" type="search" label="Quick search" placeholder="Find a section…" value={navigationQuery} onChange={event => setNavigationQuery(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); setNavigationQuery('') } }} />
-        {navigationGroups.filter(group => group.entries.length).map(group => <Stack key={group.label} gap={2}>
-          <Text variant="small" tone="secondary">{group.title}</Text>
-          <nav aria-label={group.label}><Stack gap={1}>{group.entries.map(([id, title]) => <a href={`#${id}`} key={id}>{title}</a>)}</Stack></nav>
-        </Stack>)}
-        {!navigationGroups.some(group => group.entries.length) && <Text role="status" variant="small">No matching sections. Try another search.</Text>}
-      </Stack>
+        </div>
+      </div>
     </aside>
     <main id="atoms-main" className="atoms-main" tabIndex={-1}>
       <Container maxWidth="64rem"><Stack gap={12}>

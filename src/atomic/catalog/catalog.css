@@ -1,7 +1,10 @@
 body { margin: 0; }
 .catalog-copy-status { overflow-wrap: anywhere; }
 .atoms-page { min-height: 100vh; display: grid; grid-template-columns: 244px minmax(0, 1fr); }
-.atoms-nav { position: sticky; top: 0; align-self: start; height: 100vh; overflow: auto; padding: var(--a-space-8) var(--a-space-4); border-right: var(--a-border-width) solid var(--a-color-ink); }
+.atoms-nav { position: sticky; top: 0; align-self: start; height: 100vh; overflow: hidden; padding: var(--a-space-8) var(--a-space-4); border-right: var(--a-border-width) solid var(--a-color-ink); }
+.atoms-nav__inner { display: flex; flex-direction: column; height: 100%; min-height: 0; gap: var(--a-space-8); }
+.atoms-nav__scroll { min-height: 0; overflow: auto; flex: 1; scrollbar-color: var(--a-color-secondary) var(--a-color-canvas); scrollbar-width: thin; }
+.atoms-nav__footer { flex: none; padding-top: var(--a-space-4); border-top: var(--a-border-width) solid var(--a-color-ink); }
 .atoms-nav nav a { display: flex; align-items: center; min-height: var(--a-size-compact); padding-inline: var(--a-space-3); border-radius: var(--a-radius-small); text-decoration: none; }
 .atoms-nav nav a:hover, .atoms-nav nav a:focus-visible { background: var(--a-color-surface); }
 .atoms-main { min-width: 0; padding: var(--a-space-12) var(--a-space-8); }
@@ -18,7 +21,9 @@ body { margin: 0; }
 @media (prefers-reduced-motion: reduce) { .motion-sample { transition: none; } .motion-sample:hover, .motion-sample:focus-visible { transform: none; } }
 @media (max-width: 800px) {
   .atoms-page { grid-template-columns: minmax(0, 1fr); }
-  .atoms-nav { position: static; height: auto; border-right: 0; border-bottom: var(--a-border-width) solid var(--a-color-ink); }
+  .atoms-nav { position: static; height: auto; overflow: visible; border-right: 0; border-bottom: var(--a-border-width) solid var(--a-color-ink); }
+  .atoms-nav__inner { height: auto; }
+  .atoms-nav__scroll { overflow: visible; }
   .atoms-nav nav > .a-stack { flex-direction: row; flex-wrap: wrap; }
   .atoms-main { padding: var(--a-space-8) var(--a-space-4); }
   .type-row { grid-template-columns: minmax(0, 1fr); gap: var(--a-space-3); }

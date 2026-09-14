@@ -61,3 +61,13 @@ test('each Atoms navigation link reaches its rendered section', () => {
     expect(section).toContainElement(screen.getByRole('heading', { name: title, level: 2 }))
   }
 })
+
+test('sidebar pins copy mode in a footer and uses the 1px navigation gap token', () => {
+  render(<AtomsCatalog />)
+  const sidebar = screen.getByRole('complementary', { name: '' })
+  const footer = sidebar.querySelector('.atoms-nav__footer')
+  expect(footer).toContainElement(screen.getByRole('switch', { name: 'Click to copy' }))
+  expect(sidebar.querySelector('.atoms-nav__scroll')).toContainElement(screen.getByRole('navigation', { name: 'Atoms sections' }))
+  const navStack = sidebar.querySelector('.atoms-nav__scroll nav > .a-stack')
+  expect(navStack).toHaveStyle('--layout-gap: var(--a-space-1)')
+})
