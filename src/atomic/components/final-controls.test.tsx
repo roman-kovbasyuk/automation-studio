@@ -30,6 +30,7 @@ test('SearchField shows a search glyph when empty and an unlabeled clear icon wh
   expect(screen.queryByRole('button', { name: 'Clear Search' })).not.toBeInTheDocument()
   rerender(<C.SearchField label="Search" value="Oslo" onChange={() => {}} />)
   expect(screen.getByRole('button', { name: 'Clear Search' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Clear Search' })).toHaveAttribute('data-variant', 'quiet')
   expect(screen.getByRole('button', { name: 'Clear Search' }).querySelector('[data-icon="close"]')).not.toBeNull()
 })
 test('DatePicker disables its field and calendar trigger', () => {
