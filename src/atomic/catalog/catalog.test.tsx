@@ -80,3 +80,10 @@ test('sidebar navigation groups compose the shared NavigationList component', ()
     expect(navigation.querySelectorAll('.c-navigation-row').length).toBeGreaterThan(0)
   }
 })
+
+test('component navigation is sorted alphabetically by visible title', () => {
+  render(<AtomsCatalog />)
+  const links = within(screen.getByRole('navigation', { name: 'Component sections' })).getAllByRole('link')
+  const titles = links.map(link => link.textContent?.trim() ?? '')
+  expect(titles).toEqual([...titles].sort((a, b) => a.localeCompare(b)))
+})

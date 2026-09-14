@@ -8,7 +8,10 @@ import { ComponentsBatchThree } from './ComponentsBatchThree'
 import { ComponentsFinal } from './ComponentsFinal'
 import { componentManifest } from './componentManifest'
 
-export const componentSections = componentManifest.filter((item, index) => componentManifest.findIndex(other => other.id === item.id) === index).map(({ id, title }) => [id, title] as const)
+export const componentSections = componentManifest
+  .filter((item, index) => componentManifest.findIndex(other => other.id === item.id) === index)
+  .map(({ id, title }) => [id, title] as const)
+  .sort((a, b) => a[1].localeCompare(b[1]))
 
 export function ComponentsCatalog() {
   const [icons, setIcons] = useState(true), [busy, setBusy] = useState(false), [buttonsDisabled, setButtonsDisabled] = useState(false)
