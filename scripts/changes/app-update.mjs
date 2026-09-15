@@ -360,19 +360,23 @@ function validateLockGraphEntry(entry, manifest, path) {
 
 async function releaseDependencyClosure(packages, start, appPath, manifest) {
   const closure = new Set()
+  const validation = new Map()
   const pending = [{ path: start, manifest }]
   while (pending.length) {
     const item = pending.pop()
-    if (closure.has(item.path) || !packages[item.path]) continue
+    if (validation.get(item.path) === 'installed' || !packages[item.path]) continue
     validateLockGraphEntry(packages[item.path], item.manifest, item.path)
+    validation.set(item.path, 'installed')
     closure.add(item.path)
     for (const edge of graphEdges(item.manifest)) {
       const path = resolveLockedDependency(packages, item.path, edge.name)
       if (!path) throw coded('ADOPTION_FILE_CONFLICT', `package-lock.json is missing ${edge.optional ? 'optional' : 'required'} dependency ${edge.name} from ${item.path}`)
-      if (closure.has(path)) continue
+      const state = validation.get(path)
+      if (state === 'installed' || (state === 'omittedOptional' && edge.optional)) continue
       let dependency
       try { dependency = JSON.parse(await readFile(join(appPath, path, 'package.json'), 'utf8')) } catch (error) {
         if (error.code === 'ENOENT' && edge.optional && packages[path]?.optional === true && excludedFromCurrentPlatform(packages[path])) {
+          validation.set(path, 'omittedOptional')
           closure.add(path)
           continue
         }

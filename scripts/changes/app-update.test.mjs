@@ -406,6 +406,41 @@ test('rejects a required release dependency that is missing from node_modules', 
   } finally { await rm(subject.root, { recursive: true, force: true }) }
 })
 
+test('does not let an omitted optional path satisfy a later required edge', async () => {
+  const subject = await fixture()
+  const bytes = packageTarball({
+    name: PACKAGE_NAME,
+    version: subject.release.version,
+    dependencies: { 'required-parent': '1.0.0' },
+    optionalDependencies: { 'shared-fixture': '1.0.0' },
+  })
+  subject.release.integrity = integrity(bytes)
+  await writeFile(subject.release.packagePath, bytes)
+  const npm = fakeNpm(subject)
+  const run = async (file, args, options) => {
+    const result = await npm.run(file, args, options)
+    if (file === 'npm' && args[0] === 'install') {
+      const lock = JSON.parse(await readFile(join(subject.appPath, 'package-lock.json'), 'utf8'))
+      lock.packages[`node_modules/${PACKAGE_NAME}`].dependencies = { 'required-parent': '1.0.0' }
+      lock.packages[`node_modules/${PACKAGE_NAME}`].optionalDependencies = { 'shared-fixture': '1.0.0' }
+      lock.packages['node_modules/required-parent'] = { version: '1.0.0', dependencies: { 'shared-fixture': '1.0.0' } }
+      lock.packages['node_modules/shared-fixture'] = { version: '1.0.0', optional: true, os: [process.platform === 'win32' ? 'linux' : 'win32'] }
+      await mkdir(join(subject.appPath, 'node_modules', 'required-parent'), { recursive: true })
+      await writeFile(join(subject.appPath, 'node_modules', 'required-parent', 'package.json'), JSON.stringify({ name: 'required-parent', version: '1.0.0', dependencies: { 'shared-fixture': '1.0.0' } }))
+      await writeFile(join(subject.appPath, 'package-lock.json'), `${JSON.stringify(lock, null, 2)}\n`)
+    }
+    return result
+  }
+  try {
+    const result = await updateApplication({ ...subject, run })
+    assert.equal(result.status, 'failed')
+    assert.match(result.error, /ADOPTION_FILE_CONFLICT/)
+    const lock = JSON.parse(await readFile(join(subject.appPath, 'package-lock.json'), 'utf8'))
+    assert.equal(lock.packages['node_modules/shared-fixture'].optional, true)
+    assert.equal(npm.commands.some(({ args }) => args[0] === 'ci'), false)
+  } finally { await rm(subject.root, { recursive: true, force: true }) }
+})
+
 function saved(bytes) {
   return { exists: true, data: bytes.toString('base64'), integrity: integrity(bytes) }
 }
