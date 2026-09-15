@@ -46,7 +46,7 @@ cp -R /absolute/path/to/app "$fixture/app"
 npm run changes -- configure --app "$fixture/app" --check typecheck --check build
 ```
 
-The application must use npm with a `package-lock.json`, have the configured scripts in its `package.json`, and already have `brutalist-design-system` installed. Keep its `package.json` and `package-lock.json` committed and clean before an update. The design-system checkout must be on a clean `main` branch, and the local `codex` command must be authenticated and able to run in the checkout.
+The application must use npm with a `package-lock.json`, have the configured scripts in its `package.json`, and already have `brutalist-design-system` installed. Its dependency declaration and root lock entry must either pin the exact installed version or identify the same retained `file:` tarball; for a file dependency, the lock entry's resolved path and SHA-512 integrity must match that artifact. The lock entry and `node_modules/brutalist-design-system/package.json` must report the same installed version, and every request's `installedVersion` must equal it. Keep `package.json` and `package-lock.json` committed and clean before an update. The design-system checkout must be on a clean `main` branch, and the local `codex` command must be authenticated and able to run in the checkout.
 
 Create a request file with exactly four fields:
 

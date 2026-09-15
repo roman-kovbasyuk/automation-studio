@@ -1,6 +1,6 @@
 # Single-application design-system changes
 
-Status: implemented and accepted; deterministic end-to-end coverage and a live Codex smoke check passed on 2026-09-15.
+Status: implementation complete; synthetic deterministic end-to-end acceptance passed. Live Codex execution against the real TypeScript repository remains unverified.
 
 ## Method
 

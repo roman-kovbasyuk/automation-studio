@@ -10,6 +10,7 @@ export function openStore(dataDir) {
   const requestsDir = join(root, 'requests')
   const configPath = join(root, 'config.json')
   const workerLock = join(root, 'worker.lock')
+  const reclaimLock = join(root, 'worker.reclaim.lock')
   const versionsPath = join(root, 'versions.json')
   let lockQueue = Promise.resolve()
 
@@ -22,6 +23,21 @@ export function openStore(dataDir) {
     } finally { await unlink(temp).catch((error) => { if (error.code !== 'ENOENT') throw error }) }
   }
   async function readJson(path, fallback = null) { try { return JSON.parse(await readFile(path, 'utf8')) } catch (error) { if (error.code === 'ENOENT') return fallback; throw error } }
+  async function withReclaimGuard(fn) {
+    for (;;) {
+      try {
+        const handle = await open(reclaimLock, 'wx', 0o600)
+        await handle.writeFile(JSON.stringify({ pid: process.pid, token: randomUUID() })); await handle.close()
+        try { return await fn() } finally { await unlink(reclaimLock).catch((error) => { if (error.code !== 'ENOENT') throw error }) }
+      } catch (error) {
+        if (error.code !== 'EEXIST') throw error
+        let owner
+        try { owner = await readJson(reclaimLock) } catch { await sleep(5); continue }
+        if (!owner || !Number.isInteger(owner.pid)) throw new Error('worker reclamation lock has ambiguous ownership')
+        try { process.kill(owner.pid, 0); await sleep(10) } catch (probe) { if (probe.code === 'ESRCH') { await unlink(reclaimLock).catch((e) => { if (e.code !== 'ENOENT') throw e }); continue } throw new Error('worker reclamation lock has ambiguous ownership') }
+      }
+    }
+  }
   async function acquire() {
     await init()
     let ambiguousAttempts = 0
@@ -43,8 +59,16 @@ export function openStore(dataDir) {
         let alive = true
         try { process.kill(existing.pid, 0) } catch (probe) { if (probe.code === 'ESRCH') alive = false; else throw new Error('worker lock has ambiguous ownership') }
         if (alive) { await sleep(20); continue }
-        const reclaimed = `${workerLock}.reclaim.${process.pid}.${randomUUID()}`
-        try { await rename(workerLock, reclaimed); await unlink(reclaimed); } catch (race) { if (race.code !== 'ENOENT') continue }
+        await withReclaimGuard(async () => {
+          let current
+          try { current = await readJson(workerLock) } catch { return }
+          if (!current || current.pid !== existing.pid || current.token !== existing.token) return
+          let currentAlive = true
+          try { process.kill(current.pid, 0) } catch (probe) { if (probe.code === 'ESRCH') currentAlive = false; else throw new Error('worker lock has ambiguous ownership') }
+          if (currentAlive) return
+          const reclaimed = `${workerLock}.reclaim.${process.pid}.${randomUUID()}`
+          try { await rename(workerLock, reclaimed); await unlink(reclaimed) } catch (race) { if (race.code !== 'ENOENT') throw race }
+        })
       }
     }
   }
