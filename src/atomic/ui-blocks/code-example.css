@@ -9,7 +9,7 @@
 .b-code-example__content { min-width: 0; padding: var(--a-space-6); }
 .b-code-example__preview { min-width: 0; background: var(--a-color-surface); margin: calc(-1 * var(--a-space-6)); padding: var(--a-space-6); }
 .b-code-example .c-panel__header > .a-stack { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; }
-.b-code-example .c-panel__header { padding: var(--a-space-8); }
+.b-code-example .c-panel__header { padding-inline: var(--a-space-8); padding-block: 0; }
 .b-code-example .c-panel__heading-row { display: contents; }
 .b-code-example .c-panel__heading-row > .a-stack { grid-column: 1; }
 .b-code-example .c-panel__actions { grid-column: 3; grid-row: 1; justify-self: end; }
