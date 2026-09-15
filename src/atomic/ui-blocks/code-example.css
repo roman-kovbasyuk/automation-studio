@@ -4,16 +4,19 @@
 .b-code-example__token--tag { color: var(--a-color-danger); }
 .b-code-example__token--number { color: var(--a-color-secondary); }
 .b-code-example__token--comment { color: var(--a-color-secondary); font-style: italic; }
-.b-code-example__header-controls { display: flex; justify-content: center; align-items: center; width: 100%; }
+.b-code-example__header-controls { display: flex; justify-content: flex-end; align-items: center; flex-wrap: nowrap; gap: var(--a-space-1); width: auto; }
+.b-code-example__header-controls .c-segmented-scroll { padding-inline: 0; }
 .b-code-example__view-tabs { max-width: 100%; }
+.b-code-example__copy { background: transparent; }
 .b-code-example__content { min-width: 0; padding: var(--a-space-6); }
 .b-code-example__preview { min-width: 0; background: var(--a-color-surface); margin: calc(-1 * var(--a-space-6)); padding: var(--a-space-6); }
-.b-code-example .c-panel__header > .a-stack { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; }
+.b-code-example .c-panel__header > .a-stack { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--a-space-4); }
 .b-code-example .c-panel__header { padding-inline: var(--a-space-8); padding-block: 0; }
-.b-code-example .c-panel__heading-row { display: contents; }
-.b-code-example .c-panel__heading-row > .a-stack { grid-column: 1; }
-.b-code-example .c-panel__actions { grid-column: 3; grid-row: 1; justify-self: end; }
 .b-code-example .b-code-example__header-controls { grid-column: 2; grid-row: 1; }
+@media (max-width: 700px) {
+  .b-code-example .c-panel__header > .a-stack { grid-template-columns: minmax(0, 1fr); }
+  .b-code-example .b-code-example__header-controls { grid-column: 1; grid-row: 2; justify-self: start; flex-wrap: wrap; }
+}
 .docs-typography-preview { background: var(--a-color-surface); margin: calc(-1 * var(--a-space-6)); padding: var(--a-space-6); }
 .docs-typography-preview__sample { padding-block: var(--a-space-6); border-bottom: var(--a-border-width) solid var(--a-color-secondary); }
 .docs-typography-preview__sample:first-child { padding-top: 0; }

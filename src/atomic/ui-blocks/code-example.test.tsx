@@ -22,6 +22,14 @@ test('source wraps long lines and marks common syntax tokens', () => {
   expect(screen.getByText("'A long example'")).toHaveClass('b-code-example__token--string')
 })
 
+test('CodeExample groups tabs and the transparent copy action in one header control row', () => {
+  render(<CodeExample title="Usage" filename="example.tsx" source="const answer = 42" preview={<Text>Live preview</Text>} />)
+  const controls = screen.getByRole('tablist').closest('.b-code-example__header-controls')
+  const copy = screen.getByRole('button', { name: 'Copy Usage code' })
+  expect(controls).toContainElement(copy)
+  expect(copy).toHaveClass('b-code-example__copy')
+})
+
 test('clipboard rejection exposes selectable source without claiming success', async () => {
   const user = userEvent.setup()
   vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValueOnce(new Error('Denied'))

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { ScrollArea, Stack, Text, type HeadingProps } from '../atoms'
+import { Inline, ScrollArea, Stack, Text, type HeadingProps } from '../atoms'
 import { Button, Panel, Tabs } from '../components'
 import './code-example.css'
 
@@ -52,8 +52,9 @@ export function CodeExample({ title, description, filename, source, preview, con
   </Stack>
   const viewItems = [{ id: 'preview', label: 'Preview', content: null }, { id: 'code', label: 'Code', content: null }] as const
   const viewTabs = preview != null ? <Tabs listOnly size="compact" className="b-code-example__view-tabs" label={`${title} view`} value={view} onChange={setView} items={viewItems} /> : null
+  const headerControls = <Inline className="b-code-example__header-controls" gap={2}>{viewTabs}{controls}<Button size="compact" className="b-code-example__copy" icon="copy" aria-label={`Copy ${title} code`} onClick={copy}>Copy</Button></Inline>
   const content = preview != null ? <div role="tabpanel" aria-label={`${title} ${view}`} className="b-code-example__content">{view === 'preview' ? <div className="b-code-example__preview">{preview}</div> : code}</div> : code
-  return <Panel title={title} description={description} headingLevel={headingLevel} variant="split" density="compact" className={`b-code-example ${className}`.trim()} filters={preview != null ? <div className="b-code-example__header-controls">{viewTabs}</div> : controls} actions={<Button size="compact" icon="copy" aria-label={`Copy ${title} code`} onClick={copy}>Copy</Button>}>
+  return <Panel title={title} description={description} headingLevel={headingLevel} variant="split" density="compact" className={`b-code-example ${className}`.trim()} filters={headerControls}>
     {content}
     {message && <Text role="status" variant="small">{message}</Text>}
   </Panel>
