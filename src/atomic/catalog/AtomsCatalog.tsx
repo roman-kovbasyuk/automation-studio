@@ -34,7 +34,7 @@ export function AtomsCatalog() {
       <div className="atoms-nav__inner">
         <Stack gap={8}>
           <Inline><Icon name="settings" size="small" /><Heading level={1} variant="h4">Design System</Heading></Inline>
-          <NavigationList label="Documentation" items={[{ id: 'documentation-v1', label: 'Documentation v1', href: '/page-20.html?basic=color', icon: 'BookOpen' }]} />
+          <NavigationList label="Documentation" items={[{ id: 'documentation-v1', label: 'Documentation v1', href: '/page-23.html', icon: 'BookOpen' }]} />
           <TextField id="catalog-quick-search" type="search" label="Quick search" placeholder="Find a section…" value={navigationQuery} onChange={event => setNavigationQuery(event.target.value)} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); setNavigationQuery('') } }} />
         </Stack>
         <div className="atoms-nav__scroll">

@@ -91,5 +91,5 @@ test('component navigation is sorted alphabetically by visible title', () => {
 test('catalog exposes the version-one documentation entry point', () => {
   render(<AtomsCatalog />)
   expect(screen.getByRole('navigation', { name: 'Documentation' })).toHaveTextContent('Documentation v1')
-  expect(screen.getByRole('link', { name: 'Documentation v1' })).toHaveAttribute('href', '/page-20.html?basic=color')
+  expect(screen.getByRole('link', { name: 'Documentation v1' })).toHaveAttribute('href', '/page-23.html')
 })

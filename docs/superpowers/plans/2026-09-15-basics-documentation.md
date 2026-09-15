@@ -164,6 +164,20 @@ The approved Basics checkpoint now covers the first release across all current l
 - [x] Verify the catalog link opens Basics and documentation links return to the existing catalog.
 - [x] Keep the documentation experiment separate from the catalog implementation; replacement remains a later decision.
 
+### Task 7: Publish the complete documentation index
+
+**Files:**
+- Create: `page-23.html`, `src/atomic/screens/docs/index-main.tsx`, `src/atomic/screens/docs/DocsIndex.tsx`
+- Test: `src/atomic/screens/docs/docs-index.test.tsx`
+- Modify: `vite.atomic.config.ts`, `src/atomic/catalog/AtomsCatalog.tsx`, `src/atomic/catalog/catalog.test.tsx`, and the shared documentation navigation routes
+
+**Interface:** `/page-23.html` lists every Basics page, grouped component destination and UI-block destination. It is linked as `Documentation v1` from the catalog and as `Introduction` from every documentation sidebar.
+
+- [x] Render the index from `basicsPages`, `componentGroups` and `blockPages` so the list cannot drift from the published route maps.
+- [x] Use the existing Panel and NavigationList components for each layer and preserve the link back to `/atomic.html`.
+- [x] Add route parity tests and include the page in the Vite production inputs.
+- [x] Verify the index from the catalog in the browser and run the complete atomic suite and production build.
+
 ## Self-review
 
 All eight existing Basics areas and every token family are covered in Task 2. Panel reuse, actual APIs, independent source checks, navigation and responsive behavior are addressed by Tasks 1–4. The previously proposed Button-only rollout and reference-like sample APIs are superseded by this plan.

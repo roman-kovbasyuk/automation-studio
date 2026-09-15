@@ -89,7 +89,7 @@ export function BasicsDocs() {
     window.setTimeout(() => { document.getElementById('docs-title')?.focus(); document.getElementById('overview')?.scrollIntoView() }, 0)
   }
   const groups = [
-    {title:'Getting Started', items:[{id:'intro',label:'Introduction',href:'#overview'},{id:'install',label:'Installation',href:'#installation'}]},
+    {title:'Getting Started', items:[{id:'intro',label:'Introduction',href:'/page-23.html'},{id:'install',label:'Installation',href:'#installation'}]},
     {title:'Basics', items:basicsPages.map(item => ({id:item.id,label:item.title,href:`/page-20.html?basic=${item.id}`,current:item.id===page.id}))},
     ...componentGroups.map(group => ({title:group.title,items:group.items.map(([label,id]) => ({id,label,href:`/page-21.html?component=${id}`}))})),
     {title:'UI Blocks',items:[{id:'sidebar',label:'Sidebar panel',href:'/page-22.html?block=sidebar'},{id:'prompt',label:'AI prompt input',href:'/page-22.html?block=prompt-input'},{id:'example',label:'Code example',href:'/page-22.html?block=code-example'}]},
