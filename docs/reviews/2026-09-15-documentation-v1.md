@@ -2,6 +2,8 @@
 
 Version one extends the approved Basics template to the full public component and UI-block catalog.
 
+The release-hardening supplement adds a `Documentation v1` entry point to the existing atomic catalog. The catalog remains the stable comparison surface; the new docs are still a separate set of routes.
+
 ## Delivered
 
 - `page-20.html`: eight Basics pages, retained as the foundation reference.
@@ -22,6 +24,6 @@ Version one extends the approved Basics template to the full public component an
 
 ## Review boundary
 
-The implementation remains on `codex/docs-basics`, commit `c90bde3` plus the version-one changes. Nothing was merged, published or substituted for the existing catalog. The catalog remains available from the header link for side-by-side comparison.
+The implementation remains on `codex/docs-basics`, commits `c90bde3`, `d3e4c8f` and `fa910f4`. Nothing was merged or published. The catalog remains available from the header link for side-by-side comparison, and now also links into Documentation v1.
 
 The existing Observatory harness retains its two Node v25 native assertion crashes; this is unchanged and unrelated to the documentation routes.
