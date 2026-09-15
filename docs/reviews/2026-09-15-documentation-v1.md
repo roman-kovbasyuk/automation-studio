@@ -2,7 +2,7 @@
 
 Version one extends the approved Basics template to the full public component and UI-block catalog.
 
-The release-hardening supplement adds a `Documentation v1` entry point to the existing atomic catalog. The catalog remains the stable comparison surface; the new docs are still a separate set of routes.
+The release-hardening supplement adds a `Documentation v1` entry point to the existing atomic catalog. The final integration promotes that same index to `/`; `/atomic.html` remains the stable comparison surface and is linked from the documentation header.
 
 The complete-coverage pass adds `/page-23.html`, a generated index of every Basics page, grouped component destination and UI-block destination. It is the Introduction entry in each docs sidebar and the target of the catalog’s Documentation v1 link.
 
@@ -21,7 +21,8 @@ The complete-coverage pass adds `/page-23.html`, a generated index of every Basi
 - `npm run test:atomic -- --reporter=dot`: 92 tests passed across 17 files after adding complete-index route parity coverage.
 - `npm run test:atomic-boundaries`: 11 tests passed.
 - `npm run check:atomic-boundaries`: passed.
-- `npm run build:atomic`: passed with page-20, page-21 and page-22 outputs.
+- `npm run build:atomic`: passed with root, page-20, page-21, page-22 and page-23 outputs.
+- Browser checks passed for the root Documentation v1 index and the preserved `/atomic.html` catalog; the catalog link returns to the catalog and the documentation routes remain usable.
 - Browser checks passed for Button, grouped dropdowns, Search field, Dialog, Prompt Input and Code Example. Dialog open/close, search input, tabs, copy action and send action were visible and usable; no browser error logs were observed on the checked routes.
 - The original fresh public-package consumer and displayed-source verifier remain passing from the Basics checkpoint; no production dependencies were added.
 

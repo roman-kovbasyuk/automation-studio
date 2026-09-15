@@ -134,7 +134,7 @@ In the consuming application install the generated tarball with npm/pnpm/yarn. E
 
 1. **Components:** [x] Use the same template for all 46 currently exported Component names, preserving aliases/grouped controls from `componentManifest.js`. Group by action, display, feedback, form, layout, navigation, overlay. Each destination documents actual variants, states, events, keyboard behavior, setup and API; grouped exports share a page where the existing library does.
 2. **UI blocks:** [x] SidebarPanel, PromptInput and CodeExample use the accepted page template with realistic compositions and configuration examples. Maintain the no-block-dependency rule.
-3. **Integration:** [ ] After all reviewed pages work, decide with the user whether this documentation replaces the catalog landing page. Keep the experiment separate until that decision.
+3. **Integration:** [x] Promote Documentation v1 to `/` after the complete coverage pass. Preserve `/atomic.html` as the full catalog for side-by-side inspection; no catalog sections are removed.
 
 ## Plan supplement — version-one release hardening
 
@@ -177,6 +177,17 @@ The approved Basics checkpoint now covers the first release across all current l
 - [x] Use the existing Panel and NavigationList components for each layer and preserve the link back to `/atomic.html`.
 - [x] Add route parity tests and include the page in the Vite production inputs.
 - [x] Verify the index from the catalog in the browser and run the complete atomic suite and production build.
+
+### Task 8: Promote Documentation v1 as the root entry point
+
+**Files:**
+- Modify: `index.html`
+
+**Interface:** `/` renders the same complete Documentation v1 index as `/page-23.html`; `/atomic.html` remains the existing catalog and is linked from the documentation header.
+
+- [x] Point the root page at `src/atomic/screens/docs/index-main.tsx` and update its title and description.
+- [x] Verify the root heading and the return link to `/atomic.html` in the browser.
+- [x] Run the full atomic test suite and production build after the entry-point change.
 
 ## Self-review
 
