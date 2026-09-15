@@ -136,6 +136,34 @@ In the consuming application install the generated tarball with npm/pnpm/yarn. E
 2. **UI blocks:** [x] SidebarPanel, PromptInput and CodeExample use the accepted page template with realistic compositions and configuration examples. Maintain the no-block-dependency rule.
 3. **Integration:** [ ] After all reviewed pages work, decide with the user whether this documentation replaces the catalog landing page. Keep the experiment separate until that decision.
 
+## Plan supplement — version-one release hardening
+
+The approved Basics checkpoint now covers the first release across all current layers while preserving the catalog as the stable reference surface.
+
+### Task 5: Publish the documentation entry point from the catalog
+
+**Files:**
+- Modify: `src/atomic/catalog/AtomsCatalog.tsx`
+- Test: `src/atomic/catalog/catalog.test.tsx`
+
+**Interface:** The catalog exposes a canonical `NavigationList` link labeled `Documentation v1` to `/page-20.html?basic=color`; the documentation pages continue to link back to `/atomic.html` for the catalog.
+
+- [x] Add the link beside the catalog title using the existing NavigationList component and the real `bookOpen` icon.
+- [x] Add a test that verifies the labeled navigation and exact route.
+- [x] Run the catalog test, then the full atomic suite and production build.
+
+### Task 6: Release verification and record
+
+**Files:**
+- Modify: `docs/reviews/2026-09-15-documentation-v1.md`
+- Modify: `docs/superpowers/plans/2026-09-15-basics-documentation.md`
+
+**Interface:** The review note records the entry route, grouped component destinations, UI-block destinations, exact verification commands and the preserved catalog decision.
+
+- [x] Verify desktop, tablet and 320–390px layouts on the Basics, component and UI-block routes.
+- [x] Verify the catalog link opens Basics and documentation links return to the existing catalog.
+- [x] Keep the documentation experiment separate from the catalog implementation; replacement remains a later decision.
+
 ## Self-review
 
 All eight existing Basics areas and every token family are covered in Task 2. Panel reuse, actual APIs, independent source checks, navigation and responsive behavior are addressed by Tasks 1–4. The previously proposed Button-only rollout and reference-like sample APIs are superseded by this plan.
