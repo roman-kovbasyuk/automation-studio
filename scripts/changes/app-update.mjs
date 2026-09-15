@@ -329,12 +329,24 @@ function lockedDependencyClosure(packages, start) {
 
 const LOCK_GRAPH_FIELDS = ['dependencies', 'optionalDependencies', 'peerDependencies', 'peerDependenciesMeta']
 
-function graphNames(manifest) {
-  return new Set([
-    ...Object.keys(manifest.dependencies ?? {}),
-    ...Object.keys(manifest.optionalDependencies ?? {}),
-    ...Object.keys(manifest.peerDependencies ?? {}),
-  ])
+function graphEdges(manifest) {
+  const optional = new Set(Object.keys(manifest.optionalDependencies ?? {}))
+  return [
+    ...Object.keys(manifest.dependencies ?? {}).filter((name) => !optional.has(name)).map((name) => ({ name, optional: false })),
+    ...[...optional].map((name) => ({ name, optional: true })),
+    ...Object.keys(manifest.peerDependencies ?? {}).filter((name) => !optional.has(name)).map((name) => ({ name, optional: false })),
+  ]
+}
+
+function allowsPlatform(values, current) {
+  if (!Array.isArray(values) || values.length === 0) return true
+  if (values.includes(`!${current}`)) return false
+  const allowed = values.filter((value) => typeof value === 'string' && !value.startsWith('!'))
+  return allowed.length === 0 || allowed.includes('any') || allowed.includes(current)
+}
+
+function excludedFromCurrentPlatform(entry) {
+  return !allowsPlatform(entry?.os, process.platform) || !allowsPlatform(entry?.cpu, process.arch)
 }
 
 function validateLockGraphEntry(entry, manifest, path) {
@@ -354,11 +366,16 @@ async function releaseDependencyClosure(packages, start, appPath, manifest) {
     if (closure.has(item.path) || !packages[item.path]) continue
     validateLockGraphEntry(packages[item.path], item.manifest, item.path)
     closure.add(item.path)
-    for (const name of graphNames(item.manifest)) {
-      const path = resolveLockedDependency(packages, item.path, name)
-      if (!path || closure.has(path)) continue
+    for (const edge of graphEdges(item.manifest)) {
+      const path = resolveLockedDependency(packages, item.path, edge.name)
+      if (!path) throw coded('ADOPTION_FILE_CONFLICT', `package-lock.json is missing ${edge.optional ? 'optional' : 'required'} dependency ${edge.name} from ${item.path}`)
+      if (closure.has(path)) continue
       let dependency
       try { dependency = JSON.parse(await readFile(join(appPath, path, 'package.json'), 'utf8')) } catch (error) {
+        if (error.code === 'ENOENT' && edge.optional && packages[path]?.optional === true && excludedFromCurrentPlatform(packages[path])) {
+          closure.add(path)
+          continue
+        }
         throw coded('ADOPTION_FILE_CONFLICT', `installed dependency metadata is unavailable at ${path}: ${error.message}`)
       }
       pending.push({ path, manifest: dependency })
