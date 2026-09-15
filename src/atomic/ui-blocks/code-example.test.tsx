@@ -10,10 +10,16 @@ test('code view exposes the same source that Copy writes', async () => {
   expect(screen.getByText('Live preview')).toBeVisible()
   await user.click(screen.getByRole('tab', { name: 'Code' }))
   expect(screen.queryByText('Live preview')).not.toBeInTheDocument()
-  expect(screen.getByText('const answer = 42')).toBeVisible()
+  expect(screen.getByRole('region', { name: 'Usage source' })).toHaveTextContent('const answer = 42')
   await user.click(screen.getByRole('button', { name: 'Copy Usage code' }))
   expect(await navigator.clipboard.readText()).toBe('const answer = 42')
   expect(screen.getByRole('status')).toHaveTextContent('Copied')
+})
+
+test('source wraps long lines and marks common syntax tokens', () => {
+  render(<CodeExample title="Syntax" filename="example.tsx" source="const label = 'A long example'" />)
+  expect(screen.getByText('const')).toHaveClass('b-code-example__token--keyword')
+  expect(screen.getByText("'A long example'")).toHaveClass('b-code-example__token--string')
 })
 
 test('clipboard rejection exposes selectable source without claiming success', async () => {

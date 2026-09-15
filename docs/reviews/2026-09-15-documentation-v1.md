@@ -14,11 +14,12 @@ The complete-coverage pass adds `/page-23.html`, a generated index of every Basi
 - `page-23.html`: complete documentation index for all published elements.
 - The same grouped sidebar, search, responsive Drawer, contents Menu, Panel-wrapped examples, installation steps with npm/pnpm/yarn controls, live Preview/Code tabs, copy action, usage guidance and API reference tables are shared across all three layers.
 - Component previews render the actual exported controls. Source blocks show public imports and the exact usage shape for each page.
+- Code examples wrap long source lines within their panels and apply lightweight token highlighting for keywords, strings, tags, numbers and comments.
 
 ## Verification
 
 - `npm run typecheck` passed.
-- `npm run test:atomic -- --reporter=dot`: 92 tests passed across 17 files after adding complete-index route parity coverage.
+- `npm run test:atomic -- --reporter=dot`: 93 tests passed across 17 files, including code-example wrapping and syntax-token coverage.
 - `npm run test:atomic-boundaries`: 11 tests passed.
 - `npm run check:atomic-boundaries`: passed.
 - `npm run build:atomic`: passed with root, page-20, page-21, page-22 and page-23 outputs.

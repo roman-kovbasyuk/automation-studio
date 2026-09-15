@@ -3,6 +3,17 @@ import { ScrollArea, Stack, Text, type HeadingProps } from '../atoms'
 import { Button, Panel, Tabs } from '../components'
 import './code-example.css'
 
+const tokenPattern = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|<\/?[A-Za-z][^>]*>|\b(?:import|from|export|default|function|return|const|let|var|new|true|false|null|undefined|if|else|async|await|type|interface|as|class)\b|\b\d+(?:\.\d+)?\b)/g
+const keywords = new Set(['import', 'from', 'export', 'default', 'function', 'return', 'const', 'let', 'var', 'new', 'true', 'false', 'null', 'undefined', 'if', 'else', 'async', 'await', 'type', 'interface', 'as', 'class'])
+
+function highlightedSource(source: string) {
+  return source.split(tokenPattern).map((part, index) => {
+    if (!part) return null
+    const className = part.startsWith('//') || part.startsWith('/*') ? 'comment' : part.startsWith('<') ? 'tag' : /^['"`]/.test(part) ? 'string' : /^\d/.test(part) ? 'number' : keywords.has(part) ? 'keyword' : undefined
+    return className ? <span key={`${part}-${index}`} className={`b-code-example__token b-code-example__token--${className}`}>{part}</span> : part
+  })
+}
+
 export type CodeExampleProps = {
   title: string
   description?: string
@@ -37,7 +48,7 @@ export function CodeExample({ title, description, filename, source, preview, con
   }
   const code = <Stack gap={2}>
     <Text variant="small" tone="secondary">{filename}</Text>
-    <ScrollArea label={`${title} source`} maxHeight="28rem"><pre className="b-code-example__source"><code>{source}</code></pre></ScrollArea>
+    <ScrollArea label={`${title} source`} maxHeight="28rem"><pre className="b-code-example__source"><code>{highlightedSource(source)}</code></pre></ScrollArea>
   </Stack>
   return <Panel title={title} description={description} headingLevel={headingLevel} variant="split" density="compact" className={`b-code-example ${className}`.trim()} filters={controls} actions={<Button size="compact" icon="copy" aria-label={`Copy ${title} code`} onClick={copy}>Copy</Button>}>
     {preview != null ? <Tabs label={`${title} view`} value={view} onChange={setView} items={[
