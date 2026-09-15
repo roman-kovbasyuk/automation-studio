@@ -41,3 +41,21 @@ test('independent store instances serialize concurrent submissions', async () =>
   const dir = await mkdtemp(join(tmpdir(), 'ds-queue-')); const script = `import { openStore } from ${JSON.stringify(new URL('./store.mjs', import.meta.url).href)}; const s=openStore(process.argv[1]); await s.submit({requestId:'cross',installedVersion:'0.1.0',component:'Button',change:'Change'}); process.send?.('done')`
   try { await writeFile(join(dir, 'worker.lock'), JSON.stringify({ pid: 999999, token: 'dead-owner' })); const results = await Promise.all([1, 2].map(() => new Promise((resolve, reject) => { const child = spawn(process.execPath, ['--input-type=module', '-e', script, dir], { stdio: ['ignore', 'ignore', 'pipe'] }); let stderr = ''; child.stderr.on('data', (chunk) => { stderr += chunk }); child.on('close', (code) => code === 0 ? resolve(code) : reject(new Error(`child exited ${code}: ${stderr}`))); child.on('error', reject) })) ); assert.equal(results.length, 2); assert.equal((await openStore(dir).listWorking()).length, 1) } finally { await rm(dir, { recursive: true, force: true }) }
 })
+
+test('reclaims a stale reclamation guard while concurrent contenders serialize', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'ds-queue-'))
+  const script = `import { openStore } from ${JSON.stringify(new URL('./store.mjs', import.meta.url).href)}; await openStore(process.argv[1]).submit({requestId:'guard-race',installedVersion:'0.1.0',component:'Button',change:'Change'})`
+  try {
+    await writeFile(join(dir, 'worker.lock'), JSON.stringify({ pid: 999999, token: 'dead-worker' }))
+    await writeFile(join(dir, 'worker.reclaim.lock'), JSON.stringify({ pid: 999999, token: 'dead-guard' }))
+    const results = await Promise.all(Array.from({ length: 4 }, () => new Promise((resolve, reject) => {
+      const child = spawn(process.execPath, ['--input-type=module', '-e', script, dir], { stdio: ['ignore', 'ignore', 'pipe'] })
+      let stderr = ''
+      child.stderr.on('data', (chunk) => { stderr += chunk })
+      child.on('close', (code) => code === 0 ? resolve(code) : reject(new Error(`child exited ${code}: ${stderr}`)))
+      child.on('error', reject)
+    })))
+    assert.equal(results.length, 4)
+    assert.equal((await openStore(dir).listWorking()).length, 1)
+  } finally { await rm(dir, { recursive: true, force: true }) }
+})
