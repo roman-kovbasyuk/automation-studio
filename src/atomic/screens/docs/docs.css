@@ -5,6 +5,7 @@ body { margin: 0; }
 .docs-catalog-link { justify-self: end; }
 .docs-shell { display: grid; grid-template-columns: 244px minmax(0, 1fr) 200px; }
 .docs-sidebar { position: sticky; top: 0; align-self: start; height: 100vh; overflow: auto; padding: var(--a-space-6) var(--a-space-4); border-right: var(--a-border-width) solid var(--a-color-ink); scrollbar-width: thin; }
+.docs-sidebar .c-button { justify-content: flex-start; text-align: left; }
 .docs-article { min-width: 0; padding: var(--a-space-12) var(--a-space-12) var(--a-space-16); }
 .docs-article section { scroll-margin-top: var(--a-space-6); }
 .docs-index { position: sticky; top: var(--a-space-8); align-self: start; padding: var(--a-space-12) var(--a-space-4); }
