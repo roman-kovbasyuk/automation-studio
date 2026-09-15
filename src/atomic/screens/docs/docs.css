@@ -11,6 +11,14 @@ body { margin: 0; }
 .docs-inline-index, .docs-mobile { display: none; }
 .docs-skip { position: fixed; inset: var(--a-space-2) auto auto var(--a-space-2); transform: translateY(-200%); z-index: var(--a-layer-toast); padding: var(--a-space-3); background: var(--a-color-accent); }
 .docs-skip:focus { transform: none; }
+.docs-installation-group > .c-panel__content { padding: 0; }
+.docs-installation-group > .c-panel__content > .a-stack { gap: 0; }
+.docs-installation-step { border: 0; border-radius: 0; box-shadow: none; transform: none; }
+.docs-installation-step:hover, .docs-installation-step:focus-within { transform: none; box-shadow: none; }
+.docs-installation-step > .c-panel__header { padding: var(--a-space-6); border-radius: 0; }
+.docs-installation-step > .c-panel__content { padding: var(--a-space-6); }
+.docs-installation-step + .docs-installation-step, .docs-installation-step + .docs-installation-note, .docs-installation-note + .docs-installation-step { border-top: var(--a-border-width) solid var(--a-color-ink); }
+.docs-installation-note { padding: var(--a-space-4) var(--a-space-6); }
 @media (max-width: 1200px) {
   .docs-shell { grid-template-columns: 244px minmax(0, 1fr); }
   .docs-index { display: none; }

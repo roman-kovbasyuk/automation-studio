@@ -11,10 +11,11 @@ export type CodeExampleProps = {
   preview?: ReactNode
   controls?: ReactNode
   headingLevel?: HeadingProps['level']
+  className?: string
 }
 
 /** Canonical documentation example: existing Panel, controls and layout atoms. */
-export function CodeExample({ title, description, filename, source, preview, controls, headingLevel = 3 }: CodeExampleProps) {
+export function CodeExample({ title, description, filename, source, preview, controls, headingLevel = 3, className = '' }: CodeExampleProps) {
   const [view, setView] = useState('preview')
   const [message, setMessage] = useState('')
   const copyVersion = useRef(0)
@@ -38,7 +39,7 @@ export function CodeExample({ title, description, filename, source, preview, con
     <Text variant="small" tone="secondary">{filename}</Text>
     <ScrollArea label={`${title} source`} maxHeight="28rem"><pre className="b-code-example__source"><code>{source}</code></pre></ScrollArea>
   </Stack>
-  return <Panel title={title} description={description} headingLevel={headingLevel} variant="split" density="compact" className="b-code-example" filters={controls} actions={<Button size="compact" icon="copy" aria-label={`Copy ${title} code`} onClick={copy}>Copy</Button>}>
+  return <Panel title={title} description={description} headingLevel={headingLevel} variant="split" density="compact" className={`b-code-example ${className}`.trim()} filters={controls} actions={<Button size="compact" icon="copy" aria-label={`Copy ${title} code`} onClick={copy}>Copy</Button>}>
     {preview != null ? <Tabs label={`${title} view`} value={view} onChange={setView} items={[
       { id: 'preview', label: 'Preview', content: <div className="b-code-example__preview">{preview}</div> },
       { id: 'code', label: 'Code', content: code },

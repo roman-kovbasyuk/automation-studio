@@ -118,9 +118,11 @@ export const componentPageMap = new Map(componentPages.map(page => [page.id, pag
 export function ComponentInstallation() {
   const [manager, setManager] = useState('npm')
   const command = manager === 'pnpm' ? 'pnpm add' : manager === 'yarn' ? 'yarn add' : 'npm install'
-  return <Stack gap={6}>
-    <CodeExample title="Build and pack the library" filename="terminal · design-system repository" source={'npm run build:atomic-library\nnpm pack ./dist-atomic-library'} />
-    <CodeExample title="Install the local package" description="Use the filename printed by npm pack in your consuming application." filename="terminal · consuming application" source={`${command} ./vendor/brutalist-design-system-0.1.0-atomic.0.tgz`} controls={<Tabs label="Package manager" value={manager} onChange={setManager} options={[{ value: 'npm', label: 'npm' }, { value: 'pnpm', label: 'pnpm' }, { value: 'yarn', label: 'yarn' }]} />} />
-    <CodeExample title="Provide the shared foundation" description="Import the stylesheet once and wrap the application with AtomsRoot." filename="App.tsx" source={"import { AtomsRoot } from 'brutalist-design-system'\nimport 'brutalist-design-system/styles.css'\n\nexport default function App() {\n  return <AtomsRoot>Your application</AtomsRoot>\n}"} />
-  </Stack>
+  return <Panel title="Installation workflow" description="Build, install and provide the shared foundation in one workflow." variant="split" density="compact" className="docs-installation-group">
+    <Stack gap={0}>
+      <CodeExample className="docs-installation-step" title="1. Build and pack the library" filename="terminal · design-system repository" source={'npm run build:atomic-library\nnpm pack ./dist-atomic-library'} />
+      <CodeExample className="docs-installation-step" title="2. Install the local package" description="Use the filename printed by npm pack in your consuming application." filename="terminal · consuming application" source={`${command} ./vendor/brutalist-design-system-0.1.0-atomic.0.tgz`} controls={<Tabs label="Package manager" value={manager} onChange={setManager} options={[{ value: 'npm', label: 'npm' }, { value: 'pnpm', label: 'pnpm' }, { value: 'yarn', label: 'yarn' }]} />} />
+      <CodeExample className="docs-installation-step" title="3. Provide the shared foundation" description="Import the stylesheet once and wrap the application with AtomsRoot." filename="App.tsx" source={"import { AtomsRoot } from 'brutalist-design-system'\nimport 'brutalist-design-system/styles.css'\n\nexport default function App() {\n  return <AtomsRoot>Your application</AtomsRoot>\n}"} />
+    </Stack>
+  </Panel>
 }
