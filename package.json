@@ -21,7 +21,9 @@
     "typecheck": "tsc --noEmit",
     "build:library": "node scripts/atomic/build-library.mjs",
     "verify": "npm run verify:atomic",
-    "verify:consumer": "node scripts/atomic/verify-consumer.mjs"
+    "verify:consumer": "node scripts/atomic/verify-consumer.mjs",
+    "changes": "node scripts/changes/cli.mjs",
+    "test:changes": "node --test scripts/changes/*.test.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.43.0",

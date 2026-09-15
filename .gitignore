@@ -14,3 +14,4 @@ dist-atomic-library/
 .superpowers/sdd/
 # Local monitoring tooling
 /observatory/
+.design-system-changes/
