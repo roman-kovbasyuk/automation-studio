@@ -449,6 +449,24 @@ test('drainQueue resumes a ready package whose app adoption is still pending', a
   } finally { await rm(fixture.root, { recursive: true, force: true }) }
 })
 
+test('pending adoption uses its immutable ready package after main advances', async () => {
+  const fixture = await fakeFixture()
+  const git = fakeGit()
+  git.advanceMain()
+  const release = await successfulRelease({ dataDir: fixture.dataDir, sourceCommit: 'candidate-commit', summary: 'Button changed.' })
+  try {
+    await fixture.store.update('r1', { status: 'ready', release, candidateCommit: 'candidate-commit', adoption: { status: 'pending' } })
+    const result = await processRequest({
+      ...fixture,
+      requestId: 'r1',
+      run: git.run,
+      adopt: async () => ({ status: 'installed' }),
+    })
+    assert.equal(result.status, 'ready')
+    assert.deepEqual(result.adoption, { status: 'installed' })
+  } finally { await rm(fixture.root, { recursive: true, force: true }) }
+})
+
 test('drainQueue recovers an unfinished journal before claiming new work', async () => {
   const fixture = await fakeFixture()
   try {

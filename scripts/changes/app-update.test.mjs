@@ -69,13 +69,13 @@ async function installVersion(appPath, release) {
   manifest.devDependencies[PACKAGE_NAME] = `file:${release.packagePath}`
   const lock = JSON.parse(await readFile(lockPath, 'utf8'))
   lock.packages[''].devDependencies[PACKAGE_NAME] = `file:${release.packagePath}`
-  lock.packages[`node_modules/${PACKAGE_NAME}`] = { version: release.version, dev: true, resolved: `file:${release.packagePath}` }
+  lock.packages[`node_modules/${PACKAGE_NAME}`] = { version: release.version, dev: true, resolved: `file:${release.packagePath}`, integrity: release.integrity }
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`)
   await writeFile(lockPath, `${JSON.stringify(lock, null, 2)}\n`)
   await writeFile(join(appPath, 'node_modules', PACKAGE_NAME, 'package.json'), JSON.stringify({ name: PACKAGE_NAME, version: release.version }))
 }
 
-function fakeNpm(fixture, { failInstall = false, failCheck, failRestore = false, mutateDuringFailedCheck = false } = {}) {
+function fakeNpm(fixture, { failInstall = false, failCheck, failRestore = false, mutateDuringFailedCheck = false, mutateDuringInstall = false } = {}) {
   const commands = []
   const run = async (file, args, options = {}) => {
     commands.push({ file, args: [...args], cwd: options.cwd })
@@ -83,6 +83,11 @@ function fakeNpm(fixture, { failInstall = false, failCheck, failRestore = false,
     assert.equal(file, 'npm')
     if (args[0] === 'install') {
       await installVersion(fixture.appPath, fixture.release)
+      if (mutateDuringInstall) {
+        const manifest = JSON.parse(await readFile(join(fixture.appPath, 'package.json'), 'utf8'))
+        manifest.externalEdit = 'preserve me'
+        await writeFile(join(fixture.appPath, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`)
+      }
       if (failInstall) throw new Error('synthetic npm install failure')
       return { stdout: '', stderr: '' }
     }
@@ -282,4 +287,173 @@ test('serializes concurrent updates for the same application', async () => {
     assert.deepEqual(await Promise.all([first, second]), [{ status: 'installed' }, { status: 'installed' }])
     assert.equal(installs, 1)
   } finally { await rm(subject.root, { recursive: true, force: true }) }
+})
+
+test('adopts two successive immutable file releases after the app records the first update', async () => {
+  const subject = await fixture({ requestId: 'first' })
+  try {
+    assert.deepEqual(await updateApplication({ ...subject, run: fakeNpm(subject).run }), { status: 'installed' })
+    await runCommand('git', ['add', 'package.json', 'package-lock.json'], { cwd: subject.appPath })
+    await runCommand('git', ['commit', '-m', 'adopt first release'], { cwd: subject.appPath })
+
+    const requestId = 'second'
+    const packagePath = join(subject.dataDir, 'releases', '0.1.0-change.2', 'package.tgz')
+    const bytes = Buffer.from('second immutable package bytes')
+    await mkdir(dirname(packagePath), { recursive: true })
+    await writeFile(packagePath, bytes)
+    await writeFile(join(subject.dataDir, 'requests', `${requestId}.json`), JSON.stringify({ input: { requestId, installedVersion: subject.release.version, component: 'Button', change: 'Change it twice' }, status: 'ready' }))
+    const second = {
+      ...subject,
+      requestId,
+      release: { ...subject.release, version: '0.1.0-change.2', packagePath, integrity: integrity(bytes) },
+    }
+    assert.deepEqual(await updateApplication({ ...second, run: fakeNpm(second).run }), { status: 'installed' })
+    assert.equal(JSON.parse(await readFile(join(subject.appPath, 'node_modules', PACKAGE_NAME, 'package.json'), 'utf8')).version, '0.1.0-change.2')
+  } finally { await rm(subject.root, { recursive: true, force: true }) }
+})
+
+test('treats an unrelated package edit made during npm install as an external conflict', async () => {
+  const subject = await fixture()
+  const npm = fakeNpm(subject, { mutateDuringInstall: true })
+  try {
+    const result = await updateApplication({ ...subject, run: npm.run })
+    assert.equal(result.status, 'failed')
+    assert.match(result.error, /ADOPTION_FILE_CONFLICT/)
+    assert.equal(JSON.parse(await readFile(join(subject.appPath, 'package.json'), 'utf8')).externalEdit, 'preserve me')
+    assert.equal(npm.commands.some(({ args }) => args[0] === 'ci'), false)
+  } finally { await rm(subject.root, { recursive: true, force: true }) }
+})
+
+function saved(bytes) {
+  return { exists: true, data: bytes.toString('base64'), integrity: integrity(bytes) }
+}
+
+async function identities(appPath) {
+  const describe = async (name) => {
+    const bytes = await readFile(join(appPath, name))
+    return { exists: true, size: bytes.length, integrity: integrity(bytes) }
+  }
+  return { packageJson: await describe('package.json'), packageLock: await describe('package-lock.json') }
+}
+
+async function seedInterruptedJournal(subject, { phase, originalIdentity, currentIdentity }) {
+  const path = join(subject.dataDir, 'app-updates', 'interrupted', 'journal.json')
+  await mkdir(dirname(path), { recursive: true })
+  await writeFile(path, JSON.stringify({
+    schemaVersion: 1,
+    requestId: 'interrupted',
+    appPath: subject.appPath,
+    release: { version: subject.release.version, packagePath: subject.release.packagePath, integrity: subject.release.integrity },
+    previous: { packageJson: saved(subject.originalPackage), packageLock: saved(subject.originalLock) },
+    originalIdentity,
+    currentIdentity,
+    phase,
+    createdAt: new Date(0).toISOString(),
+    updatedAt: new Date(0).toISOString(),
+  }))
+}
+
+async function nextRequest(subject) {
+  const requestId = 'after-interruption'
+  await writeFile(join(subject.dataDir, 'requests', `${requestId}.json`), JSON.stringify({ input: { requestId, installedVersion: '0.1.0', component: 'Button', change: 'Continue after recovery' }, status: 'ready' }))
+  return { ...subject, requestId }
+}
+
+test('recovers when an install was interrupted after changing only package.json', async () => {
+  const subject = await fixture()
+  try {
+    const originalIdentity = await identities(subject.appPath)
+    await installVersion(subject.appPath, subject.release)
+    await writeFile(join(subject.appPath, 'package-lock.json'), subject.originalLock)
+    await seedInterruptedJournal(subject, { phase: 'installing', originalIdentity, currentIdentity: originalIdentity })
+    const next = await nextRequest(subject)
+    assert.deepEqual(await updateApplication({ ...next, run: fakeNpm(next).run }), { status: 'installed' })
+    const recovered = JSON.parse(await readFile(join(subject.dataDir, 'app-updates', 'interrupted', 'journal.json'), 'utf8'))
+    assert.equal(recovered.phase, 'failed')
+    assert.equal(recovered.recoveredAfterInterruption, true)
+  } finally { await rm(subject.root, { recursive: true, force: true }) }
+})
+
+test('resumes a rollback interrupted between restoring package.json and package-lock.json', async () => {
+  const subject = await fixture()
+  try {
+    const originalIdentity = await identities(subject.appPath)
+    await installVersion(subject.appPath, subject.release)
+    const currentIdentity = await identities(subject.appPath)
+    await writeFile(join(subject.appPath, 'package.json'), subject.originalPackage)
+    await seedInterruptedJournal(subject, { phase: 'restoring', originalIdentity, currentIdentity })
+    const next = await nextRequest(subject)
+    assert.deepEqual(await updateApplication({ ...next, run: fakeNpm(next).run }), { status: 'installed' })
+    const recovered = JSON.parse(await readFile(join(subject.dataDir, 'app-updates', 'interrupted', 'journal.json'), 'utf8'))
+    assert.deepEqual(recovered.restoreProgress, { packageJson: true, packageLock: true })
+  } finally { await rm(subject.root, { recursive: true, force: true }) }
+})
+
+test('stale-lock reclamation does not admit concurrent app installers', async () => {
+  const subject = await fixture()
+  let releaseInstall
+  const gate = new Promise((done) => { releaseInstall = done })
+  let installs = 0
+  const npm = fakeNpm(subject)
+  const run = async (file, args, options) => {
+    if (file === 'npm' && args[0] === 'install') {
+      installs += 1
+      if (installs === 1) await gate
+    }
+    return npm.run(file, args, options)
+  }
+  try {
+    const key = createHash('sha256').update(subject.appPath).digest('hex')
+    const lock = join(subject.dataDir, 'app-locks', `${key}.lock`)
+    await mkdir(dirname(lock), { recursive: true })
+    await writeFile(lock, JSON.stringify({ pid: 999_999_999, token: 'stale' }))
+    const updates = Array.from({ length: 8 }, () => updateApplication({ ...subject, run }))
+    while (installs === 0) await new Promise((done) => setTimeout(done, 5))
+    await new Promise((done) => setTimeout(done, 50))
+    const concurrentInstalls = installs
+    releaseInstall()
+    assert.ok((await Promise.all(updates)).every(({ status }) => status === 'installed'))
+    assert.equal(concurrentInstalls, 1)
+    assert.equal(installs, 1)
+  } finally { await rm(subject.root, { recursive: true, force: true }) }
+})
+
+test('real npm adopts two successive local tarballs', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ds-real-successive-'))
+  const appPath = join(root, 'app')
+  const dataDir = join(root, 'data')
+  const run = (file, args, options = {}) => runCommand(file, args, { ...options, env: { ...process.env, npm_config_cache: join(root, 'npm-cache') } })
+  try {
+    const releases = []
+    for (const version of ['1.0.0', '1.0.1', '1.0.2']) {
+      const source = join(root, `package-${version}`)
+      const destination = join(root, 'tarballs')
+      await mkdir(source, { recursive: true })
+      await mkdir(destination, { recursive: true })
+      await writeFile(join(source, 'package.json'), JSON.stringify({ name: PACKAGE_NAME, version, type: 'module', exports: './index.js' }))
+      await writeFile(join(source, 'index.js'), `export const version = ${JSON.stringify(version)}\n`)
+      const packed = JSON.parse((await run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', destination, source], { cwd: root })).stdout)[0]
+      const packagePath = join(destination, packed.filename)
+      releases.push({ version, packagePath, integrity: integrity(await readFile(packagePath)), sourceCommit: `commit-${version}`, summary: `Release ${version}` })
+    }
+    await mkdir(appPath, { recursive: true })
+    await writeFile(join(appPath, 'package.json'), `${JSON.stringify({ name: 'real-consumer', private: true, scripts: { check: 'node -e "process.exit(0)"' }, devDependencies: { [PACKAGE_NAME]: `file:${releases[0].packagePath}` } }, null, 2)}\n`)
+    await run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: appPath })
+    await run('git', ['init', '-b', 'main'], { cwd: appPath })
+    await run('git', ['config', 'user.name', 'App Test'], { cwd: appPath })
+    await run('git', ['config', 'user.email', 'app@example.invalid'], { cwd: appPath })
+    await run('git', ['add', 'package.json', 'package-lock.json'], { cwd: appPath })
+    await run('git', ['commit', '-m', 'initial app'], { cwd: appPath })
+    await mkdir(join(dataDir, 'requests'), { recursive: true })
+    const config = { appPath, checkScripts: ['check'] }
+
+    for (let index = 1; index < releases.length; index += 1) {
+      const requestId = `real-${index}`
+      await writeFile(join(dataDir, 'requests', `${requestId}.json`), JSON.stringify({ input: { requestId, installedVersion: releases[index - 1].version, component: 'Button', change: `Release ${index}` }, status: 'ready' }))
+      assert.deepEqual(await updateApplication({ config, release: releases[index], dataDir, requestId, run }), { status: 'installed' })
+      await run('git', ['add', 'package.json', 'package-lock.json'], { cwd: appPath })
+      await run('git', ['commit', '-m', `adopt ${releases[index].version}`], { cwd: appPath })
+    }
+    assert.equal(JSON.parse(await readFile(join(appPath, 'node_modules', PACKAGE_NAME, 'package.json'), 'utf8')).version, '1.0.2')
+  } finally { await rm(root, { recursive: true, force: true }) }
 })

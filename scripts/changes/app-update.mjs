@@ -78,6 +78,20 @@ function sameIdentity(left, right) {
   return Boolean(left && right && JSON.stringify(left) === JSON.stringify(right))
 }
 
+function sameFileIdentity(left, right) {
+  return Boolean(left && right && left.exists === right.exists && left.size === right.size && left.integrity === right.integrity)
+}
+
+function canonical(value) {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`
+  if (value && typeof value === 'object') return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`
+  return JSON.stringify(value)
+}
+
+function clone(value) {
+  return JSON.parse(JSON.stringify(value))
+}
+
 async function restoreSnapshot(path, saved) {
   if (!saved || typeof saved.exists !== 'boolean') throw coded('DEPENDENCY_RESTORE_FAILED', 'recovery journal has an invalid file snapshot')
   if (!saved.exists) {
@@ -118,7 +132,17 @@ function pidAlive(pid) {
 
 async function acquireAppLock(path) {
   await mkdir(dirname(path), { recursive: true })
+  const reclaimPath = `${path}.reclaim`
   for (;;) {
+    if (await exists(reclaimPath)) {
+      let guard
+      try { guard = JSON.parse(await readFile(reclaimPath, 'utf8')) } catch { throw coded('APP_LOCK_AMBIGUOUS', 'application lock reclamation ownership is unreadable') }
+      const guardAlive = pidAlive(guard?.pid)
+      if (guardAlive === false) throw coded('APP_LOCK_AMBIGUOUS', 'application lock has an abandoned reclamation guard')
+      if (guardAlive === null) throw coded('APP_LOCK_AMBIGUOUS', 'application lock reclamation ownership is ambiguous')
+      await delay(20)
+      continue
+    }
     const owner = { pid: process.pid, token: randomUUID(), createdAt: new Date().toISOString() }
     try {
       const handle = await open(path, 'wx', 0o600)
@@ -131,8 +155,29 @@ async function acquireAppLock(path) {
       const alive = pidAlive(existing?.pid)
       if (alive === null) throw coded('APP_LOCK_AMBIGUOUS', 'application lock ownership is ambiguous')
       if (alive) { await delay(20); continue }
-      const stale = `${path}.stale.${process.pid}.${randomUUID()}`
-      try { await rename(path, stale); await unlink(stale) } catch (race) { if (race.code !== 'ENOENT') await delay(5) }
+      let reclaim
+      try {
+        const handle = await open(reclaimPath, 'wx', 0o600)
+        reclaim = { pid: process.pid, token: randomUUID(), createdAt: new Date().toISOString() }
+        try { await handle.writeFile(JSON.stringify(reclaim)) } finally { await handle.close() }
+      } catch (race) {
+        if (race.code !== 'EEXIST') throw race
+        let guard
+        try { guard = JSON.parse(await readFile(reclaimPath, 'utf8')) } catch { throw coded('APP_LOCK_AMBIGUOUS', 'application lock reclamation ownership is unreadable') }
+        if (pidAlive(guard?.pid) === false) throw coded('APP_LOCK_AMBIGUOUS', 'application lock has an abandoned reclamation guard')
+        await delay(20)
+        continue
+      }
+      try {
+        let current
+        try { current = JSON.parse(await readFile(path, 'utf8')) } catch (race) { if (race.code === 'ENOENT') continue; throw coded('APP_LOCK_AMBIGUOUS', 'application lock changed during reclamation') }
+        if (current.pid !== existing.pid || current.token !== existing.token) continue
+        if (pidAlive(current.pid) !== false) continue
+        await unlink(path)
+      } finally {
+        const currentGuard = await readFile(reclaimPath, 'utf8').then(JSON.parse).catch(() => null)
+        if (currentGuard?.token === reclaim.token) await unlink(reclaimPath).catch(() => {})
+      }
     }
   }
 }
@@ -154,7 +199,88 @@ function dependencyDeclaration(manifest) {
   const declarations = ['dependencies', 'devDependencies', 'optionalDependencies']
     .flatMap((section) => typeof manifest?.[section]?.[PACKAGE_NAME] === 'string' ? [{ section, value: manifest[section][PACKAGE_NAME] }] : [])
   if (declarations.length !== 1) throw coded('CURRENT_VERSION_MISMATCH', `${PACKAGE_NAME} must have exactly one dependency declaration`)
-  return declarations[0].value
+  return declarations[0]
+}
+
+function artifactPath(spec, appPath) {
+  if (typeof spec !== 'string' || !spec.startsWith('file:')) return null
+  return resolve(appPath, spec.slice(5))
+}
+
+function sameArtifactSpec(left, right, appPath) {
+  const leftPath = artifactPath(left, appPath)
+  const rightPath = artifactPath(right, appPath)
+  return Boolean(leftPath && rightPath && leftPath === rightPath)
+}
+
+async function validateCurrentDependency({ manifest, lock, installed, input, appPath }) {
+  const declared = dependencyDeclaration(manifest)
+  const lockedRoot = lock?.packages?.['']?.[declared.section]?.[PACKAGE_NAME]
+  const lockedPackage = lock?.packages?.[`node_modules/${PACKAGE_NAME}`]
+  if (lockedPackage?.version !== input.installedVersion || installed?.version !== input.installedVersion || installed?.name !== PACKAGE_NAME) {
+    throw coded('CURRENT_VERSION_MISMATCH', `request says ${input.installedVersion}; locked=${lockedPackage?.version ?? 'missing'}, installed=${installed?.version ?? 'missing'}`)
+  }
+  if (declared.value === input.installedVersion && lockedRoot === input.installedVersion) return
+  const declaredPath = artifactPath(declared.value, appPath)
+  if (!declaredPath || !sameArtifactSpec(declared.value, lockedRoot, appPath) || !sameArtifactSpec(declared.value, lockedPackage.resolved, appPath)) {
+    throw coded('CURRENT_VERSION_MISMATCH', `declared and locked ${PACKAGE_NAME} artifacts do not agree with the request`)
+  }
+  if (typeof lockedPackage.integrity !== 'string' || !lockedPackage.integrity.startsWith('sha512-')) throw coded('CURRENT_VERSION_MISMATCH', 'locked file dependency has no SHA-512 artifact identity')
+  let bytes
+  try { bytes = await readFile(declaredPath) } catch (error) { throw coded('CURRENT_VERSION_MISMATCH', `declared dependency artifact could not be read: ${error.message}`) }
+  if (sha512(bytes) !== lockedPackage.integrity) throw coded('CURRENT_VERSION_MISMATCH', 'declared dependency artifact does not match the lockfile identity')
+}
+
+function snapshotJson(saved, label) {
+  if (!saved?.exists || typeof saved.data !== 'string') throw coded('ADOPTION_RECOVERY_FAILED', `${label} backup is unavailable`)
+  try { return JSON.parse(Buffer.from(saved.data, 'base64').toString('utf8')) } catch { throw coded('ADOPTION_RECOVERY_FAILED', `${label} backup is invalid`) }
+}
+
+async function validateOwnedPackageMutation(journal) {
+  const original = snapshotJson(journal.previous.packageJson, 'package.json')
+  const current = await readJson(join(journal.appPath, 'package.json'), 'ADOPTION_FILE_CONFLICT', 'package.json changed to invalid JSON during installation')
+  const declaration = dependencyDeclaration(original)
+  const currentDeclaration = dependencyDeclaration(current)
+  if (currentDeclaration.section !== declaration.section || !sameArtifactSpec(currentDeclaration.value, `file:${journal.release.packagePath}`, journal.appPath)) throw coded('ADOPTION_FILE_CONFLICT', 'package.json does not contain only the expected release adoption')
+  current[currentDeclaration.section][PACKAGE_NAME] = declaration.value
+  if (canonical(current) !== canonical(original)) throw coded('ADOPTION_FILE_CONFLICT', 'package.json contains changes outside the expected release adoption')
+}
+
+async function validateOwnedLockMutation(journal) {
+  const original = snapshotJson(journal.previous.packageLock, 'package-lock.json')
+  const current = await readJson(join(journal.appPath, 'package-lock.json'), 'ADOPTION_FILE_CONFLICT', 'package-lock.json changed to invalid JSON during installation')
+  const declaration = dependencyDeclaration(original.packages?.[''] ?? {})
+  const currentRoot = current.packages?.['']?.[declaration.section]?.[PACKAGE_NAME]
+  const currentPackage = current.packages?.[`node_modules/${PACKAGE_NAME}`]
+  if (!sameArtifactSpec(currentRoot, `file:${journal.release.packagePath}`, journal.appPath)
+    || currentPackage?.version !== journal.release.version
+    || !sameArtifactSpec(currentPackage?.resolved, `file:${journal.release.packagePath}`, journal.appPath)
+    || currentPackage?.integrity !== journal.release.integrity) throw coded('ADOPTION_FILE_CONFLICT', 'package-lock.json does not identify the expected release artifact')
+  current.packages[''][declaration.section][PACKAGE_NAME] = original.packages[''][declaration.section][PACKAGE_NAME]
+  current.packages[`node_modules/${PACKAGE_NAME}`] = clone(original.packages[`node_modules/${PACKAGE_NAME}`])
+  if (canonical(current) !== canonical(original)) throw coded('ADOPTION_FILE_CONFLICT', 'package-lock.json contains changes outside the expected release adoption')
+}
+
+async function establishMutationOwnership(journal) {
+  const current = await dependencyIdentity(journal.appPath)
+  const validators = { packageJson: validateOwnedPackageMutation, packageLock: validateOwnedLockMutation }
+  const owned = { ...journal.currentIdentity }
+  for (const key of Object.keys(validators)) {
+    if (sameFileIdentity(current[key], journal.originalIdentity[key])) {
+      owned[key] ??= current[key]
+      continue
+    }
+    const recorded = journal.currentIdentity?.[key]
+    if (recorded && !sameFileIdentity(recorded, journal.originalIdentity[key])) {
+      if (!sameFileIdentity(current[key], recorded)) throw coded('ADOPTION_FILE_CONFLICT', `${key} changed after this transaction recorded its installed state`)
+      continue
+    }
+    try { await validators[key](journal) }
+    catch (error) { throw coded('ADOPTION_FILE_CONFLICT', errorText(error)) }
+    owned[key] = current[key]
+  }
+  journal.currentIdentity = owned
+  return current
 }
 
 async function requestInput(dataDir, requestId) {
@@ -184,12 +310,8 @@ async function verifyPreconditions({ config, release, dataDir, requestId, run })
   for (const script of checkedConfig.checkScripts) {
     if (typeof manifest?.scripts?.[script] !== 'string' || !manifest.scripts[script].trim()) throw coded('CHECK_SCRIPT_MISSING', `application check script is missing: ${script}`)
   }
-  const declared = dependencyDeclaration(manifest)
-  const locked = lock?.packages?.[`node_modules/${PACKAGE_NAME}`]?.version
-  const installed = (await readJson(installedFile, 'CURRENT_VERSION_MISMATCH', `installed ${PACKAGE_NAME} metadata could not be read`))?.version
-  if (declared !== input.installedVersion || locked !== input.installedVersion || installed !== input.installedVersion) {
-    throw coded('CURRENT_VERSION_MISMATCH', `request says ${input.installedVersion}; declared=${declared}, locked=${locked ?? 'missing'}, installed=${installed ?? 'missing'}`)
-  }
+  const installed = await readJson(installedFile, 'CURRENT_VERSION_MISMATCH', `installed ${PACKAGE_NAME} metadata could not be read`)
+  await validateCurrentDependency({ manifest, lock, installed, input, appPath: checkedConfig.appPath })
   const status = (await run('git', ['status', '--porcelain=v1', '--untracked-files=all', '--', 'package.json', 'package-lock.json'], { cwd: checkedConfig.appPath })).stdout.trim()
   if (status) throw coded('DEPENDENCY_FILES_DIRTY', 'package.json or package-lock.json has local changes')
   let packageBytes
@@ -201,17 +323,31 @@ async function verifyPreconditions({ config, release, dataDir, requestId, run })
 }
 
 async function restoreJournal({ journal, path, run, recoveredAfterInterruption = false, failure }) {
-  const current = await dependencyIdentity(journal.appPath)
-  if (!sameIdentity(current, journal.originalIdentity) && !sameIdentity(current, journal.currentIdentity)) {
+  let current
+  try { current = await establishMutationOwnership(journal) } catch {
     const text = 'ADOPTION_FILE_CONFLICT: dependency files changed outside this transaction; backups were retained'
     await saveJournal(path, journal, { phase: 'conflict', error: text })
     return { status: 'failed', error: text }
   }
   try {
-    await saveJournal(path, journal, { phase: 'restoring', error: errorText(failure) })
-    if (!sameIdentity(current, journal.originalIdentity)) {
-      await restoreSnapshot(join(journal.appPath, 'package.json'), journal.previous.packageJson)
-      await restoreSnapshot(join(journal.appPath, 'package-lock.json'), journal.previous.packageLock)
+    await saveJournal(path, journal, {
+      phase: 'restoring',
+      currentIdentity: journal.currentIdentity ?? current,
+      restoreProgress: journal.restoreProgress ?? { packageJson: false, packageLock: false },
+      error: errorText(failure),
+    })
+    const files = [
+      ['packageJson', 'package.json'],
+      ['packageLock', 'package-lock.json'],
+    ]
+    for (const [key, name] of files) {
+      const identity = await fileIdentity(join(journal.appPath, name))
+      if (!sameFileIdentity(identity, journal.originalIdentity[key])) {
+        if (!sameFileIdentity(identity, journal.currentIdentity[key])) throw coded('ADOPTION_FILE_CONFLICT', `${name} changed before it could be restored`)
+        await restoreSnapshot(join(journal.appPath, name), journal.previous[key])
+        if (!sameFileIdentity(await fileIdentity(join(journal.appPath, name)), journal.originalIdentity[key])) throw coded('DEPENDENCY_RESTORE_FAILED', `${name} bytes do not match the journal after restoration`)
+      }
+      await saveJournal(path, journal, { restoreProgress: { ...journal.restoreProgress, [key]: true } })
     }
     if (!sameIdentity(await dependencyIdentity(journal.appPath), journal.originalIdentity)) throw coded('DEPENDENCY_RESTORE_FAILED', 'restored dependency file bytes do not match the journal')
     await run('npm', ['ci', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: journal.appPath, timeoutMs: CHECK_TIMEOUT_MS })
@@ -220,6 +356,11 @@ async function restoreJournal({ journal, path, run, recoveredAfterInterruption =
     await saveJournal(path, journal, { phase: 'failed', error: text, recoveredAfterInterruption })
     return { status: 'failed', error: text }
   } catch (error) {
+    if (error.code === 'ADOPTION_FILE_CONFLICT') {
+      const text = errorText(error)
+      await saveJournal(path, journal, { phase: 'conflict', error: text })
+      return { status: 'failed', error: text }
+    }
     const text = error.message.startsWith('DEPENDENCY_RESTORE_FAILED:') ? error.message : `DEPENDENCY_RESTORE_FAILED: ${errorText(error)}`
     await saveJournal(path, journal, { phase: 'restore_failed', error: text, originalFailure: errorText(failure) })
     return { status: 'failed', error: text }
@@ -294,11 +435,23 @@ export async function updateApplication({ config, release, dataDir, requestId, r
     try {
       await run('npm', ['install', '--save-exact', '--ignore-scripts', '--no-audit', '--no-fund', release.packagePath], { cwd: appPath, timeoutMs: CHECK_TIMEOUT_MS })
     } catch (error) {
-      await saveJournal(path, journal, { phase: 'restoring', currentIdentity: await dependencyIdentity(appPath), originalFailure: `APP_INSTALL_FAILED: ${errorText(error)}` })
+      let currentIdentity
+      try { currentIdentity = await establishMutationOwnership(journal) } catch (ownershipError) {
+        const text = errorText(ownershipError)
+        await saveJournal(path, journal, { phase: 'conflict', error: text })
+        return { status: 'failed', error: text }
+      }
+      await saveJournal(path, journal, { phase: 'restoring', currentIdentity, originalFailure: `APP_INSTALL_FAILED: ${errorText(error)}` })
       return restoreJournal({ journal, path, run, failure: journal.originalFailure })
     }
 
-    await saveJournal(path, journal, { phase: 'checking', currentIdentity: await dependencyIdentity(appPath) })
+    let currentIdentity
+    try { currentIdentity = await establishMutationOwnership(journal) } catch (ownershipError) {
+      const text = errorText(ownershipError)
+      await saveJournal(path, journal, { phase: 'conflict', error: text })
+      return { status: 'failed', error: text }
+    }
+    await saveJournal(path, journal, { phase: 'checking', currentIdentity })
     try {
       const installed = await readJson(join(appPath, 'node_modules', PACKAGE_NAME, 'package.json'), 'INSTALLED_VERSION_MISMATCH', `installed ${PACKAGE_NAME} metadata could not be read`)
       if (installed?.version !== release.version) throw coded('INSTALLED_VERSION_MISMATCH', `expected ${release.version}, found ${installed?.version ?? 'missing'}`)

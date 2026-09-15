@@ -176,9 +176,11 @@ async function failRequest(context, error, extra = {}) {
 async function finishReleased(context) {
   const { release, candidateCommit } = context.journal
   if (!await verifiedRelease(release)) throw new Error('Released artifact is missing or failed its integrity check')
-  const mainHead = await git(context.run, context.repositoryDir, ['rev-parse', 'HEAD'])
-  if (mainHead !== candidateCommit) throw new Error('Retryable recovery failure: main does not contain the journaled candidate commit')
-  if (context.journal.phase !== 'released') await setPhase(context, 'released')
+  if (context.record.status !== 'ready') {
+    const mainHead = await git(context.run, context.repositoryDir, ['rev-parse', 'HEAD'])
+    if (mainHead !== candidateCommit) throw new Error('Retryable recovery failure: main does not contain the journaled candidate commit')
+    if (context.journal.phase !== 'released') await setPhase(context, 'released')
+  }
   const ready = await context.store.update(context.requestId, {
     status: 'ready',
     phase: 'released',
