@@ -56,9 +56,9 @@ export function AtomsCatalog() {
       <Container maxWidth="64rem"><Stack gap={12}>
         <Stack gap={3}><Heading level={2} variant="h2">Atoms</Heading><Text tone="secondary">One foundation for every component. Same visual language, rebuilt from the ground up.</Text></Stack>
         <Section id="color" title="Color">
-          <Grid minItemWidth="10rem">{Object.entries(tokens.color).map(([name, value]) => <Stack gap={2} key={name}>
+          <Grid minItemWidth="10rem">{Object.entries(tokens.color).filter(([, value]) => typeof value === 'string').map(([name, value]) => <Stack gap={2} key={name}>
             <div className="color-swatch" style={{ background: `var(--a-color-${name})` }} />
-            <Heading level={3} variant="h7">{name}</Heading><Text variant="small" tone="secondary">{value}</Text>
+            <Heading level={3} variant="h7">{name}</Heading><Text variant="small" tone="secondary">{value as string}</Text>
           </Stack>)}</Grid>
           <Text variant="small" tone="secondary">Ink on cyan for actions. Secondary text remains readable. Success and danger always need a text label or icon.</Text>
         </Section>

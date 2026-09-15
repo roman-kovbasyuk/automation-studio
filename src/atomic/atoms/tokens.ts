@@ -2,7 +2,13 @@ import type { CSSProperties } from 'react'
 
 /** The only value source for the rewrite. Catalog and primitives consume this object. */
 export const tokens = {
-  color: { canvas: '#f4f4f0', surface: '#ffffff', ink: '#000000', secondary: '#595959', accent: '#79d9ff', success: '#23a094', danger: '#dc341e', editHighlight: 'rgb(0 0 0 / 3%)', backdrop: 'rgb(0 0 0 / 35%)' },
+  color: {
+    earthy: { 0: '#f4f4f0', 50: '#efeee8', 100: '#e5e3da', 200: '#d4d0c3', 300: '#bcb6a5', 400: '#9f9784', 500: '#827966', 600: '#685f50', 700: '#4f493d', 800: '#38342d', 900: '#24221e', 950: '#151411' },
+    gray: { 0: '#ffffff', 50: '#f7f7f7', 100: '#eeeeee', 200: '#dddddd', 300: '#c8c8c8', 400: '#adadad', 500: '#919191', 600: '#737373', 700: '#555555', 800: '#3b3b3b', 900: '#252525', 950: '#171717' },
+    blue: { 0: '#f5faff', 50: '#e8f3ff', 100: '#cfe6ff', 200: '#a6d2ff', 300: '#72b8ff', 400: '#3d98f5', 500: '#1677d2', 600: '#0d5eac', 700: '#0b4a86', 800: '#0b3b69', 900: '#0b3155', 950: '#061d35' },
+    static: { black: '#000000', white: '#ffffff' },
+    canvas: '#f4f4f0', surface: '#ffffff', ink: '#000000', secondary: '#595959', accent: '#79d9ff', success: '#23a094', danger: '#dc341e', editHighlight: 'rgb(0 0 0 / 3%)', backdrop: 'rgb(0 0 0 / 35%)'
+  },
   space: { 0: '0px', 1: '4px', 2: '8px', 3: '12px', 4: '16px', 6: '24px', 8: '32px', 12: '48px', 16: '64px' },
   radius: { none: '0px', small: '4px', large: '20px', pill: '999px' },
   border: { width: '1px' },
@@ -36,7 +42,7 @@ export type HeadingRole = Extract<TypeRole, `h${number}`>
 export type TextRole = Exclude<TypeRole, HeadingRole>
 
 export const tokenVariables = Object.fromEntries([
-  ...Object.entries(tokens).flatMap(([group, values]) => Object.entries(values).map(([name, value]) => [`--a-${group}-${name}`, value])),
+  ...Object.entries(tokens).flatMap(([group, values]) => { const flatten = (obj: Record<string, unknown>, prefix: string): [string, string][] => Object.entries(obj).flatMap(([name, value]) => typeof value === 'object' ? flatten(value as Record<string, unknown>, `${prefix}-${name}`) : [[`--a-${prefix}-${name}`, String(value)]]); return flatten(values as Record<string, unknown>, group) }),
   ...Object.entries(typography).flatMap(([role, values]) => Object.entries(values).map(([name, value]) => [`--a-type-${role}-${name}`, String(value)])),
 ]) as CSSProperties
 

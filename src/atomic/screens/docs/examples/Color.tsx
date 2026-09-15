@@ -1,12 +1,14 @@
 import { AtomsRoot, Grid, Icon, Inline, Stack, Surface, Text, tokens } from '../../../atoms'
 
 export default function Color() {
-  return <AtomsRoot><Grid minItemWidth="8rem" gap={4}>
-    {Object.entries(tokens.color).map(([name, value]) => <Stack gap={2} key={name}>
-      <Surface padding={0} radius="small" style={{ background: value, height: 'var(--a-space-16)' }} />
-      <Text variant="h7">{name}</Text><Text variant="small" tone="secondary">{value}</Text>
-    </Stack>)}
-  </Grid></AtomsRoot>
+  const groups = ['earthy', 'gray', 'blue', 'static'] as const
+  return <AtomsRoot><Stack gap={4}>{groups.map(group => <Stack gap={2} key={group}>
+    <Text variant="h6">{group}</Text>
+    <Grid minItemWidth="8rem" gap={4}>{Object.entries(tokens.color[group]).map(([shade, value]) => <Stack gap={2} key={shade}>
+      <Surface padding={0} radius="small" style={{ background: value, height: 'var(--a-space-16)', border: '1px solid var(--a-color-ink)' }} />
+      <Text variant="h7">{shade}</Text><Text variant="small" tone="secondary">{value}</Text>
+    </Stack>)}</Grid>
+  </Stack>)}</Stack></AtomsRoot>
 }
 
 export function SemanticColor() {
