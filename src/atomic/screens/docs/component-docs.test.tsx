@@ -18,6 +18,18 @@ test('component routes render real grouped pages and references', async () => {
   expect(screen.getByText('Three related controls for choosing one option, searching options or choosing several.')).toBeVisible()
 })
 
+test('Button documentation follows the reference example hierarchy', () => {
+  window.history.replaceState({}, '', '/page-21.html?component=button#overview')
+  render(<ComponentDocs />)
+  expect(screen.getByRole('heading', { name: 'Examples', level: 2 })).toBeVisible()
+  for (const title of ['Primary (Default)', 'Neutral', 'Error', 'Size', 'Disabled', 'With Icon', 'Full Width', 'asChild']) {
+    expect(screen.getByRole('heading', { name: title, level: 3 })).toBeVisible()
+  }
+  expect(screen.getByRole('heading', { name: 'Composition', level: 2 })).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'API Reference', level: 2 })).toBeVisible()
+  expect(screen.queryByText('Missing component')).not.toBeInTheDocument()
+})
+
 test('every exported component name is represented by a documentation destination', () => {
   expect(componentManifest.every(entry => componentPageMap.has(entry.id.replace(/^component-/, '')))).toBe(true)
   expect(componentPageMap.size).toBeGreaterThan(30)

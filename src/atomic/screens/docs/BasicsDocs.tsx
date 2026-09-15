@@ -94,7 +94,7 @@ export function BasicsDocs() {
   const groups = [
     {title:'Getting Started', items:[{id:'intro',label:'Introduction',href:'/page-23.html'},{id:'install',label:'Installation',href:'#installation'}]},
     {title:'Basics', items:basicsPages.map(item => ({id:item.id,label:item.title,href:`/page-20.html?basic=${item.id}`,current:item.id===page.id}))},
-    ...componentGroups.map(group => ({title:`${group.title}${group.items.some(item => item.availability === 'missing') ? ` · ${group.items.filter(item => item.availability === 'missing').length} missing` : ''}`,items:group.items.map(item => ({id:item.id,label:item.label,href:item.href,status:item.availability === 'missing' ? 'Missing component' : item.availability === 'partial' ? 'Partial' : undefined}))})),
+    ...componentGroups.map(group => ({title:group.title,items:group.items.map(item => ({id:item.id,label:item.label,href:item.href,status:item.availability === 'missing' ? 'Missing component' : item.availability === 'partial' ? 'Partial' : undefined}))})),
     {title:'UI Blocks',items:[{id:'sidebar',label:'Sidebar panel',href:'/page-22.html?block=sidebar'},{id:'prompt',label:'AI prompt input',href:'/page-22.html?block=prompt-input'},{id:'example',label:'Code example',href:'/page-22.html?block=code-example'}]},
   ].map(group => ({...group, items:group.items.filter(item => item.label.toLowerCase().includes(normalized) || group.title.toLowerCase().includes(normalized))})).filter(group => group.items.length)
   const navigation = (mobile = false) => <Stack gap={8} onClick={navigate}>

@@ -12,6 +12,7 @@ import {
 import { CodeExample } from '../../ui-blocks/CodeExample'
 
 export type ComponentReferenceRow = { name: string; value: string; purpose: string }
+export type ComponentExample = { id: string; title: string; description?: string; source: string; preview: ComponentType }
 export type ComponentSpec = {
   id: string
   title: string
@@ -20,6 +21,8 @@ export type ComponentSpec = {
   source: string
   preview: ComponentType
   example?: { title: string; description: string; preview: ComponentType }
+  examples?: ComponentExample[]
+  composition?: ComponentExample
   reference: ComponentReferenceRow[]
   notes: string[]
 }
@@ -27,7 +30,16 @@ export type ComponentSpec = {
 const rows = (...items: [string, string, string][]): ComponentReferenceRow[] => items.map(([name, value, purpose]) => ({ name, value, purpose }))
 const snippet = (imports: string, body: string) => `import { ${imports} } from 'brutalist-design-system'\n\nexport function Example() {\n  return ${body}\n}`
 
-function ButtonPreview() { const [result, setResult] = useState(''); return <Stack gap={3}><Inline gap={3}><Button variant="primary" icon="plus" onClick={() => setResult('Created')}>Create</Button><Button icon="arrowRight" iconPosition="end" onClick={() => setResult('Reviewed')}>Review</Button><Button variant="danger" icon="delete" onClick={() => setResult('Deleted')}>Delete</Button><Button variant="quiet" onClick={() => setResult('Cancelled')}>Cancel</Button></Inline>{result && <Text role="status" variant="small">{result}</Text>}</Stack> }
+function ButtonPreview() { const [result, setResult] = useState(''); return <Stack gap={3}><Button variant="primary" onClick={() => setResult('Button activated')}>Button</Button>{result && <Text role="status" variant="small">{result}</Text>}</Stack> }
+function ButtonPrimaryPreview() { return <Button variant="primary">Get started</Button> }
+function ButtonNeutralPreview() { return <Button>Learn more</Button> }
+function ButtonErrorPreview() { return <Button variant="danger">Try again</Button> }
+function ButtonSizePreview() { return <Inline gap={3} className="docs-button-size-row">{(['medium', 'small', 'xsmall', 'xxsmall'] as const).map(size => <Button key={size} size={size} variant="primary">{size === 'medium' ? 'Medium' : size === 'xsmall' ? 'Xsmall' : size === 'xxsmall' ? 'Xxsmall' : 'Small'}</Button>)}</Inline> }
+function ButtonDisabledPreview() { return <Inline gap={3}><Button variant="primary" disabled>Disabled</Button><Button disabled>Disabled</Button><Button variant="danger" disabled>Disabled</Button></Inline> }
+function ButtonIconPreview() { return <Inline gap={3}><Button variant="primary" icon="plus">Create</Button><Button icon="arrowRight" iconPosition="end">Continue</Button><Button variant="danger" icon="delete">Delete</Button></Inline> }
+function ButtonFullWidthPreview() { return <Button className="docs-button-full-width" variant="primary">Learn more</Button> }
+function ButtonAsChildPreview() { return <TextAction href="#reference">As link</TextAction> }
+function ButtonCompositionPreview() { function ActionButton({ children }: { children: ReactNode }) { return <Button variant="primary" size="compact">{children}</Button> } return <ActionButton>Save changes</ActionButton> }
 function TextActionPreview() { return <Inline gap={4}><TextAction href="#component-text-action">Read the guide</TextAction><TextAction onClick={() => undefined}>Run action</TextAction></Inline> }
 function FormActionsPreview() { return <Form label="Example form" onSubmit={event => event.preventDefault()}><TextField label="Project name" defaultValue="Oslo launch" /><FormActions onCancel={() => undefined} message="Actions belong at the end of a form." /></Form> }
 function InlineConfirmationPreview() { const [confirmed, setConfirmed] = useState(false); return <Stack gap={3}><InlineConfirmation label="Delete draft" question="Delete this draft?" description="This demo keeps the action inline until you confirm." onConfirm={() => setConfirmed(true)} />{confirmed && <Text role="status" variant="small">Draft deleted.</Text>}</Stack> }
@@ -66,10 +78,22 @@ function DialogPreview() { return <Dialog title="Delete draft" description="This
 function DrawerPreview() { return <Drawer title="Documentation" description="A drawer keeps secondary navigation available on small screens." trigger="Open drawer"><NavigationList label="Drawer links" items={[{ id: 'overview', label: 'Overview', href: '#' }, { id: 'settings', label: 'Settings', href: '#' }]} /></Drawer> }
 function PopoverPreview() { return <Popover label="More information"><Stack gap={2}><Text variant="small">Popover content is positioned by the shared overlay primitive.</Text><Button size="compact">Continue</Button></Stack></Popover> }
 
-const common = (id: string, title: string, category: string, description: string, preview: ComponentType, source: string, reference: ComponentReferenceRow[], notes: string[], example?: ComponentSpec['example']): ComponentSpec => ({ id, title, category, description, preview, source, reference, notes, example })
+const buttonExamples: ComponentExample[] = [
+  { id: 'primary', title: 'Primary (Default)', description: 'Use the accent action for the main path through a view.', source: snippet('Button', '<Button variant="primary">Get started</Button>'), preview: ButtonPrimaryPreview },
+  { id: 'neutral', title: 'Neutral', description: 'Use the neutral action for supporting or secondary work.', source: snippet('Button', '<Button>Learn more</Button>'), preview: ButtonNeutralPreview },
+  { id: 'error', title: 'Error', description: 'Use the danger treatment for destructive or recovery actions.', source: snippet('Button', '<Button variant="danger">Try again</Button>'), preview: ButtonErrorPreview },
+  { id: 'size', title: 'Size', description: 'Choose a named size to match the surrounding density.', source: snippet('Button', '<Inline gap={3}>\n  <Button size="medium">Medium</Button>\n  <Button size="small">Small</Button>\n  <Button size="xsmall">Xsmall</Button>\n  <Button size="xxsmall">Xxsmall</Button>\n</Inline>'), preview: ButtonSizePreview },
+  { id: 'disabled', title: 'Disabled', description: 'Disabled actions remain visible while preventing activation.', source: snippet('Button', '<Button variant="primary" disabled>Disabled</Button>'), preview: ButtonDisabledPreview },
+  { id: 'with-icon', title: 'With Icon', description: 'Pair a concise verb with an icon when it improves recognition.', source: snippet('Button', '<Button variant="primary" icon="plus">Create</Button>'), preview: ButtonIconPreview },
+  { id: 'full-width', title: 'Full Width', description: 'Use the full-width composition when the action owns the available row.', source: snippet('Button', '<Button className="docs-button-full-width" variant="primary">Learn more</Button>'), preview: ButtonFullWidthPreview },
+  { id: 'as-child', title: 'asChild', description: 'Use a text action when the same visual action should navigate as a link.', source: snippet('TextAction', '<TextAction href="/guide">As link</TextAction>'), preview: ButtonAsChildPreview },
+]
+const buttonComposition: ComponentExample = { id: 'composition', title: 'Button composition', description: 'Create a small wrapper when an action has a consistent product-specific meaning.', source: "import { Button } from 'brutalist-design-system'\n\nfunction SaveButton() {\n  return <Button variant=\"primary\" size=\"compact\">Save changes</Button>\n}\n\nexport function Toolbar() {\n  return <SaveButton />\n}" , preview: ButtonCompositionPreview }
+
+const common = (id: string, title: string, category: string, description: string, preview: ComponentType, source: string, reference: ComponentReferenceRow[], notes: string[], example?: ComponentSpec['example'], examples?: ComponentExample[], composition?: ComponentExample): ComponentSpec => ({ id, title, category, description, preview, source, reference, notes, example, examples, composition })
 
 export const componentPages: ComponentSpec[] = [
-  common('button', 'Button', 'Actions', 'Buttons trigger an action and communicate its importance through a shared variant, size and state model.', ButtonPreview, snippet('Button', '<Button variant="primary" icon="plus">Create campaign</Button>'), rows(['variant', 'primary | secondary | danger | quiet', 'Visual importance; defaults to secondary.'], ['size', 'default | compact', 'Default 48px; compact 44px.'], ['icon / iconPosition', 'IconName / start | end', 'Optional leading or trailing icon.'], ['busy / disabled', 'boolean', 'Busy blocks repeat activation and disabled prevents input.']), ['Prefer a verb that describes the result. Keep one primary action in a group.', 'Icon-only buttons require an accessible aria-label.']),
+  common('button', 'Button', 'Actions', 'Buttons trigger an action and communicate their importance through a shared variant, size and state model.', ButtonPreview, snippet('Button', '<Button variant="primary" icon="plus">Create campaign</Button>'), rows(['variant', 'primary | secondary | danger | quiet', 'Visual importance; defaults to secondary.'], ['size', 'default | compact | medium | small | xsmall | xxsmall', 'Named sizes map to our shared control density tokens.'], ['icon / iconPosition', 'IconName / start | end', 'Optional leading or trailing icon.'], ['busy / disabled', 'boolean', 'Busy blocks repeat activation and disabled prevents input.']), ['Prefer a verb that describes the result. Keep one primary action in a group.', 'Icon-only buttons require an accessible aria-label.'], undefined, buttonExamples, buttonComposition),
   common('text-action', 'Text action', 'Actions', 'A low-emphasis action that keeps the surrounding sentence or list compact.', TextActionPreview, snippet('TextAction', '<TextAction href="/guide">Read the guide</TextAction>'), rows(['href', 'string | undefined', 'Renders a link when provided; otherwise a button.'], ['disabled', 'boolean', 'Prevents the button action.']), ['Use this for inline navigation or a secondary action.']),
   common('form-actions', 'Form actions', 'Actions', 'A consistent submit and cancel row for forms, including busy and status feedback.', FormActionsPreview, snippet('Form, FormActions, TextField', '<FormActions onCancel={onCancel} submitLabel="Save" />'), rows(['submitLabel / cancelLabel', 'string', 'Action labels; defaults Save and Cancel.'], ['busy / disabled', 'boolean', 'Busy changes the submit button state.'], ['message', 'ReactNode', 'Optional status text below the buttons.']), ['Place FormActions as the last child of Form.']),
   common('inline-confirmation', 'Inline confirmation', 'Actions', 'A compact confirmation pattern that reveals the question in place of a separate dialog.', InlineConfirmationPreview, snippet('InlineConfirmation', '<InlineConfirmation label="Delete draft" question="Delete this draft?" onConfirm={removeDraft} />'), rows(['label / question', 'string', 'Trigger label and confirmation prompt.'], ['onConfirm', '() => void | Promise<void>', 'Runs after confirmation.'], ['description / disabled', 'string? / boolean?', 'Supporting copy and disabled state.']), ['Use Dialog when the decision needs more context or an explicit cancel action.']),

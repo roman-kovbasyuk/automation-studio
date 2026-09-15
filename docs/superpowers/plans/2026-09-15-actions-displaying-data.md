@@ -14,7 +14,7 @@ User clarification, 2026-09-15: implement organization using existing components
 
 - Keep every reference category and family visible, including completely missing groups.
 - Available family: normal navigable link to real documentation using existing exports.
-- Missing family: visible static row with a neutral `Missing component` label; no broken link, fake preview, or automatic development. Include these rows in search.
+- Missing family: visible static row with the family name in the danger color and no extra status label; no broken link, fake preview, or automatic development. Include these rows in search.
 - Partial family: keep existing examples usable; list unsupported reference variations as `Missing variation` within the family page. A smaller size alone does not establish equivalence to a missing component family.
 - Show a category summary such as `3 missing` when it contains unavailable families. Compute this from the registry, not handwritten totals. An entirely unavailable category stays visible.
 - Keep labels compact and secondary, with an accessible text meaning; do not use error-red treatment. On narrow sidebars wrap the status below the family name; retain a minimum 36px row without clipping.
@@ -65,7 +65,7 @@ The examples below describe reference coverage, not claims that our library alre
 - Exact completed navigation contains five Actions families and thirteen Displaying Data families in the order above. Do not invent extra subgroups such as Buttons or Indicators.
 - Form Actions moves to the Form documentation group. Inline Confirmation remains documented under a UI Blocks composition entry. Neither occupies an extra Actions family slot.
 - Existing URLs for text-action, table, progress-ring and tag continue resolving. Preferred new labels are Link Button, Data Table, Progress Circle and Tag. Add a dedicated status-badge route. Keep old routes as aliases when canonical IDs change.
-- Missing families remain visible with a `Missing component` label and become future backlog entries. Structural completeness is independent of future functional parity.
+- Missing families remain visible in the danger color and become future backlog entries. Structural completeness is independent of future functional parity.
 - Family organization does not require renaming public component exports or moving Basics into Components. Keep dependency direction Basics → Components → UI blocks → Screens.
 
 ## Implementation tasks
@@ -112,7 +112,7 @@ Files: `src/atomic/screens/docs/componentContent.tsx`, `ComponentDocs.tsx`; crea
 Files: `docsNavigation.ts`, shared documentation navigation, family page content and registry tests.
 
 - [ ] Classify every family using current public exports and verified behavior: available, partial or missing.
-- [ ] Render missing families as visible static rows labeled `Missing component`; retain exact reference ordering.
+- [ ] Render missing families as visible static rows in the danger color with no extra label; retain exact reference ordering.
 - [ ] Render unsupported variations on partial family pages as `Missing variation`, alongside working existing examples.
 - [ ] Add derived missing-family counts to categories and preserve entirely unavailable categories in the tree.
 - [ ] Generate a backlog document from the same registry. Verify missing entries remain searchable and have no dead links or fake examples.

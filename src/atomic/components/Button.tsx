@@ -6,7 +6,7 @@ type Content = { iconOnly: true; icon: IconName; 'aria-label': string; children?
 export type ButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & Content & {
   ref?: Ref<HTMLButtonElement>
   variant?: 'primary' | 'secondary' | 'danger' | 'quiet'
-  size?: 'default' | 'compact'
+  size?: 'default' | 'compact' | 'medium' | 'small' | 'xsmall' | 'xxsmall'
   iconPosition?: 'start' | 'end'
   busy?: boolean
 }

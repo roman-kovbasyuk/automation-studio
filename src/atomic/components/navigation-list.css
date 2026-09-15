@@ -4,5 +4,7 @@
 .c-navigation-row__static { display:flex; align-items:center; gap:var(--a-space-2); min-width:0; min-height:36px; padding:var(--a-space-2); color:var(--a-color-secondary); }
 .c-navigation-row__static > span:first-of-type, .c-navigation-row > a > span:first-of-type { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .c-navigation-row--missing { opacity: .72; }
+.c-navigation-row--unavailable { opacity: 1; }
+.c-navigation-row--unavailable .c-navigation-row__static > span:first-of-type { color: var(--a-color-danger); font-weight: var(--a-type-h6-weight); }
 .c-navigation-row > a > span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .c-navigation-row > a[aria-current=page] { font-weight:600; box-shadow:inset 0 0 0 var(--a-border-width) var(--a-color-ink); }

@@ -14,9 +14,9 @@ User clarification, 2026-09-15: implement organization using existing components
 
 - Keep every reference category and family visible, including completely missing groups.
 - Available family: normal navigable link to real documentation using existing exports.
-- Missing family: visible static row with a neutral `Missing component` label; no broken link, fake preview, or automatic development. Include these rows in search.
+- Missing family: visible static row with the family name in the danger color and no extra status label; no broken link, fake preview, or automatic development. Include these rows in search.
 - Partial family: keep existing examples usable; list unsupported reference variations as `Missing variation` within the family page. A smaller size alone does not establish equivalence to a missing component family.
-- Show a category summary such as `3 missing` when it contains unavailable families. Compute this from the registry, not handwritten totals. An entirely unavailable category stays visible.
+- Keep category headers clean and unchanged. Mark unavailable family names in the danger color without adding a visible `Missing component` label. An entirely unavailable category stays visible.
 - Keep labels compact and secondary, with an accessible text meaning; do not use error-red treatment. On narrow sidebars wrap the status below the family name; retain a minimum 36px row without clipping.
 - Registry status is `available | partial | missing`; only real destinations have `href`. Store actual export mappings and unsupported features explicitly.
 - Produce a future-development backlog from missing entries (family, reference link, missing capability, dependencies). Recording an item does not start implementation or automation.
@@ -184,7 +184,7 @@ Use static group headings as in the reference and the user's earlier request. Re
 3. **Wire every surface:** BasicsDocs, ComponentDocs, UIBlockDocs and DocsIndex use that registry. Remove duplicate private group interactions. Fix Getting Started / Installation to a real shared destination; it currently points to removed Color installation content on some pages.
 4. **Consolidate existing families:** Input, Select, Slider, File Upload; split Tabs/Segmented Control and Tag/Status Badge; move Breadcrumb to Layout. Route aliases include text-field/search-field/password-field/number-stepper → Input sections, dropdowns → Select, range-slider → Slider, file-dropzone/file-list/attachment-area → File Upload, toggle → Switch, breadcrumbs → Breadcrumb, menu → Dropdown, dialog → Modal. Preserve query and section navigation on back/forward.
 5. **Family content:** extend ComponentDocs to ordered example arrays. Example titles, source, preview and table-of-contents links must refer to the same example record. Show our actual public prop names even where the documentation family name matches AlignUI.
-6. **Visible gaps and backlog:** show every missing family with `Missing component`, every unsupported variation with `Missing variation`, and derived missing counts on categories. Generate a future-development inventory; do not build new components or variants in this phase.
+6. **Visible gaps and backlog:** keep every missing family visible with its name in the danger color and no extra status label. Generate a future-development inventory; do not build new component families in this phase.
 7. **Verification:** compare registry order against all 49 reference entries; audit every existing public export for a documentation destination; test old routes, search-by-variation, missing-route handling and single active-page selection. Run typecheck, atomic tests and boundary/build checks. Inspect one desktop/mobile batch for group rhythm, measured 36px rows, active rail, scroll, keyboard focus and long names.
 
 ## Acceptance boundaries
