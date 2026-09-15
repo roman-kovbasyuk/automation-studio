@@ -2,10 +2,10 @@ import { AtomsRoot, Grid, Heading, Icon, Inline, Stack, Surface, Text, tokens } 
 
 export default function Color() {
   const groups = ['earthy', 'gray', 'blue', 'static'] as const
-  return <AtomsRoot><Stack gap={4}>{groups.map(group => <Stack gap={2} key={group}>
+  return <AtomsRoot><Stack gap={0}>{groups.map((group, index) => <Stack gap={2} key={group} className={index ? 'docs-color-group docs-color-group--separated' : 'docs-color-group'}>
     <Heading level={3} variant="h6">{group}</Heading>
     <Grid minItemWidth="8rem" gap={4}>{Object.entries(tokens.color[group]).map(([shade, value]) => <Stack gap={2} key={shade}>
-      <Surface padding={0} radius="small" style={{ background: value, height: 'var(--a-space-16)', border: '1px solid var(--a-color-ink)' }} />
+      <Surface padding={0} radius="small" className="docs-color-cell" style={{ background: value, height: 'var(--a-space-16)', border: '1px solid var(--a-color-ink)' }} />
       <Text variant="h7">{shade}</Text><Text variant="small" tone="secondary">{value}</Text>
     </Stack>)}</Grid>
   </Stack>)}</Stack></AtomsRoot>

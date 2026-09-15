@@ -17,3 +17,6 @@
 .docs-typography-preview__sample { padding-block: var(--a-space-6); border-bottom: var(--a-border-width) solid var(--a-color-secondary); }
 .docs-typography-preview__sample:first-child { padding-top: 0; }
 .docs-typography-preview__sample:last-child { padding-bottom: 0; border-bottom: 0; }
+.docs-color-group--separated { border-top: var(--a-border-width) solid var(--a-color-secondary); padding-top: var(--a-space-4); }
+.docs-color-cell { transition: transform var(--a-motion-fast) var(--a-motion-ease), box-shadow var(--a-motion-fast) var(--a-motion-ease); }
+.docs-color-cell:hover, .docs-color-cell:focus-visible { transform: translateY(-2px); box-shadow: var(--a-shadow-small); outline: none; }
