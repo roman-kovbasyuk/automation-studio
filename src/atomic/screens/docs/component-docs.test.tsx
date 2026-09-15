@@ -13,7 +13,7 @@ test('component routes render real grouped pages and references', async () => {
   render(<ComponentDocs />)
   expect(screen.getByRole('heading', { name: 'Button', level: 1 })).toBeVisible()
   expect(screen.getByRole('table', { name: 'Button reference' })).toBeVisible()
-  await user.click(within(screen.getByRole('complementary', { name: 'Documentation' })).getByRole('link', { name: 'Select / Combobox / MultiSelect' }))
+  await user.click(within(screen.getByRole('complementary', { name: 'Documentation' })).getByRole('link', { name: 'Select' }))
   expect(screen.getByRole('heading', { name: 'Select / Combobox / MultiSelect', level: 1 })).toBeVisible()
   expect(screen.getByText('Three related controls for choosing one option, searching options or choosing several.')).toBeVisible()
 })

@@ -49,10 +49,10 @@ export function ComponentDocs() {
   const groups = [
     { title: 'Getting Started', items: [{ id: 'intro', label: 'Introduction', href: '/page-23.html' }, { id: 'install', label: 'Installation', href: '/page-20.html?basic=color#installation' }] },
     { title: 'Basics', items: basicsPages.map(item => ({ id: item.id, label: item.title, href: `/page-20.html?basic=${item.id}` })) },
-    ...componentGroups.map(group => ({ title: group.title, items: group.items.map(([label, id]) => ({ id, label, href: `/page-21.html?component=${id}`, current: id === page.id })) })),
+    ...componentGroups.map(group => ({ title: `${group.title}${group.items.some(item => item.availability === 'missing') ? ` · ${group.items.filter(item => item.availability === 'missing').length} missing` : ''}`, items: group.items.map(item => ({ id: item.id, label: item.label, href: item.href, current: item.id === page.id, status: item.availability === 'missing' ? 'Missing component' : item.availability === 'partial' ? 'Partial' : undefined })) })),
     { title: 'UI Blocks', items: [{ id: 'sidebar', label: 'Sidebar panel', href: '/page-22.html?block=sidebar' }, { id: 'prompt', label: 'AI prompt input', href: '/page-22.html?block=prompt-input' }, { id: 'example', label: 'Code example', href: '/page-22.html?block=code-example' }] },
   ].map(group => ({ ...group, items: group.items.filter(item => item.label.toLowerCase().includes(normalized) || group.title.toLowerCase().includes(normalized)) })).filter(group => group.items.length)
-  const navigation = (mobile = false) => <Stack gap={6} onClick={navigate}>
+  const navigation = (mobile = false) => <Stack gap={8} onClick={navigate}>
     {mobile && <SearchField autoFocus label="Search documentation" value={query} onChange={setQuery} onKeyDown={event => { if (event.key === 'Escape') setQuery('') }} />}
     {groups.map(group => <Stack gap={1} key={group.title}><Button variant="quiet" icon={collapsed[group.title] && !normalized ? 'chevronRight' : 'chevronDown'} iconPosition="end" size="compact" aria-expanded={Boolean(normalized) || !collapsed[group.title]} onClick={() => setCollapsed(old => ({ ...old, [group.title]: !old[group.title] }))}>{group.title}</Button>{(!collapsed[group.title] || normalized) && <NavigationList label={`${mobile ? 'Mobile ' : ''}${group.title}`} items={group.items} />}</Stack>)}
     {!groups.length && <Text role="status" variant="small">No matching pages. Try another search.</Text>}

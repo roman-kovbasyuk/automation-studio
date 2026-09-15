@@ -13,6 +13,6 @@ test('documentation index links every published page family', () => {
   const components = links.filter(link => link.getAttribute('href')?.startsWith('/page-21.html?component='))
   const blocks = links.filter(link => link.getAttribute('href')?.startsWith('/page-22.html?block='))
   expect(basics).toHaveLength(basicsPages.length)
-  expect(components.length).toBe(componentGroups.reduce((count, group) => count + group.items.length, 0))
+  expect(components.length).toBe(componentGroups.reduce((count, group) => count + group.items.filter(item => item.href).length, 0))
   expect(blocks).toHaveLength(blockPages.length)
 })

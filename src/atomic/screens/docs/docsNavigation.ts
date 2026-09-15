@@ -1,10 +1,16 @@
-/** Only current library exports; these links remain catalog destinations until phase two. */
-export const componentGroups = [
-  { title:'Actions', items:[['Button','button'],['Text action','text-action'],['Form actions','form-actions'],['Inline confirmation','inline-confirmation']] },
-  { title:'Displaying Data', items:[['Table','table'],['Tag / Status badge','tag'],['Progress bar','progress-bar'],['Progress ring','progress-ring'],['Rating','rating']] },
-  { title:'Feedback', items:[['Alert','alert'],['Toast','toast'],['Tooltip','tooltip'],['Spinner','spinner'],['Skeleton','skeleton'],['Empty state','empty-state']] },
-  { title:'Form', items:[['Form','form'],['Text field','text-field'],['Search field','search-field'],['Password field','password-field'],['Text area','textarea'],['Checkbox','checkbox'],['Radio group','radio-group'],['Toggle','toggle'],['Select / Combobox / MultiSelect','dropdowns'],['Date picker','date-picker'],['Number stepper','number-stepper'],['Slider','slider'],['Range slider','range-slider'],['File dropzone','file-dropzone'],['File list','file-list'],['Attachment area','attachment-area'],['Inline text','inline-text']] },
-  { title:'Layout', items:[['Panel','panel'],['Tabs / Segmented control','tabs']] },
-  { title:'Navigation', items:[['Breadcrumbs','breadcrumbs'],['Pagination','pagination'],['Navigation list','navigation-list'],['Workflow steps','workflow-steps']] },
-  { title:'Overlays', items:[['Menu','menu'],['Dialog','dialog'],['Drawer','drawer'],['Popover','popover']] },
-] as const
+export type ComponentAvailability = 'available' | 'partial' | 'missing'
+export type ComponentFamily = { label: string; id: string; availability: ComponentAvailability; href?: string; aliases?: readonly string[] }
+export type ComponentGroup = { title: string; items: readonly ComponentFamily[] }
+const family = (label: string, id: string, availability: ComponentAvailability, aliases: readonly string[] = []): ComponentFamily => ({ label, id, availability, aliases, ...(availability === 'missing' ? {} : { href: `/page-21.html?component=${id}` }) })
+/** AlignUI's component taxonomy, mapped to our existing exports where they exist. */
+export const componentGroups: readonly ComponentGroup[] = [
+  { title: 'Actions', items: [family('Button', 'button', 'available'), family('Button Group', 'button-group', 'missing'), family('Compact Button', 'compact-button', 'missing'), family('Fancy Button', 'fancy-button', 'missing'), family('Link Button', 'text-action', 'available', ['link-button'])] },
+  { title: 'Displaying Data', items: [family('Avatar', 'avatar', 'missing'), family('Avatar Group', 'avatar-group', 'missing'), family('Avatar Group Compact', 'avatar-group-compact', 'missing'), family('Badge', 'badge', 'missing'), family('Banner', 'banner', 'missing'), family('Data Table', 'table', 'available', ['data-table']), family('Divider', 'divider', 'missing'), family('Kbd', 'kbd', 'missing'), family('Progress Bar', 'progress-bar', 'available'), family('Progress Circle', 'progress-ring', 'available', ['progress-circle']), family('Rating', 'rating', 'available'), family('Status Badge', 'status-badge', 'missing'), family('Tag', 'tag', 'available')] },
+  { title: 'Feedback', items: [family('Alert', 'alert', 'available'), family('Notification', 'notification', 'missing'), family('Toast', 'toast', 'available'), family('Tooltip', 'tooltip', 'available')] },
+  { title: 'Form', items: [family('Checkbox', 'checkbox', 'available'), family('Color Picker', 'color-picker', 'missing'), family('Datepicker', 'date-picker', 'partial', ['datepicker']), family('Digit Input', 'digit-input', 'missing'), family('File Upload', 'file-dropzone', 'partial', ['file-upload', 'file-list', 'attachment-area']), family('Hint', 'hint', 'missing'), family('Input', 'text-field', 'partial', ['search-field', 'password-field', 'number-stepper']), family('Label', 'label', 'missing'), family('Radio', 'radio-group', 'available'), family('Select', 'dropdowns', 'partial', ['select', 'combobox', 'multi-select']), family('Slider', 'slider', 'partial', ['range-slider']), family('Switch', 'toggle', 'available', ['switch']), family('Textarea', 'textarea', 'available')] },
+  { title: 'Layout', items: [family('Accordion', 'accordion', 'missing'), family('Breadcrumb', 'breadcrumbs', 'available', ['breadcrumb']), family('Segmented Control', 'segmented-control', 'missing'), family('Tab Menu Horizontal', 'tabs', 'partial', ['tab-menu-horizontal']), family('Tab Menu Vertical', 'tab-menu-vertical', 'missing')] },
+  { title: 'Navigation', items: [family('Dot Stepper', 'dot-stepper', 'missing'), family('Horizontal Stepper', 'workflow-steps', 'partial', ['horizontal-stepper']), family('Pagination', 'pagination', 'available'), family('Vertical Stepper', 'vertical-stepper', 'missing', ['vertical-stepper'])] },
+  { title: 'Overlays', items: [family('Command Menu', 'command-menu', 'missing'), family('Drawer', 'drawer', 'available'), family('Dropdown', 'menu', 'available', ['dropdown']), family('Modal', 'dialog', 'available', ['modal']), family('Popover', 'popover', 'available')] },
+]
+export const componentFamilyCount = componentGroups.reduce((count, group) => count + group.items.length, 0)
+export const missingComponentCount = (group: ComponentGroup) => group.items.filter(item => item.availability === 'missing').length
