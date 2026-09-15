@@ -3,6 +3,7 @@
 .c-segmented__indicator { position: absolute; z-index: -1; inset-block: var(--a-space-1); inset-inline-start: var(--a-space-1); width: calc((100% - var(--a-space-2)) / var(--segment-count)); border-radius: var(--a-radius-pill); background: var(--a-color-ink); transform: translateX(calc(var(--segment-index) * 100%)); transition: transform var(--a-motion-disclosure) var(--a-motion-out); pointer-events: none; }
 .c-segmented:dir(rtl) .c-segmented__indicator { transform: translateX(calc(var(--segment-index) * -100%)); }
 .c-segmented__option { appearance: none; min-width: 0; min-height: var(--a-size-compact); padding: var(--a-space-2) var(--a-space-4); border: 0; border-radius: var(--a-radius-pill); background: transparent; color: var(--a-color-ink); cursor: pointer; font: inherit; white-space: nowrap; }
+.c-segmented[data-size='compact'] .c-segmented__option { min-height: calc(var(--a-size-compact) - var(--a-space-2) - (var(--a-border-width) * 2)); padding-block: var(--a-space-1); }
 .c-segmented__option[aria-checked='true'] { color: var(--a-color-surface); }
 .c-segmented__option:disabled { opacity: var(--a-state-disabled); cursor: not-allowed; }
 .c-segmented:not([aria-disabled='true']):hover { transform: translate(var(--a-motion-lift), var(--a-motion-lift)); box-shadow: var(--a-shadow-small); }

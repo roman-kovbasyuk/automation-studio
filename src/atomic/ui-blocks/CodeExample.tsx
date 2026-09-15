@@ -51,7 +51,7 @@ export function CodeExample({ title, description, filename, source, preview, con
     <ScrollArea label={`${title} source`} maxHeight="none"><pre className="b-code-example__source"><code>{highlightedSource(source)}</code></pre></ScrollArea>
   </Stack>
   const viewItems = [{ id: 'preview', label: 'Preview', content: null }, { id: 'code', label: 'Code', content: null }] as const
-  const viewTabs = preview != null ? <Tabs listOnly className="b-code-example__view-tabs" label={`${title} view`} value={view} onChange={setView} items={viewItems} /> : null
+  const viewTabs = preview != null ? <Tabs listOnly size="compact" className="b-code-example__view-tabs" label={`${title} view`} value={view} onChange={setView} items={viewItems} /> : null
   const content = preview != null ? <div role="tabpanel" aria-label={`${title} ${view}`} className="b-code-example__content">{view === 'preview' ? <div className="b-code-example__preview">{preview}</div> : code}</div> : code
   return <Panel title={title} description={description} headingLevel={headingLevel} variant="split" density="compact" className={`b-code-example ${className}`.trim()} filters={preview != null ? <div className="b-code-example__header-controls">{viewTabs}</div> : controls} actions={<Button size="compact" icon="copy" aria-label={`Copy ${title} code`} onClick={copy}>Copy</Button>}>
     {content}

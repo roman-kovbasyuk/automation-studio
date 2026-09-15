@@ -40,6 +40,13 @@ test('Tabs arrow keys select matching content and skip disabled tabs', async () 
   screen.getByRole('tab', { name: 'Brief' }).focus(); await user.keyboard('{ArrowRight}')
   expect(screen.getByRole('tab', { name: 'Assets' })).toHaveAttribute('aria-selected', 'true'); expect(screen.getByRole('tabpanel')).toHaveTextContent('Assets content')
 })
+test('Tabs exposes a compact 44px size variant', () => {
+  const items = [{ id: 'brief', label: 'Brief', content: 'Brief content' }]
+  const view = render(<C.Tabs label="Campaign views" items={items} />)
+  expect(screen.getByRole('tablist')).toHaveAttribute('data-size', 'default')
+  view.rerender(<C.Tabs label="Campaign views" items={items} size="compact" />)
+  expect(screen.getByRole('tablist')).toHaveAttribute('data-size', 'compact')
+})
 test('Combobox filters, keyboard selects, and emits an option value', async () => {
   const user = userEvent.setup(), change = vi.fn()
   render(<C.Combobox label="Market" value="" onChange={change} options={[{ value: 'no', label: 'Norway' }, { value: 'se', label: 'Sweden' }]} />)

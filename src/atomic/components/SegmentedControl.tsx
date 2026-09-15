@@ -6,6 +6,7 @@ export type SegmentOption = { value: string; label: string; disabled?: boolean }
 export type SegmentedControlProps = Omit<HTMLAttributes<HTMLDivElement>, 'onChange' | 'defaultValue'> & {
   label: string
   options: readonly SegmentOption[]
+  size?: 'default' | 'compact'
   value?: string
   defaultValue?: string
   onChange?: (value: string) => void
@@ -13,7 +14,7 @@ export type SegmentedControlProps = Omit<HTMLAttributes<HTMLDivElement>, 'onChan
   disabled?: boolean
 }
 
-export function SegmentedControl({ label, options, value, defaultValue, onChange, name, disabled = false, className = '', style, ...props }: SegmentedControlProps) {
+export function SegmentedControl({ label, options, size = 'default', value, defaultValue, onChange, name, disabled = false, className = '', style, ...props }: SegmentedControlProps) {
   const [internal, setInternal] = useState(defaultValue ?? options.find(option => !option.disabled)?.value)
   const selected = value === undefined ? internal : value
   const index = options.findIndex(option => option.value === selected)
@@ -38,7 +39,7 @@ export function SegmentedControl({ label, options, value, defaultValue, onChange
     buttons.current[next]?.focus()
     buttons.current[next]?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
   }
-  return <ScrollArea label={`${label} options`} maxHeight="none" className="c-segmented-scroll"><div {...props} role="radiogroup" aria-label={label} aria-disabled={disabled || undefined} className={`c-segmented ${className}`.trim()} style={{ '--segment-count': Math.max(1, options.length), '--segment-index': index, ...style } as CSSProperties}>
+  return <ScrollArea label={`${label} options`} maxHeight="none" className="c-segmented-scroll"><div {...props} role="radiogroup" aria-label={label} aria-disabled={disabled || undefined} data-size={size} className={`c-segmented ${className}`.trim()} style={{ '--segment-count': Math.max(1, options.length), '--segment-index': index, ...style } as CSSProperties}>
     {index >= 0 && <span className="c-segmented__indicator" aria-hidden="true" />}
     {options.map((option, i) => <button key={option.value} ref={element => { buttons.current[i] = element }} type="button" role="radio" aria-checked={i === index} disabled={disabled || option.disabled} tabIndex={!disabled && i === entry ? 0 : -1} className="c-segmented__option" onClick={() => choose(i)} onKeyDown={event => navigate(event, i)}>
       <Text as="span" variant="h6" tone="inherit">{option.label}</Text>

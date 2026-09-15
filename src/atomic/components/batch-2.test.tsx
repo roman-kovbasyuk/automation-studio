@@ -93,3 +93,8 @@ test('SegmentedControl respects controlled value and disabled/empty groups', asy
   view.rerender(<components.SegmentedControl label="Density" options={[]} />)
   expect(screen.queryAllByRole('radio')).toHaveLength(0)
 })
+
+test('SegmentedControl exposes a compact 44px size variant', () => {
+  render(<components.SegmentedControl label="Density" options={options} size="compact" />)
+  expect(screen.getByRole('radiogroup', { name: 'Density' })).toHaveAttribute('data-size', 'compact')
+})
