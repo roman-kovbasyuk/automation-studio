@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
-import { appendFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, isAbsolute, join } from 'node:path'
 import { createRelease } from './release.mjs'
@@ -16,7 +16,7 @@ async function fixture() {
   return { root, candidateDir, dataDir }
 }
 
-function fakeCommands({ tamperDuringVerification = false, failPack = false } = {}) {
+function fakeCommands({ tamperDuringVerification = false, failPack = false, packName = 'brutalist-design-system', packVersion } = {}) {
   const calls = []
   let version
   const run = async (file, args, options = {}) => {
@@ -31,7 +31,7 @@ function fakeCommands({ tamperDuringVerification = false, failPack = false } = {
       const destination = args[args.indexOf('--pack-destination') + 1]
       const filename = `brutalist-design-system-${version}.tgz`
       await writeFile(join(destination, filename), `archive:${version}`)
-      return { stdout: JSON.stringify([{ filename }]), stderr: '' }
+      return { stdout: JSON.stringify([{ filename, name: packName, version: packVersion ?? version }]), stderr: '' }
     }
     if (file === process.execPath && basename(args[0]) === 'verify-consumer.mjs') {
       call.tarballBytes = await readFile(args[2])
@@ -77,6 +77,35 @@ test('createRelease rejects a tarball changed during verification', async () => 
   const { root, candidateDir, dataDir } = await fixture()
   try {
     await assert.rejects(createRelease({ candidateDir, dataDir, store: openStore(dataDir), sourceCommit: 'abc123', summary: 'Change', run: fakeCommands({ tamperDuringVerification: true }).run }), /integrity|checksum|changed/i)
+  } finally {
+    await rm(root, { recursive: true, force: true })
+  }
+})
+
+test('createRelease rejects npm pack metadata for another package or version', async () => {
+  for (const options of [{ packName: 'other-package' }, { packVersion: '0.1.0-change.999' }]) {
+    const { root, candidateDir, dataDir } = await fixture()
+    try {
+      await assert.rejects(
+        createRelease({ candidateDir, dataDir, store: openStore(dataDir), sourceCommit: 'abc123', summary: 'Change', run: fakeCommands(options).run }),
+        /package name|package version/i,
+      )
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  }
+})
+
+test('recovery publishes a manifest after interruption left only the artifact', async () => {
+  const { root, candidateDir, dataDir } = await fixture()
+  const store = { reserveVersion: async () => '0.1.0-change.8' }
+  try {
+    const first = await createRelease({ candidateDir, dataDir, store, sourceCommit: 'abc123', summary: 'Change', run: fakeCommands().run })
+    const artifactBefore = await readFile(first.packagePath)
+    await unlink(first.manifestPath)
+    const recovered = await createRelease({ candidateDir, dataDir, store, sourceCommit: 'abc123', summary: 'Change', run: fakeCommands().run })
+    assert.deepEqual(JSON.parse(await readFile(recovered.manifestPath, 'utf8')), recovered)
+    assert.deepEqual(await readFile(recovered.packagePath), artifactBefore)
   } finally {
     await rm(root, { recursive: true, force: true })
   }

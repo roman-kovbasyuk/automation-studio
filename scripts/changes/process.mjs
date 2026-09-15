@@ -11,7 +11,11 @@ function terminateTree(child, signal) {
   if (!child.pid) return
   if (process.platform !== 'win32') {
     try { process.kill(-child.pid, signal); return } catch (error) { if (error.code !== 'ESRCH') child.kill(signal) }
-  } else child.kill(signal)
+  } else {
+    const killer = spawn('taskkill', ['/PID', String(child.pid), '/T', '/F'], { windowsHide: true, stdio: 'ignore' })
+    killer.on('error', () => child.kill(signal))
+    killer.on('close', (code) => { if (code !== 0) child.kill(signal) })
+  }
 }
 
 export function runCommand(file, args = [], { cwd, env, input, timeoutMs } = {}) {

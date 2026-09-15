@@ -1,19 +1,23 @@
 import { COPYFILE_EXCL } from 'node:constants'
-import { createHash } from 'node:crypto'
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { createHash, randomUUID } from 'node:crypto'
+import { copyFile, link, mkdir, mkdtemp, readFile, rm, unlink, writeFile } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 import { runCommand } from './process.mjs'
 
 const RELEASE_VERSION = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/
+const PACKAGE_NAME = 'brutalist-design-system'
 
 async function integrity(path) {
   return `sha512-${createHash('sha512').update(await readFile(path)).digest('base64')}`
 }
 
-function packedFilename(stdout) {
+function packedFilename(stdout, expectedVersion) {
   let value
   try { value = JSON.parse(stdout) } catch { throw new Error('npm pack returned invalid JSON') }
-  const filename = value?.[0]?.filename
+  const packed = value?.[0]
+  if (packed?.name !== PACKAGE_NAME) throw new Error(`npm pack returned unexpected package name: ${packed?.name ?? 'missing'}`)
+  if (packed?.version !== expectedVersion) throw new Error(`npm pack returned unexpected package version: ${packed?.version ?? 'missing'}`)
+  const filename = packed.filename
   if (typeof filename !== 'string' || basename(filename) !== filename || !filename.endsWith('.tgz')) throw new Error('npm pack did not return a safe tarball filename')
   return filename
 }
@@ -29,12 +33,18 @@ async function publishArtifact(sourcePath, destinationPath, expectedIntegrity) {
 }
 
 async function publishManifest(manifestPath, release) {
-  try { await writeFile(manifestPath, `${JSON.stringify(release, null, 2)}\n`, { flag: 'wx', mode: 0o444 }) }
-  catch (error) {
-    if (error.code !== 'EEXIST') throw error
-    let existing
-    try { existing = JSON.parse(await readFile(manifestPath, 'utf8')) } catch { throw new Error('Existing release manifest is invalid') }
-    if (JSON.stringify(existing) !== JSON.stringify(release)) throw new Error('Existing release manifest conflicts with the staged release')
+  const temporaryPath = `${manifestPath}.${process.pid}.${randomUUID()}.tmp`
+  try {
+    await writeFile(temporaryPath, `${JSON.stringify(release, null, 2)}\n`, { flag: 'wx', mode: 0o444 })
+    try { await link(temporaryPath, manifestPath) }
+    catch (error) {
+      if (error.code !== 'EEXIST') throw error
+      let existing
+      try { existing = JSON.parse(await readFile(manifestPath, 'utf8')) } catch { throw new Error('Existing release manifest is invalid') }
+      if (JSON.stringify(existing) !== JSON.stringify(release)) throw new Error('Existing release manifest conflicts with the staged release')
+    }
+  } finally {
+    await unlink(temporaryPath).catch((error) => { if (error.code !== 'ENOENT') throw error })
   }
 }
 
@@ -62,7 +72,7 @@ export async function createRelease({ candidateDir, dataDir, store, sourceCommit
       env: process.env,
       timeoutMs: 5 * 60 * 1000,
     })
-    const filename = packedFilename(packed.stdout)
+    const filename = packedFilename(packed.stdout, version)
     const stagedPath = resolve(stagingDir, filename)
     if (dirname(stagedPath) !== stagingDir) throw new Error('npm pack returned a path outside the staging directory')
     const stagedIntegrity = await integrity(stagedPath)
