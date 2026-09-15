@@ -14,3 +14,20 @@ test('validates config and rejects design system checkout', () => {
   assert.deepEqual(validateConfig({ appPath: '/tmp/app', checkScripts: ['test'] }), { appPath: '/tmp/app', checkScripts: ['test'], masterBranch: 'main', agentExecutable: 'codex', agentTimeoutMs: 1800000 })
   assert.throws(() => validateConfig({ appPath: '/tmp/design-system', checkScripts: ['test'] }, { designSystemPath: '/tmp/design-system' }), /design-system/)
 })
+
+test('projects adoption independently from package readiness', async () => {
+  const { publicResult } = await import('./protocol.mjs')
+  assert.deepEqual(publicResult({
+    input: { requestId: 'r1' },
+    status: 'ready',
+    version: '0.1.0-change.1',
+    packagePath: '/tmp/package.tgz',
+    adoption: { status: 'failed', error: 'APP_CHECK_FAILED: build failed' },
+  }), {
+    requestId: 'r1',
+    status: 'ready',
+    version: '0.1.0-change.1',
+    packagePath: '/tmp/package.tgz',
+    adoption: { status: 'failed', error: 'APP_CHECK_FAILED: build failed' },
+  })
+})

@@ -349,6 +349,56 @@ test('a failed ready-result write is recovered after promotion without reimpleme
   }
 })
 
+test('records successful app adoption separately from package readiness', async () => {
+  const fixture = await fakeFixture()
+  const git = fakeGit()
+  let adoptions = 0
+  try {
+    const result = await processRequest({
+      ...fixture,
+      requestId: 'r1',
+      run: git.run,
+      implement: async ({ candidateDir }) => {
+        git.changed()
+        await writeFile(join(candidateDir, 'src', 'atomic', 'Button.js'), 'export const busy = true\n')
+        return { outcome: 'implemented', summary: 'Button supports a busy label.', error: null }
+      },
+      release: successfulRelease,
+      adopt: async ({ requestId, release }) => {
+        adoptions += 1
+        assert.equal(requestId, 'r1')
+        assert.equal(release.version, '0.1.0-change.1')
+        return { status: 'installed' }
+      },
+    })
+    assert.equal(result.status, 'ready')
+    assert.deepEqual(result.adoption, { status: 'installed' })
+    assert.equal(adoptions, 1)
+  } finally { await rm(fixture.root, { recursive: true, force: true }) }
+})
+
+test('keeps a verified package ready when app adoption fails', async () => {
+  const fixture = await fakeFixture()
+  const git = fakeGit()
+  try {
+    const result = await processRequest({
+      ...fixture,
+      requestId: 'r1',
+      run: git.run,
+      implement: async ({ candidateDir }) => {
+        git.changed()
+        await writeFile(join(candidateDir, 'src', 'atomic', 'Button.js'), 'export const busy = true\n')
+        return { outcome: 'implemented', summary: 'Button supports a busy label.', error: null }
+      },
+      release: successfulRelease,
+      adopt: async () => ({ status: 'failed', error: 'APP_CHECK_FAILED: build failed' }),
+    })
+    assert.equal(result.status, 'ready')
+    assert.equal(result.version, '0.1.0-change.1')
+    assert.deepEqual(result.adoption, { status: 'failed', error: 'APP_CHECK_FAILED: build failed' })
+  } finally { await rm(fixture.root, { recursive: true, force: true }) }
+})
+
 test('drainQueue claims queued requests under the worker lock in creation order', async () => {
   const fixture = await fakeFixture()
   let lockCalls = 0
@@ -375,6 +425,28 @@ test('drainQueue claims queued requests under the worker lock in creation order'
   } finally {
     await rm(fixture.root, { recursive: true, force: true })
   }
+})
+
+test('drainQueue resumes a ready package whose app adoption is still pending', async () => {
+  const fixture = await fakeFixture()
+  try {
+    await fixture.store.update('r1', {
+      status: 'ready',
+      release: await successfulRelease({ dataDir: fixture.dataDir, sourceCommit: 'candidate-commit', summary: 'Button changed.' }),
+      candidateCommit: 'candidate-commit',
+      adoption: { status: 'pending' },
+    })
+    const seen = []
+    await drainQueue({
+      ...fixture,
+      process: async ({ requestId }) => {
+        seen.push(requestId)
+        return fixture.store.update(requestId, { status: 'ready', adoption: { status: 'installed' } })
+      },
+    })
+    assert.deepEqual(seen, ['r1'])
+    assert.deepEqual((await fixture.store.get('r1')).adoption, { status: 'installed' })
+  } finally { await rm(fixture.root, { recursive: true, force: true }) }
 })
 
 test('drainQueue recovers an unfinished journal before claiming new work', async () => {

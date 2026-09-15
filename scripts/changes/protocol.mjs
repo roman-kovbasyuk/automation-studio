@@ -51,5 +51,6 @@ export function publicResult(record) {
   if (record.packagePath) result.packagePath = record.packagePath
   if (record.summary) result.summary = record.summary
   if (record.error) result.error = record.error
+  if (record.adoption) result.adoption = record.adoption
   return result
 }

@@ -7,6 +7,7 @@ import { implementChange } from './agent.mjs'
 import { runCommand } from './process.mjs'
 import { createRelease } from './release.mjs'
 import { openStore } from './store.mjs'
+import { updateApplication } from './app-update.mjs'
 
 const PHASES = new Set(['queued', 'implementing', 'verifying', 'packaged', 'promoting', 'released'])
 const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/
@@ -178,7 +179,7 @@ async function finishReleased(context) {
   const mainHead = await git(context.run, context.repositoryDir, ['rev-parse', 'HEAD'])
   if (mainHead !== candidateCommit) throw new Error('Retryable recovery failure: main does not contain the journaled candidate commit')
   if (context.journal.phase !== 'released') await setPhase(context, 'released')
-  const result = await context.store.update(context.requestId, {
+  const ready = await context.store.update(context.requestId, {
     status: 'ready',
     phase: 'released',
     taskId: context.journal.taskId,
@@ -189,8 +190,22 @@ async function finishReleased(context) {
     packagePath: release.packagePath,
     summary: release.summary,
     error: undefined,
+    adoption: context.record.adoption ?? { status: 'pending' },
   })
-  await reportObservatory({ ...context, taskId: context.journal.taskId, status: 'ready', note: `Promoted ${candidateCommit} and verified immutable package ${release.version}.`, run: context.run }).catch(() => {})
+  if (ready.adoption?.status === 'installed' || ready.adoption?.status === 'failed') return ready
+  await reportObservatory({ ...context, taskId: context.journal.taskId, status: 'in progress', note: `Promoted ${candidateCommit} and verified immutable package ${release.version}; installing it in the configured application.`, run: context.run }).catch(() => {})
+  const adoption = await context.adopt({ config: context.config, release, dataDir: context.dataDir, requestId: context.requestId, run: context.run })
+  const result = await context.store.update(context.requestId, { status: 'ready', adoption })
+  const installed = adoption.status === 'installed'
+  await reportObservatory({
+    ...context,
+    taskId: context.journal.taskId,
+    status: installed ? 'ready' : 'needs attention',
+    note: installed
+      ? `Promoted ${candidateCommit}, verified immutable package ${release.version}, and installed it in the configured application.`
+      : `Package ${release.version} remains ready, but application adoption failed; inspect the local result and recovery journal.`,
+    run: context.run,
+  }).catch(() => {})
   return result
 }
 
@@ -273,12 +288,13 @@ export async function processRequest({
   run = runCommand,
   implement = implementChange,
   release = createRelease,
+  adopt = updateApplication,
 }) {
   const repository = resolve(repositoryDir)
   const data = resolve(dataDir)
   const id = ensureRequestId(requestId)
   const record = await privateRecord(data, id)
-  if (record.status !== 'working') return store.get(id)
+  if (record.status === 'failed') return store.get(id)
   const config = await store.readConfig() ?? {}
   const candidateDir = join(data, 'worktrees', id)
   const context = {
@@ -288,6 +304,9 @@ export async function processRequest({
     store,
     run,
     release,
+    adopt,
+    config,
+    record,
     candidateDir,
     masterBranch: config.masterBranch ?? 'main',
     journalFile: journalPath(data, id),
@@ -295,6 +314,11 @@ export async function processRequest({
   }
 
   try {
+    if (record.status === 'ready') {
+      if (!record.release) return store.get(id)
+      context.journal = { ...context.journal, phase: 'released', release: record.release, candidateCommit: record.candidateCommit, taskId: record.taskId }
+      return await finishReleased(context)
+    }
     if (context.journal.phase === 'released') return await finishReleased(context)
     if (context.journal.phase === 'implementing') return await failRequest(context, `Implementation was interrupted and will not be replayed; preserved worktree: ${context.journal.worktreePath ?? candidateDir}`)
 
@@ -460,7 +484,9 @@ async function workingRecords(dataDir) {
   let names
   try { names = await readdir(requestsDir) } catch (error) { if (error.code === 'ENOENT') return []; throw error }
   const records = await Promise.all(names.filter((name) => name.endsWith('.json')).map((name) => readJson(join(requestsDir, name))))
-  return records.filter((record) => record?.status === 'working').sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+  return records.filter((record) => record?.status === 'working'
+    || record?.status === 'ready' && record.release && !['installed', 'failed'].includes(record.adoption?.status))
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
 }
 
 function pidAlive(pid) {
