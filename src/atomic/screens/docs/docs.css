@@ -35,3 +35,5 @@ body { margin: 0; }
   .docs-mobile { display: block; }
   .docs-article { padding: var(--a-space-8) var(--a-space-4) var(--a-space-12); }
 }
+.docs-nav-group-heading { display:flex; align-items:center; justify-content:space-between; padding: var(--a-space-2) 0; cursor:pointer; }
+.docs-nav-group-heading:focus-visible { outline: var(--a-focus-width) solid var(--a-color-accent); outline-offset: var(--a-focus-offset); }

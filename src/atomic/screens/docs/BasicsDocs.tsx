@@ -99,8 +99,8 @@ export function BasicsDocs() {
   ].map(group => ({...group, items:group.items.filter(item => item.label.toLowerCase().includes(normalized) || group.title.toLowerCase().includes(normalized))})).filter(group => group.items.length)
   const navigation = (mobile = false) => <Stack gap={6} onClick={navigate}>
     {mobile && <SearchField autoFocus label="Search documentation" value={query} onChange={setQuery} onKeyDown={event => { if(event.key==='Escape') setQuery('') }} />}
-    {groups.map(group => <Stack gap={1} key={group.title}>
-      <Button variant="quiet" icon={collapsed[group.title] && !normalized ? 'chevronRight':'chevronDown'} iconPosition="end" size="compact" aria-expanded={Boolean(normalized) || !collapsed[group.title]} onClick={() => setCollapsed(old => ({...old,[group.title]:!old[group.title]}))}>{group.title}</Button>
+      {groups.map(group => <Stack gap={1} key={group.title}>
+      <div className="docs-nav-group-heading" role="button" tabIndex={0} aria-expanded={Boolean(normalized) || !collapsed[group.title]} onClick={() => setCollapsed(old => ({...old,[group.title]:!old[group.title]}))} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setCollapsed(old => ({...old,[group.title]:!old[group.title]})) } }}><Text variant="h6">{group.title}</Text><Icon name={collapsed[group.title] && !normalized ? 'chevronRight':'chevronDown'} label="" /></div>
       {(!collapsed[group.title] || normalized) && <NavigationList label={`${mobile?'Mobile ':''}${group.title}`} items={group.items} />}
     </Stack>)}
     {!groups.length && <Text role="status" variant="small">No matching pages. Try another search.</Text>}
