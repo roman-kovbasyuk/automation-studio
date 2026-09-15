@@ -332,9 +332,13 @@ const LOCK_GRAPH_FIELDS = ['dependencies', 'optionalDependencies', 'peerDependen
 function graphEdges(manifest) {
   const optional = new Set(Object.keys(manifest.optionalDependencies ?? {}))
   return [
-    ...Object.keys(manifest.dependencies ?? {}).filter((name) => !optional.has(name)).map((name) => ({ name, optional: false })),
-    ...[...optional].map((name) => ({ name, optional: true })),
-    ...Object.keys(manifest.peerDependencies ?? {}).filter((name) => !optional.has(name)).map((name) => ({ name, optional: false })),
+    ...Object.keys(manifest.dependencies ?? {}).filter((name) => !optional.has(name)).map((name) => ({ name, optional: false, peer: false })),
+    ...[...optional].map((name) => ({ name, optional: true, peer: false })),
+    ...Object.keys(manifest.peerDependencies ?? {}).filter((name) => !optional.has(name)).map((name) => ({
+      name,
+      optional: manifest.peerDependenciesMeta?.[name]?.optional === true,
+      peer: true,
+    })),
   ]
 }
 
@@ -370,7 +374,11 @@ async function releaseDependencyClosure(packages, start, appPath, manifest) {
     closure.add(item.path)
     for (const edge of graphEdges(item.manifest)) {
       const path = resolveLockedDependency(packages, item.path, edge.name)
-      if (!path) throw coded('ADOPTION_FILE_CONFLICT', `package-lock.json is missing ${edge.optional ? 'optional' : 'required'} dependency ${edge.name} from ${item.path}`)
+      if (!path) {
+        const lockPeerOptional = packages[item.path]?.peerDependenciesMeta?.[edge.name]?.optional === true
+        if (edge.peer && edge.optional && lockPeerOptional) continue
+        throw coded('ADOPTION_FILE_CONFLICT', `package-lock.json is missing ${edge.optional ? 'optional' : 'required'} dependency ${edge.name} from ${item.path}`)
+      }
       const state = validation.get(path)
       if (state === 'installed' || (state === 'omittedOptional' && edge.optional)) continue
       let dependency
