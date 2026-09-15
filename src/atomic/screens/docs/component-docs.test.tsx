@@ -1,0 +1,33 @@
+import { render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { expect, test } from 'vitest'
+import { ComponentDocs } from './ComponentDocs'
+import { UIBlockDocs } from './UIBlockDocs'
+import { componentManifest } from '../../catalog/componentManifest'
+import { componentPageMap } from './componentContent'
+import { blockPageMap } from './blockContent'
+
+test('component routes render real grouped pages and references', async () => {
+  window.history.replaceState({}, '', '/page-21.html?component=button#reference')
+  const user = userEvent.setup()
+  render(<ComponentDocs />)
+  expect(screen.getByRole('heading', { name: 'Button', level: 1 })).toBeVisible()
+  expect(screen.getByRole('table', { name: 'Button reference' })).toBeVisible()
+  await user.click(within(screen.getByRole('complementary', { name: 'Documentation' })).getByRole('link', { name: 'Select / Combobox / MultiSelect' }))
+  expect(screen.getByRole('heading', { name: 'Select / Combobox / MultiSelect', level: 1 })).toBeVisible()
+  expect(screen.getByText('Three related controls for choosing one option, searching options or choosing several.')).toBeVisible()
+})
+
+test('every exported component name is represented by a documentation destination', () => {
+  expect(componentManifest.every(entry => componentPageMap.has(entry.id.replace(/^component-/, '')))).toBe(true)
+  expect(componentPageMap.size).toBeGreaterThan(30)
+  expect(blockPageMap.size).toBe(3)
+})
+
+test('UI block routes use the same documentation structure', () => {
+  window.history.replaceState({}, '', '/page-22.html?block=prompt-input#overview')
+  render(<UIBlockDocs />)
+  expect(screen.getByRole('heading', { name: 'AI prompt input', level: 1 })).toBeVisible()
+  expect(screen.getByRole('region', { name: 'AI prompt input overview' })).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Reference', level: 2 })).toBeVisible()
+})

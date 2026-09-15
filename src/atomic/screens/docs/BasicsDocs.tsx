@@ -91,8 +91,8 @@ export function BasicsDocs() {
   const groups = [
     {title:'Getting Started', items:[{id:'intro',label:'Introduction',href:'#overview'},{id:'install',label:'Installation',href:'#installation'}]},
     {title:'Basics', items:basicsPages.map(item => ({id:item.id,label:item.title,href:`/page-20.html?basic=${item.id}`,current:item.id===page.id}))},
-    ...componentGroups.map(group => ({title:group.title,items:group.items.map(([label,id]) => ({id,label,href:`/atomic.html#component-${id}`}))})),
-    {title:'UI Blocks',items:[{id:'sidebar',label:'Sidebar panel',href:'/atomic.html#block-sidebar'},{id:'prompt',label:'AI prompt input',href:'/atomic.html#block-prompt-input'},{id:'example',label:'Code example',href:'/atomic.html#block-code-example'}]},
+    ...componentGroups.map(group => ({title:group.title,items:group.items.map(([label,id]) => ({id,label,href:`/page-21.html?component=${id}`}))})),
+    {title:'UI Blocks',items:[{id:'sidebar',label:'Sidebar panel',href:'/page-22.html?block=sidebar'},{id:'prompt',label:'AI prompt input',href:'/page-22.html?block=prompt-input'},{id:'example',label:'Code example',href:'/page-22.html?block=code-example'}]},
   ].map(group => ({...group, items:group.items.filter(item => item.label.toLowerCase().includes(normalized) || group.title.toLowerCase().includes(normalized))})).filter(group => group.items.length)
   const navigation = (mobile = false) => <Stack gap={6} onClick={navigate}>
     {mobile && <SearchField autoFocus label="Search documentation" value={query} onChange={setQuery} onKeyDown={event => { if(event.key==='Escape') setQuery('') }} />}

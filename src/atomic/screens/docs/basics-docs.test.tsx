@@ -2,7 +2,8 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event'
 import { expect, test } from 'vitest'
 import { BasicsDocs } from './BasicsDocs'
-import { AtomsCatalog } from '../../catalog/AtomsCatalog'
+import { componentPageMap } from './componentContent'
+import { blockPageMap } from './blockContent'
 
 test('direct links select the requested page; history changes update the article', () => {
   window.history.replaceState({}, '', '/page-20.html?basic=typography#reference')
@@ -60,13 +61,15 @@ test('sidebar Installation retains its section destination on a selected Basics 
   await waitFor(() => expect(window.location.hash).toBe('#installation'))
 })
 
-test('every component and block navigation link reaches a real catalog section', () => {
+test('every component and block navigation link reaches a real documentation page', () => {
   window.history.replaceState({}, '', '/page-20.html')
   const docs = render(<BasicsDocs />)
   const links = within(screen.getByRole('complementary', { name:'Documentation' })).getAllByRole('link')
-  const anchors = links.map(link => link.getAttribute('href')!).filter(href => href.startsWith('/atomic.html#')).map(href => href.split('#')[1])
-  expect(anchors.length).toBeGreaterThan(40)
+  const componentIds = links.map(link => link.getAttribute('href')!).filter(href => href.startsWith('/page-21.html?component=')).map(href => new URL(href, 'http://localhost').searchParams.get('component'))
+  const blockIds = links.map(link => link.getAttribute('href')!).filter(href => href.startsWith('/page-22.html?block=')).map(href => new URL(href, 'http://localhost').searchParams.get('block'))
+  expect(componentIds.length).toBeGreaterThan(30)
+  expect(blockIds).toEqual(expect.arrayContaining(['sidebar', 'prompt-input', 'code-example']))
+  for (const id of componentIds) expect(componentPageMap.has(id!), `Missing component documentation ${id}`).toBe(true)
+  for (const id of blockIds) expect(blockPageMap.has(id!), `Missing block documentation ${id}`).toBe(true)
   docs.unmount()
-  render(<AtomsCatalog />)
-  for (const id of anchors) expect(document.getElementById(id), `Missing catalog destination ${id}`).not.toBeNull()
 })

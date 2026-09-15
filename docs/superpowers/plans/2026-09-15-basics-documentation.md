@@ -130,11 +130,11 @@ In the consuming application install the generated tarball with npm/pnpm/yarn. E
 - [x] Record the verified preview URL and review notes, update Observatory location and status, commit only scoped branch files and open the Basics preview for the user.
 - [x] Stop at the Basics review checkpoint. Do not begin Components or UI block documentation until the user confirms the Basics template works.
 
-## Rollout after Basics approval
+## Rollout after Basics approval — version one
 
-1. **Components:** Use the same template for all 46 currently exported Component names, preserving aliases/grouped controls from `componentManifest.js`. Group by action, display, feedback, form, layout, navigation, overlay. Each destination documents actual variants, states, events, keyboard behavior, setup and API; grouped exports share a page where the existing library does.
-2. **UI blocks:** SidebarPanel, PromptInput and CodeExample use the accepted page template with realistic compositions and configuration examples. Maintain the no-block-dependency rule.
-3. **Integration:** After all reviewed pages work, decide with the user whether this documentation replaces the catalog landing page. Keep the experiment separate until that decision.
+1. **Components:** [x] Use the same template for all 46 currently exported Component names, preserving aliases/grouped controls from `componentManifest.js`. Group by action, display, feedback, form, layout, navigation, overlay. Each destination documents actual variants, states, events, keyboard behavior, setup and API; grouped exports share a page where the existing library does.
+2. **UI blocks:** [x] SidebarPanel, PromptInput and CodeExample use the accepted page template with realistic compositions and configuration examples. Maintain the no-block-dependency rule.
+3. **Integration:** [ ] After all reviewed pages work, decide with the user whether this documentation replaces the catalog landing page. Keep the experiment separate until that decision.
 
 ## Self-review
 

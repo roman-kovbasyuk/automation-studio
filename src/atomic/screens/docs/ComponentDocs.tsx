@@ -1,0 +1,76 @@
+import { useEffect, useRef, useState, type MouseEvent } from 'react'
+import { AtomsRoot, Container, Divider, Heading, Icon, Inline, Stack, Text } from '../../atoms'
+import { Button, Drawer, Menu, NavigationList, Panel, SearchField, Table } from '../../components'
+import { CodeExample } from '../../ui-blocks/CodeExample'
+import { basicsPages, publicSource } from './basicsContent'
+import { componentGroups } from './docsNavigation'
+import { ComponentInstallation, componentPageMap } from './componentContent'
+import './docs.css'
+
+const pageFromUrl = () => componentPageMap.get(new URLSearchParams(window.location.search).get('component') ?? '') ?? componentPageMap.get('button')!
+
+export function ComponentDocs() {
+  const [page, setPage] = useState(pageFromUrl)
+  const [query, setQuery] = useState('')
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [activeSection, setActiveSection] = useState('overview')
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const searchRef = useRef<HTMLDivElement>(null)
+  const normalized = query.trim().toLowerCase()
+  const contents = [{ id: 'overview', label: 'Overview' }, { id: 'installation', label: 'Installation' }, { id: 'examples', label: 'Examples' }, { id: 'usage', label: 'Usage guidance' }, { id: 'reference', label: 'Reference' }]
+  useEffect(() => { const sync = () => setPage(pageFromUrl()); window.addEventListener('popstate', sync); return () => window.removeEventListener('popstate', sync) }, [])
+  useEffect(() => {
+    document.title = `${page.title} · Brutalist Design System`
+    let frame = 0
+    const restoration = window.history.scrollRestoration
+    window.history.scrollRestoration = 'manual'
+    const scrollToHash = () => {
+      const id = window.location.hash.slice(1)
+      if (!contents.some(item => item.id === id)) return
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => { frame = requestAnimationFrame(() => { const section = document.getElementById(id); const heading = section?.querySelector<HTMLElement>('h1, h2, h3'); if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }) }; section?.scrollIntoView(); setActiveSection(id) }) })
+    }
+    scrollToHash(); window.addEventListener('hashchange', scrollToHash); window.addEventListener('load', scrollToHash)
+    const observer = 'IntersectionObserver' in window ? new IntersectionObserver(entries => { const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top); if (visible[0]) setActiveSection(visible[0].target.id) }, { rootMargin: '-80px 0px -55% 0px' }) : undefined
+    contents.forEach(item => { const element = document.getElementById(item.id); if (element) observer?.observe(element) })
+    return () => { cancelAnimationFrame(frame); observer?.disconnect(); window.removeEventListener('hashchange', scrollToHash); window.removeEventListener('load', scrollToHash); window.history.scrollRestoration = restoration }
+  }, [page.id])
+  useEffect(() => { const shortcut = (event: KeyboardEvent) => { if (event.key === '/' && !(event.target instanceof HTMLElement && (event.target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName)))) { event.preventDefault(); searchRef.current?.querySelector('input')?.focus() } }; window.addEventListener('keydown', shortcut); return () => window.removeEventListener('keydown', shortcut) }, [])
+  function navigate(event: MouseEvent) {
+    const link = (event.target as HTMLElement).closest('a')
+    if (!link || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return
+    if (link.getAttribute('href')?.startsWith('#')) { setMobileOpen(false); return }
+    const url = new URL(link.href)
+    if (url.pathname !== window.location.pathname) return
+    const selected = componentPageMap.get(url.searchParams.get('component') ?? '')
+    if (!selected) return
+    event.preventDefault(); window.history.pushState({}, '', `${url.pathname}${url.search}#overview`); setPage(selected); setMobileOpen(false); setActiveSection('overview'); window.setTimeout(() => { document.getElementById('docs-title')?.focus(); document.getElementById('overview')?.scrollIntoView() }, 0)
+  }
+  const groups = [
+    { title: 'Getting Started', items: [{ id: 'intro', label: 'Introduction', href: '/page-20.html?basic=color' }, { id: 'install', label: 'Installation', href: '/page-20.html?basic=color#installation' }] },
+    { title: 'Basics', items: basicsPages.map(item => ({ id: item.id, label: item.title, href: `/page-20.html?basic=${item.id}` })) },
+    ...componentGroups.map(group => ({ title: group.title, items: group.items.map(([label, id]) => ({ id, label, href: `/page-21.html?component=${id}`, current: id === page.id })) })),
+    { title: 'UI Blocks', items: [{ id: 'sidebar', label: 'Sidebar panel', href: '/page-22.html?block=sidebar' }, { id: 'prompt', label: 'AI prompt input', href: '/page-22.html?block=prompt-input' }, { id: 'example', label: 'Code example', href: '/page-22.html?block=code-example' }] },
+  ].map(group => ({ ...group, items: group.items.filter(item => item.label.toLowerCase().includes(normalized) || group.title.toLowerCase().includes(normalized)) })).filter(group => group.items.length)
+  const navigation = (mobile = false) => <Stack gap={6} onClick={navigate}>
+    {mobile && <SearchField autoFocus label="Search documentation" value={query} onChange={setQuery} onKeyDown={event => { if (event.key === 'Escape') setQuery('') }} />}
+    {groups.map(group => <Stack gap={1} key={group.title}><Button variant="quiet" icon={collapsed[group.title] && !normalized ? 'chevronRight' : 'chevronDown'} iconPosition="end" size="compact" aria-expanded={Boolean(normalized) || !collapsed[group.title]} onClick={() => setCollapsed(old => ({ ...old, [group.title]: !old[group.title] }))}>{group.title}</Button>{(!collapsed[group.title] || normalized) && <NavigationList label={`${mobile ? 'Mobile ' : ''}${group.title}`} items={group.items} />}</Stack>)}
+    {!groups.length && <Text role="status" variant="small">No matching pages. Try another search.</Text>}
+    <Divider /><Text variant="small" tone="secondary">Basics and Components use the new documentation. UI Blocks use the same template.</Text>
+  </Stack>
+  const indexItems = contents.map(item => ({ ...item, href: `#${item.id}`, current: activeSection === item.id }))
+  const Preview = page.preview
+  const Example = page.example?.preview ?? page.preview
+  return <AtomsRoot className="docs-page">
+    <a className="docs-skip" href="#docs-title">Skip to content</a>
+    <header className="docs-header"><Inline gap={3}><Icon name="Layers" /><Text variant="h6">Design System</Text></Inline><div className="docs-search" ref={searchRef}><SearchField label="Quick search" value={query} onChange={value => { setQuery(value); if (value.trim() && window.matchMedia?.('(max-width: 800px)').matches) setMobileOpen(true) }} placeholder="Find a page… /" onKeyDown={event => { if (event.key === 'Escape') setQuery('') }} /></div><div className="docs-catalog-link"><NavigationList label="Catalog" items={[{ id: 'catalog', label: 'Component catalog', href: '/atomic.html', icon: 'externalLink' }]} /></div><div className="docs-mobile"><Drawer title="Documentation" trigger="Browse documentation" open={mobileOpen} onOpenChange={setMobileOpen}>{navigation(true)}</Drawer></div></header>
+    <div className="docs-shell"><aside className="docs-sidebar" aria-label="Documentation">{navigation()}</aside><main className="docs-article" key={page.id}><Container maxWidth="52rem"><Stack gap={12}>
+      <section id="overview"><Stack gap={6}><Stack gap={3}><Text variant="small" tone="secondary">{page.category} / Components</Text><Heading level={1} variant="h1" id="docs-title" tabIndex={-1}>{page.title}</Heading><Text tone="secondary">{page.description}</Text></Stack><div className="docs-inline-index"><Menu label="On this page" icon="chevronDown" items={contents} onSelect={id => { window.location.hash = id }} /></div><CodeExample title={`${page.title} overview`} headingLevel={2} filename={`${page.id}.tsx`} source={page.source} preview={<Preview />} /></Stack></section>
+      <section id="installation"><Stack gap={6}><Heading level={2} variant="h3">Installation</Heading><Text tone="secondary">Install the local package and provide the shared foundation once.</Text><ComponentInstallation /></Stack></section>
+      <section id="examples"><Stack gap={6}><Heading level={2} variant="h3">Examples</Heading><CodeExample title={page.example?.title ?? `${page.title} states`} description={page.example?.description ?? 'Use the same component with its supported states and props.'} filename={`${page.id}.tsx · variant example`} source={page.source} preview={<Example />} /></Stack></section>
+      <section id="usage"><Panel title="Usage guidance" headingLevel={2} variant="split"><Stack gap={3}>{page.notes.map(note => <Text key={note}>{note}</Text>)}</Stack></Panel></section>
+      <section id="reference"><Stack gap={6}><Heading level={2} variant="h3">Reference</Heading><Panel title={`${page.title} props`} description="These rows reflect the public component signature and supported values." variant="split"><Table label={`${page.title} reference`} rows={page.reference} rowKey={row => row.name} columns={[{ id: 'name', header: 'Prop', render: row => <code>{row.name}</code> }, { id: 'value', header: 'Value / type', render: row => <Text variant="small">{row.value}</Text> }, { id: 'purpose', header: 'Description', render: row => <Text variant="small" tone="secondary">{row.purpose}</Text> }]} /></Panel></Stack></section>
+      <Divider /><footer><Text variant="small" tone="secondary">Documentation structure inspired by <a href="https://alignui.com/docs/v1.2/ui/button" target="_blank" rel="noreferrer">AlignUI</a>.</Text></footer>
+    </Stack></Container></main><aside className="docs-index" aria-label="On this page"><Stack gap={3}><Text variant="small" tone="secondary">ON THIS PAGE</Text><NavigationList label="Article sections" items={indexItems} /></Stack></aside></div>
+  </AtomsRoot>
+}
