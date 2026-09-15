@@ -348,11 +348,22 @@ function declaredDependencySpec(manifest, edge) {
   return manifest.dependencies?.[edge.name] ?? manifest.optionalDependencies?.[edge.name]
 }
 
-function bindsOmittedArchive(entry, declaration, appPath) {
+async function bindsOmittedArchive(entry, declaration, appPath, run, packageName) {
   if (typeof declaration !== 'string' || typeof entry?.resolved !== 'string') return false
   if (declaration.startsWith('file:')) return sameArtifactSpec(entry.resolved, declaration, appPath)
   if (/^https?:\/\//.test(declaration)) return entry.resolved === declaration
-  return false
+  if (!packageName || typeof entry.version !== 'string' || typeof entry.integrity !== 'string') return false
+  try {
+    const versionsResult = await run('npm', ['view', `${packageName}@${declaration}`, 'versions', '--json'], { cwd: appPath, timeoutMs: CHECK_TIMEOUT_MS })
+    const versions = JSON.parse(versionsResult.stdout)
+    const matches = Array.isArray(versions) ? versions.includes(entry.version) : versions === entry.version
+    if (!matches) return false
+    const metadataResult = await run('npm', ['view', `${packageName}@${entry.version}`, 'dist.tarball', 'dist.integrity', '--json'], { cwd: appPath, timeoutMs: CHECK_TIMEOUT_MS })
+    const metadata = JSON.parse(metadataResult.stdout)
+    return metadata?.['dist.tarball'] === entry.resolved && metadata?.['dist.integrity'] === entry.integrity
+  } catch {
+    return false
+  }
 }
 
 function allowsPlatform(values, current) {
@@ -429,7 +440,7 @@ async function releaseDependencyClosure(packages, start, appPath, manifest, run)
         if (error.code === 'ENOENT' && packages[path]?.optional === true && (item.omitted || (edge.optional && excludedFromCurrentPlatform(packages[path])))) {
           // npm retains an omitted package's entire optional subtree in the lockfile.
           // Its archive supplies the edges that missing installed metadata cannot attest.
-          if (!bindsOmittedArchive(packages[path], declaredDependencySpec(item.manifest, edge), appPath)) {
+          if (!await bindsOmittedArchive(packages[path], declaredDependencySpec(item.manifest, edge), appPath, run, edge.name)) {
             throw coded('ADOPTION_FILE_CONFLICT', `omitted dependency archive is not bound to the verified declaration at ${path}`)
           }
           const omittedManifest = await omittedPackageManifest(packages[path], appPath, run)

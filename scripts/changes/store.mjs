@@ -36,37 +36,18 @@ export function openStore(dataDir) {
       }
     } finally { await unlink(temp).catch((error) => { if (error.code !== 'ENOENT') throw error }) }
   }
-  async function removeIfOwner(path, expected) {
-    // Move the candidate out of the shared name before inspecting it. If a
-    // contender replaced the file after our read, restore that replacement
-    // with a no-replace hard link instead of unlinking the new owner's guard.
-    const moved = `${path}.remove.${process.pid}.${randomUUID()}`
-    try { await rename(path, moved) } catch (error) { if (error.code === 'ENOENT') return false; throw error }
-    let current
-    try { current = await readJson(moved) } catch (error) {
-      await unlink(moved).catch((cleanup) => { if (cleanup.code !== 'ENOENT') throw cleanup })
-      throw error
-    }
-    if (current?.pid === expected.pid && current?.token === expected.token) {
-      await unlink(moved)
-      return true
-    }
-    try { await link(moved, path) } catch (error) { if (error.code !== 'EEXIST') throw error }
-    await unlink(moved).catch((error) => { if (error.code !== 'ENOENT') throw error })
-    return false
-  }
   async function withReclaimGuard(fn) {
     for (;;) {
       const owner = { pid: process.pid, token: randomUUID() }
       if (await createExclusiveJson(reclaimLock, owner)) {
-        try { return await fn() } finally { await removeIfOwner(reclaimLock, owner) }
+        try { return await fn() } finally { await unlink(reclaimLock).catch((error) => { if (error.code !== 'ENOENT') throw error }) }
       }
       let existing
       try { existing = await readJson(reclaimLock) } catch { await sleep(5); continue }
       if (!existing) { await sleep(5); continue }
       if (!Number.isInteger(existing.pid)) throw new Error('worker reclamation lock has ambiguous ownership')
       try { process.kill(existing.pid, 0); await sleep(10) } catch (probe) {
-        if (probe.code === 'ESRCH') { await removeIfOwner(reclaimLock, existing); continue }
+        if (probe.code === 'ESRCH') throw new Error('worker reclamation lock has ambiguous ownership')
         throw new Error('worker reclamation lock has ambiguous ownership')
       }
     }
