@@ -354,9 +354,9 @@ async function bindsOmittedArchive(entry, declaration, appPath, run, packageName
   if (/^https?:\/\//.test(declaration)) return entry.resolved === declaration
   if (!packageName || typeof entry.version !== 'string' || typeof entry.integrity !== 'string') return false
   try {
-    const versionsResult = await run('npm', ['view', `${packageName}@${declaration}`, 'versions', '--json'], { cwd: appPath, timeoutMs: CHECK_TIMEOUT_MS })
+    const versionsResult = await run('npm', ['view', `${packageName}@${declaration}`, 'version', '--json'], { cwd: appPath, timeoutMs: CHECK_TIMEOUT_MS })
     const versions = JSON.parse(versionsResult.stdout)
-    const matches = Array.isArray(versions) ? versions.includes(entry.version) : versions === entry.version
+    const matches = (Array.isArray(versions) ? versions.flat(Infinity) : [versions]).includes(entry.version)
     if (!matches) return false
     const metadataResult = await run('npm', ['view', `${packageName}@${entry.version}`, 'dist.tarball', 'dist.integrity', '--json'], { cwd: appPath, timeoutMs: CHECK_TIMEOUT_MS })
     const metadata = JSON.parse(metadataResult.stdout)
