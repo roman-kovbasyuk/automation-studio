@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdir, open, readFile, readdir, rename, stat, unlink, writeFile } from 'node:fs/promises'
+import { link, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { validateConfig } from './protocol.mjs'
 import { runCommand } from './process.mjs'
@@ -88,10 +88,6 @@ function canonical(value) {
   return JSON.stringify(value)
 }
 
-function clone(value) {
-  return JSON.parse(JSON.stringify(value))
-}
-
 async function restoreSnapshot(path, saved) {
   if (!saved || typeof saved.exists !== 'boolean') throw coded('DEPENDENCY_RESTORE_FAILED', 'recovery journal has an invalid file snapshot')
   if (!saved.exists) {
@@ -130,13 +126,42 @@ function pidAlive(pid) {
   try { process.kill(pid, 0); return true } catch (error) { if (error.code === 'ESRCH') return false; return null }
 }
 
+async function publishOwner(path, owner) {
+  const temporary = `${path}.${process.pid}.${randomUUID()}.owner`
+  try {
+    await writeFile(temporary, JSON.stringify(owner), { flag: 'wx', mode: 0o600 })
+    try {
+      await link(temporary, path)
+      return true
+    } catch (error) {
+      if (error.code === 'EEXIST') return false
+      throw error
+    }
+  } finally {
+    await unlink(temporary).catch((error) => { if (error.code !== 'ENOENT') throw error })
+  }
+}
+
+async function readOwner(path, detail) {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    try {
+      const owner = JSON.parse(await readFile(path, 'utf8'))
+      if (!Number.isInteger(owner?.pid) || owner.pid <= 0 || typeof owner?.token !== 'string' || !owner.token) throw new Error('invalid owner')
+      return owner
+    } catch (error) {
+      if (error.code === 'ENOENT') return null
+      if (attempt === 9) throw coded('APP_LOCK_AMBIGUOUS', detail)
+      await delay(5)
+    }
+  }
+}
+
 async function acquireAppLock(path) {
   await mkdir(dirname(path), { recursive: true })
   const reclaimPath = `${path}.reclaim`
   for (;;) {
-    if (await exists(reclaimPath)) {
-      let guard
-      try { guard = JSON.parse(await readFile(reclaimPath, 'utf8')) } catch { throw coded('APP_LOCK_AMBIGUOUS', 'application lock reclamation ownership is unreadable') }
+    const guard = await readOwner(reclaimPath, 'application lock reclamation ownership is unreadable')
+    if (guard) {
       const guardAlive = pidAlive(guard?.pid)
       if (guardAlive === false) throw coded('APP_LOCK_AMBIGUOUS', 'application lock has an abandoned reclamation guard')
       if (guardAlive === null) throw coded('APP_LOCK_AMBIGUOUS', 'application lock reclamation ownership is ambiguous')
@@ -144,38 +169,29 @@ async function acquireAppLock(path) {
       continue
     }
     const owner = { pid: process.pid, token: randomUUID(), createdAt: new Date().toISOString() }
-    try {
-      const handle = await open(path, 'wx', 0o600)
-      try { await handle.writeFile(JSON.stringify(owner)) } finally { await handle.close() }
-      return owner
-    } catch (error) {
-      if (error.code !== 'EEXIST') throw error
-      let existing
-      try { existing = JSON.parse(await readFile(path, 'utf8')) } catch { throw coded('APP_LOCK_AMBIGUOUS', 'application lock ownership is unreadable') }
+    if (await publishOwner(path, owner)) return owner
+    {
+      const existing = await readOwner(path, 'application lock ownership is unreadable')
+      if (!existing) continue
       const alive = pidAlive(existing?.pid)
       if (alive === null) throw coded('APP_LOCK_AMBIGUOUS', 'application lock ownership is ambiguous')
       if (alive) { await delay(20); continue }
-      let reclaim
-      try {
-        const handle = await open(reclaimPath, 'wx', 0o600)
-        reclaim = { pid: process.pid, token: randomUUID(), createdAt: new Date().toISOString() }
-        try { await handle.writeFile(JSON.stringify(reclaim)) } finally { await handle.close() }
-      } catch (race) {
-        if (race.code !== 'EEXIST') throw race
-        let guard
-        try { guard = JSON.parse(await readFile(reclaimPath, 'utf8')) } catch { throw coded('APP_LOCK_AMBIGUOUS', 'application lock reclamation ownership is unreadable') }
-        if (pidAlive(guard?.pid) === false) throw coded('APP_LOCK_AMBIGUOUS', 'application lock has an abandoned reclamation guard')
+      const reclaim = { pid: process.pid, token: randomUUID(), createdAt: new Date().toISOString() }
+      if (!await publishOwner(reclaimPath, reclaim)) {
+        const winner = await readOwner(reclaimPath, 'application lock reclamation ownership is unreadable')
+        if (!winner) continue
+        if (pidAlive(winner.pid) === false) throw coded('APP_LOCK_AMBIGUOUS', 'application lock has an abandoned reclamation guard')
         await delay(20)
         continue
       }
       try {
-        let current
-        try { current = JSON.parse(await readFile(path, 'utf8')) } catch (race) { if (race.code === 'ENOENT') continue; throw coded('APP_LOCK_AMBIGUOUS', 'application lock changed during reclamation') }
+        const current = await readOwner(path, 'application lock changed during reclamation')
+        if (!current) continue
         if (current.pid !== existing.pid || current.token !== existing.token) continue
         if (pidAlive(current.pid) !== false) continue
         await unlink(path)
       } finally {
-        const currentGuard = await readFile(reclaimPath, 'utf8').then(JSON.parse).catch(() => null)
+        const currentGuard = await readOwner(reclaimPath, 'application lock reclamation ownership changed before release')
         if (currentGuard?.token === reclaim.token) await unlink(reclaimPath).catch(() => {})
       }
     }
@@ -183,8 +199,8 @@ async function acquireAppLock(path) {
 }
 
 async function releaseAppLock(path, owner) {
-  let existing
-  try { existing = JSON.parse(await readFile(path, 'utf8')) } catch (error) { if (error.code === 'ENOENT') return; throw coded('APP_LOCK_AMBIGUOUS', 'application lock changed before release') }
+  const existing = await readOwner(path, 'application lock changed before release')
+  if (!existing) return
   if (existing.token !== owner.token) throw coded('APP_LOCK_AMBIGUOUS', 'application lock changed before release')
   await unlink(path)
 }
@@ -246,6 +262,40 @@ async function validateOwnedPackageMutation(journal) {
   if (canonical(current) !== canonical(original)) throw coded('ADOPTION_FILE_CONFLICT', 'package.json contains changes outside the expected release adoption')
 }
 
+function resolveLockedDependency(packages, fromPath, name) {
+  let base = fromPath
+  for (;;) {
+    const candidate = base ? `${base}/node_modules/${name}` : `node_modules/${name}`
+    if (packages[candidate]) return candidate
+    const parent = base.lastIndexOf('/node_modules/')
+    if (parent >= 0) base = base.slice(0, parent)
+    else if (base.startsWith('node_modules/')) base = ''
+    else break
+  }
+  return null
+}
+
+function dependencyClosure(packages, start) {
+  const closure = new Set()
+  const pending = [start]
+  while (pending.length) {
+    const path = pending.pop()
+    if (closure.has(path) || !packages[path]) continue
+    closure.add(path)
+    const entry = packages[path]
+    const names = new Set([
+      ...Object.keys(entry.dependencies ?? {}),
+      ...Object.keys(entry.optionalDependencies ?? {}),
+      ...Object.keys(entry.peerDependencies ?? {}),
+    ])
+    for (const name of names) {
+      const dependency = resolveLockedDependency(packages, path, name)
+      if (dependency && !closure.has(dependency)) pending.push(dependency)
+    }
+  }
+  return closure
+}
+
 async function validateOwnedLockMutation(journal) {
   const original = snapshotJson(journal.previous.packageLock, 'package-lock.json')
   const current = await readJson(join(journal.appPath, 'package-lock.json'), 'ADOPTION_FILE_CONFLICT', 'package-lock.json changed to invalid JSON during installation')
@@ -256,9 +306,27 @@ async function validateOwnedLockMutation(journal) {
     || currentPackage?.version !== journal.release.version
     || !sameArtifactSpec(currentPackage?.resolved, `file:${journal.release.packagePath}`, journal.appPath)
     || currentPackage?.integrity !== journal.release.integrity) throw coded('ADOPTION_FILE_CONFLICT', 'package-lock.json does not identify the expected release artifact')
-  current.packages[''][declaration.section][PACKAGE_NAME] = original.packages[''][declaration.section][PACKAGE_NAME]
-  current.packages[`node_modules/${PACKAGE_NAME}`] = clone(original.packages[`node_modules/${PACKAGE_NAME}`])
-  if (canonical(current) !== canonical(original)) throw coded('ADOPTION_FILE_CONFLICT', 'package-lock.json contains changes outside the expected release adoption')
+
+  const originalMetadata = { ...original, packages: undefined }
+  const currentMetadata = { ...current, packages: undefined }
+  if (canonical(currentMetadata) !== canonical(originalMetadata)) throw coded('ADOPTION_FILE_CONFLICT', 'package-lock.json metadata changed outside the expected release adoption')
+
+  const originalRoot = structuredClone(original.packages[''])
+  const normalizedRoot = structuredClone(current.packages[''])
+  normalizedRoot[declaration.section][PACKAGE_NAME] = originalRoot[declaration.section][PACKAGE_NAME]
+  if (canonical(normalizedRoot) !== canonical(originalRoot)) throw coded('ADOPTION_FILE_CONFLICT', 'package-lock.json root package contains changes outside the expected release adoption')
+
+  const packagePath = `node_modules/${PACKAGE_NAME}`
+  const allowed = new Set([
+    ...dependencyClosure(original.packages, packagePath),
+    ...dependencyClosure(current.packages, packagePath),
+  ])
+  for (const path of new Set([...Object.keys(original.packages), ...Object.keys(current.packages)])) {
+    if (path === '') continue
+    if (canonical(original.packages[path]) !== canonical(current.packages[path]) && !allowed.has(path)) {
+      throw coded('ADOPTION_FILE_CONFLICT', `package-lock.json contains an unrelated package change at ${path}`)
+    }
+  }
 }
 
 async function establishMutationOwnership(journal) {

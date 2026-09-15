@@ -75,7 +75,7 @@ async function installVersion(appPath, release) {
   await writeFile(join(appPath, 'node_modules', PACKAGE_NAME, 'package.json'), JSON.stringify({ name: PACKAGE_NAME, version: release.version }))
 }
 
-function fakeNpm(fixture, { failInstall = false, failCheck, failRestore = false, mutateDuringFailedCheck = false, mutateDuringInstall = false } = {}) {
+function fakeNpm(fixture, { failInstall = false, failCheck, failRestore = false, mutateDuringFailedCheck = false, mutateDuringInstall = false, mutateLockDuringInstall = false } = {}) {
   const commands = []
   const run = async (file, args, options = {}) => {
     commands.push({ file, args: [...args], cwd: options.cwd })
@@ -87,6 +87,11 @@ function fakeNpm(fixture, { failInstall = false, failCheck, failRestore = false,
         const manifest = JSON.parse(await readFile(join(fixture.appPath, 'package.json'), 'utf8'))
         manifest.externalEdit = 'preserve me'
         await writeFile(join(fixture.appPath, 'package.json'), `${JSON.stringify(manifest, null, 2)}\n`)
+      }
+      if (mutateLockDuringInstall) {
+        const lock = JSON.parse(await readFile(join(fixture.appPath, 'package-lock.json'), 'utf8'))
+        lock.packages['node_modules/external-edit'] = { version: '1.0.0' }
+        await writeFile(join(fixture.appPath, 'package-lock.json'), `${JSON.stringify(lock, null, 2)}\n`)
       }
       if (failInstall) throw new Error('synthetic npm install failure')
       return { stdout: '', stderr: '' }
@@ -324,6 +329,19 @@ test('treats an unrelated package edit made during npm install as an external co
   } finally { await rm(subject.root, { recursive: true, force: true }) }
 })
 
+test('treats an unrelated lock entry made during npm install as an external conflict', async () => {
+  const subject = await fixture()
+  const npm = fakeNpm(subject, { mutateLockDuringInstall: true })
+  try {
+    const result = await updateApplication({ ...subject, run: npm.run })
+    assert.equal(result.status, 'failed')
+    assert.match(result.error, /ADOPTION_FILE_CONFLICT/)
+    const lock = JSON.parse(await readFile(join(subject.appPath, 'package-lock.json'), 'utf8'))
+    assert.equal(lock.packages['node_modules/external-edit'].version, '1.0.0')
+    assert.equal(npm.commands.some(({ args }) => args[0] === 'ci'), false)
+  } finally { await rm(subject.root, { recursive: true, force: true }) }
+})
+
 function saved(bytes) {
   return { exists: true, data: bytes.toString('base64'), integrity: integrity(bytes) }
 }
@@ -418,6 +436,30 @@ test('stale-lock reclamation does not admit concurrent app installers', async ()
   } finally { await rm(subject.root, { recursive: true, force: true }) }
 })
 
+test('retries a reclaim guard that is still being initialized and then disappears', async () => {
+  const subject = await fixture()
+  const key = createHash('sha256').update(subject.appPath).digest('hex')
+  const lock = join(subject.dataDir, 'app-locks', `${key}.lock`)
+  const guard = `${lock}.reclaim`
+  let initialize
+  let release
+  try {
+    await mkdir(dirname(lock), { recursive: true })
+    await writeFile(lock, JSON.stringify({ pid: 999_999_999, token: 'stale' }))
+    await writeFile(guard, '')
+    initialize = setTimeout(() => {
+      writeFile(guard, JSON.stringify({ pid: process.pid, token: 'initializing' })).catch(() => {})
+    }, 10)
+    release = setTimeout(() => { rm(guard, { force: true }).catch(() => {}) }, 50)
+
+    assert.deepEqual(await updateApplication({ ...subject, run: fakeNpm(subject).run }), { status: 'installed' })
+  } finally {
+    clearTimeout(initialize)
+    clearTimeout(release)
+    await rm(subject.root, { recursive: true, force: true })
+  }
+})
+
 test('real npm adopts two successive local tarballs', async () => {
   const root = await mkdtemp(join(tmpdir(), 'ds-real-successive-'))
   const appPath = join(root, 'app')
@@ -455,5 +497,43 @@ test('real npm adopts two successive local tarballs', async () => {
       await run('git', ['commit', '-m', `adopt ${releases[index].version}`], { cwd: appPath })
     }
     assert.equal(JSON.parse(await readFile(join(appPath, 'node_modules', PACKAGE_NAME, 'package.json'), 'utf8')).version, '1.0.2')
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+test('real npm accepts lockfile changes in the adopted package transitive graph', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ds-real-transitive-'))
+  const appPath = join(root, 'app')
+  const dataDir = join(root, 'data')
+  const destination = join(root, 'tarballs')
+  const run = (file, args, options = {}) => runCommand(file, args, { ...options, env: { ...process.env, npm_config_cache: join(root, 'npm-cache') } })
+  const pack = async (name, version, dependencies = {}) => {
+    const source = join(root, `${name.replaceAll('/', '-')}-${version}`)
+    await mkdir(source, { recursive: true })
+    await mkdir(destination, { recursive: true })
+    await writeFile(join(source, 'package.json'), JSON.stringify({ name, version, dependencies }))
+    await writeFile(join(source, 'index.js'), `module.exports = ${JSON.stringify(version)}\n`)
+    const packed = JSON.parse((await run('npm', ['pack', '--json', '--ignore-scripts', '--pack-destination', destination, source], { cwd: root })).stdout)[0]
+    return join(destination, packed.filename)
+  }
+  try {
+    const transitiveOne = await pack('ds-transitive-fixture', '1.0.0')
+    const transitiveTwo = await pack('ds-transitive-fixture', '2.0.0')
+    const firstPath = await pack(PACKAGE_NAME, '1.0.0', { 'ds-transitive-fixture': `file:${transitiveOne}` })
+    const secondPath = await pack(PACKAGE_NAME, '1.0.1', { 'ds-transitive-fixture': `file:${transitiveTwo}` })
+    const release = { version: '1.0.1', packagePath: secondPath, integrity: integrity(await readFile(secondPath)), sourceCommit: 'commit-1.0.1', summary: 'Release 1.0.1' }
+
+    await mkdir(appPath, { recursive: true })
+    await writeFile(join(appPath, 'package.json'), `${JSON.stringify({ name: 'real-consumer', private: true, scripts: { check: 'node -e "process.exit(0)"' }, devDependencies: { [PACKAGE_NAME]: `file:${firstPath}` } }, null, 2)}\n`)
+    await run('npm', ['install', '--ignore-scripts', '--no-audit', '--no-fund'], { cwd: appPath })
+    await run('git', ['init', '-b', 'main'], { cwd: appPath })
+    await run('git', ['config', 'user.name', 'App Test'], { cwd: appPath })
+    await run('git', ['config', 'user.email', 'app@example.invalid'], { cwd: appPath })
+    await run('git', ['add', 'package.json', 'package-lock.json'], { cwd: appPath })
+    await run('git', ['commit', '-m', 'initial app'], { cwd: appPath })
+    await mkdir(join(dataDir, 'requests'), { recursive: true })
+    await writeFile(join(dataDir, 'requests', 'transitive.json'), JSON.stringify({ input: { requestId: 'transitive', installedVersion: '1.0.0', component: 'Button', change: 'Change transitive dependency' }, status: 'ready' }))
+
+    assert.deepEqual(await updateApplication({ config: { appPath, checkScripts: ['check'] }, release, dataDir, requestId: 'transitive', run }), { status: 'installed' })
+    assert.equal(JSON.parse(await readFile(join(appPath, 'node_modules', 'ds-transitive-fixture', 'package.json'), 'utf8')).version, '2.0.0')
   } finally { await rm(root, { recursive: true, force: true }) }
 })
