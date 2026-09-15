@@ -343,6 +343,18 @@ function graphEdges(manifest) {
   ]
 }
 
+function declaredDependencySpec(manifest, edge) {
+  if (edge.peer) return manifest.peerDependencies?.[edge.name]
+  return manifest.dependencies?.[edge.name] ?? manifest.optionalDependencies?.[edge.name]
+}
+
+function bindsOmittedArchive(entry, declaration, appPath) {
+  if (typeof declaration !== 'string' || typeof entry?.resolved !== 'string') return false
+  if (declaration.startsWith('file:')) return sameArtifactSpec(entry.resolved, declaration, appPath)
+  if (/^https?:\/\//.test(declaration)) return entry.resolved === declaration
+  return false
+}
+
 function allowsPlatform(values, current) {
   if (!Array.isArray(values) || values.length === 0) return true
   if (values.includes(`!${current}`)) return false
@@ -417,6 +429,9 @@ async function releaseDependencyClosure(packages, start, appPath, manifest, run)
         if (error.code === 'ENOENT' && packages[path]?.optional === true && (item.omitted || (edge.optional && excludedFromCurrentPlatform(packages[path])))) {
           // npm retains an omitted package's entire optional subtree in the lockfile.
           // Its archive supplies the edges that missing installed metadata cannot attest.
+          if (!bindsOmittedArchive(packages[path], declaredDependencySpec(item.manifest, edge), appPath)) {
+            throw coded('ADOPTION_FILE_CONFLICT', `omitted dependency archive is not bound to the verified declaration at ${path}`)
+          }
           const omittedManifest = await omittedPackageManifest(packages[path], appPath, run)
           pending.push({ path, manifest: omittedManifest, omitted: true })
           continue

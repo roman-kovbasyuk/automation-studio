@@ -480,6 +480,39 @@ for (const tamper of ['dependency edges', 'archive bytes']) test(`rejects forged
   } finally { await rm(subject.root, { recursive: true, force: true }) }
 })
 
+test('preserves a lock entry when an omitted archive source is forged', async () => {
+  const subject = await fixture()
+  const os = [process.platform === 'win32' ? 'linux' : 'win32']
+  const trustedPath = join(subject.root, 'trusted-optional.tgz')
+  const forgedPath = join(subject.root, 'forged-optional.tgz')
+  await writeFile(trustedPath, packageTarball({ name: 'optional-fixture', version: '1.0.0', os }))
+  const forgedBytes = packageTarball({ name: 'optional-fixture', version: '1.0.0', os, dependencies: { 'external-edit': '1.0.0' } })
+  await writeFile(forgedPath, forgedBytes)
+  const optionalDependencies = { 'optional-fixture': `file:${trustedPath}` }
+  const releaseBytes = packageTarball({ name: PACKAGE_NAME, version: subject.release.version, optionalDependencies })
+  subject.release.integrity = integrity(releaseBytes)
+  await writeFile(subject.release.packagePath, releaseBytes)
+  const npm = fakeNpm(subject)
+  const run = async (file, args, options) => {
+    const result = await npm.run(file, args, options)
+    if (file === 'npm' && args[0] === 'install') {
+      const lock = JSON.parse(await readFile(join(subject.appPath, 'package-lock.json'), 'utf8'))
+      lock.packages[`node_modules/${PACKAGE_NAME}`].optionalDependencies = optionalDependencies
+      lock.packages['node_modules/optional-fixture'] = { version: '1.0.0', optional: true, os, resolved: `file:${forgedPath}`, integrity: integrity(forgedBytes) }
+      lock.packages['node_modules/external-edit'] = { version: '1.0.0', optional: true }
+      await writeFile(join(subject.appPath, 'package-lock.json'), `${JSON.stringify(lock, null, 2)}\n`)
+    }
+    return result
+  }
+  try {
+    const result = await updateApplication({ ...subject, run })
+    assert.equal(result.status, 'failed')
+    assert.match(result.error, /ADOPTION_FILE_CONFLICT/)
+    const lock = JSON.parse(await readFile(join(subject.appPath, 'package-lock.json'), 'utf8'))
+    assert.equal(lock.packages['node_modules/external-edit'].version, '1.0.0')
+  } finally { await rm(subject.root, { recursive: true, force: true }) }
+})
+
 test('rejects a required peer that is missing from the lock graph', async () => {
   const subject = await fixture()
   const bytes = packageTarball({ name: PACKAGE_NAME, version: subject.release.version, peerDependencies: { 'required-peer-fixture': '>=1' } })
