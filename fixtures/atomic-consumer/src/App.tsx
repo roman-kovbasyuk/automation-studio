@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  NavigationList, AttachmentArea, SidebarPanel, PromptInput,
+  NavigationList, AttachmentArea, SidebarPanel, PromptInput, CodeExample,
   AtomsRoot, Container, Stack, Heading, Text,
   Button, Panel, TextField, Checkbox, RadioGroup, Toggle, TextArea, Select, Tag, SegmentedControl,
   Breadcrumbs, Pagination, NumberStepper, Slider, RangeSlider, Rating, ProgressBar, ProgressRing, StatusBadge, Alert,
@@ -9,7 +9,7 @@ import 'brutalist-design-system/styles.css'
 import { FinalExamples, finalCoverage } from './FinalExamples'
 
 // Coverage is verified against the catalog inventory, not a second hand-maintained expected count.
-export const coveredBlocks = { SidebarPanel, PromptInput }
+export const coveredBlocks = { SidebarPanel, PromptInput, CodeExample }
 export const coveredComponents = { NavigationList, AttachmentArea, Button, Panel, TextField, Checkbox, RadioGroup, Toggle, TextArea, Select, Tag, SegmentedControl, Breadcrumbs, Pagination, NumberStepper, Slider, RangeSlider, Rating, ProgressBar, ProgressRing, StatusBadge, Alert, ...finalCoverage }
 
 export default function App() {
@@ -50,6 +50,7 @@ export default function App() {
     <AttachmentArea label="Preview attachments"><Text>Attachment composition</Text></AttachmentArea>
     <SidebarPanel brand={{label:'Studio'}} primaryAction={{label:'New campaign',onClick:()=>{}}} navigation={[{id:'home',label:'Home',href:'#',current:true}]} projects={[{id:'oslo',title:'Oslo launch',href:'#',actions:[{id:'duplicate',label:'Duplicate'},{id:'delete',label:'Delete',danger:true}]}]}/>
     <PromptInput value="Create a campaign for Oslo" onChange={()=>{}} onSubmit={()=>{}} onAttach={()=>{}}/>
+    <CodeExample title="Installed example" filename="Example.tsx" source={'<Text>Shared library</Text>'} preview={<Text>Shared library</Text>} />
 
   </Stack></Container></AtomsRoot>
 }

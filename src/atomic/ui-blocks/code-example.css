@@ -1,0 +1,2 @@
+.b-code-example__source { margin: 0; padding: var(--a-space-4); background: var(--a-color-canvas); color: var(--a-color-ink); font-size: var(--a-type-small-size); line-height: var(--a-type-small-line); tab-size: 2; width: max-content; min-width: 100%; }
+.b-code-example__preview { padding-block: var(--a-space-4); min-width: 0; }

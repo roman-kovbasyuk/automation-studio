@@ -3,9 +3,10 @@ import { Heading, Stack, Text } from '../atoms'
 import { Button, NavigationList, AttachmentArea, TextArea, Toggle, type FileItem } from '../components'
 import { SidebarPanel } from '../ui-blocks/SidebarPanel'
 import { PromptInput } from '../ui-blocks/PromptInput'
+import { CodeExample } from '../ui-blocks/CodeExample'
 import { CatalogSection as Section } from './CatalogSection'
 import { CatalogFilters } from './CatalogFilters'
-export const uiBlockSections=[['block-sidebar','Sidebar panel'],['block-prompt-input','AI prompt input']] as const
+export const uiBlockSections=[['block-sidebar','Sidebar panel'],['block-prompt-input','AI prompt input'],['block-code-example','Code example']] as const
 export function UIBlocksCatalog(){
  const [projects,setProjects]=useState([{id:'oslo',title:'Oslo launch',href:'#block-sidebar',pinned:true},{id:'nordic',title:'Nordic spring campaign',href:'#block-sidebar',pinned:false}])
  const [notice,setNotice]=useState(''),[value,setValue]=useState(''),[files,setFiles]=useState<FileItem[]>([]),[busy,setBusy]=useState(false),[disabled,setDisabled]=useState(false),[readOnly,setReadOnly]=useState(false),[fail,setFail]=useState(false),[error,setError]=useState(''),[sent,setSent]=useState('')
@@ -22,5 +23,6 @@ export function UIBlocksCatalog(){
  <PromptInput value={value} onChange={setValue} onSubmit={send} files={files} onAttach={items=>setFiles(old=>[...old,...items.map((f,i)=>({id:f.name+'-'+Date.now()+'-'+i,name:f.name,size:f.size}))])} onRemove={id=>setFiles(f=>f.filter(x=>x.id!==id))} busy={busy} disabled={disabled} readOnly={readOnly} error={error}/>
  <Text variant="small" tone="secondary">Ctrl/⌘ + Enter to send. TXT, MD, PDF or DOCX, up to 10 MB each. Demo only—nothing is uploaded or sent to AI.</Text>
  {sent&&<Text role="status">Demo received: {sent}</Text>}
- </Section></>
+ </Section>
+ <Section id="block-code-example" title="Code example"><CodeExample title="Button usage" filename="Example.tsx" source={"import { Button } from 'brutalist-design-system'\n\nexport default function Example() {\n  return <Button variant=\"primary\">Save changes</Button>\n}"} preview={<Button variant="primary">Save changes</Button>} /></Section></>
 }

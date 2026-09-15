@@ -29,5 +29,5 @@ export default defineConfig({
     setupFiles: './src/test/setup.js',
     include: ['src/atomic/**/*.test.{ts,tsx}'],
   },
-  build: { outDir: 'dist', rollupOptions: { input: { index: resolve(import.meta.dirname, 'index.html'), atomic: resolve(import.meta.dirname, 'atomic.html') } } },
+  build: { outDir: 'dist', rollupOptions: { input: { index: resolve(import.meta.dirname, 'index.html'), atomic: resolve(import.meta.dirname, 'atomic.html'), docs: resolve(import.meta.dirname, 'page-20.html') } } },
 })

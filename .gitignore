@@ -6,7 +6,7 @@
 # OS and generated files
 .DS_Store
 Thumbs.db
-node_modules/
+node_modules
 dist/
 dist-library/
 dist-atomic-library/

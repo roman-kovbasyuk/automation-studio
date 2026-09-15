@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { test, expect } from 'vitest'
-import { Panel, Checkbox } from './index'
+import { Panel, Checkbox, Button } from './index'
 import { ComponentsCatalog } from '../catalog/ComponentsCatalog'
 
 test('split panel keeps interactive filters with the heading and content separate', async () => {
@@ -28,6 +28,19 @@ test('default panel retains unified content without a split body', () => {
   const panel = screen.getByRole('region', { name: 'Default' })
   expect(panel).not.toHaveClass('c-panel--split')
   expect(within(panel).getByText('Content')).toBeInTheDocument()
+})
+
+test('header actions remain outside the heading and can act on compact panel content', async () => {
+  function Example() {
+    const [value, setValue] = useState('Draft')
+    return <Panel title="Document" variant="split" density="compact" actions={<Button onClick={() => setValue('Saved')}>Save</Button>}><p>{value}</p></Panel>
+  }
+  render(<Example />)
+  const panel = screen.getByRole('region', { name: 'Document' })
+  const action = within(panel.querySelector('header')!).getByRole('button', { name:'Save' })
+  expect(screen.getByRole('heading', { name:'Document' })).not.toContainElement(action)
+  await userEvent.click(action)
+  expect(within(panel).getByText('Saved')).toBeVisible()
 })
 
 test('catalog variables are in the shared panel header and still control specimens', async () => {
