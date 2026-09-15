@@ -408,6 +408,10 @@ test('rejects a required release dependency that is missing from node_modules', 
 
 test('does not let an omitted optional path satisfy a later required edge', async () => {
   const subject = await fixture()
+  const excludedOs = process.platform === 'win32' ? 'linux' : 'win32'
+  const sharedPath = join(subject.root, 'shared-fixture.tgz')
+  const sharedBytes = packageTarball({ name: 'shared-fixture', version: '1.0.0', os: [excludedOs] })
+  await writeFile(sharedPath, sharedBytes)
   const bytes = packageTarball({
     name: PACKAGE_NAME,
     version: subject.release.version,
@@ -424,7 +428,7 @@ test('does not let an omitted optional path satisfy a later required edge', asyn
       lock.packages[`node_modules/${PACKAGE_NAME}`].dependencies = { 'required-parent': '1.0.0' }
       lock.packages[`node_modules/${PACKAGE_NAME}`].optionalDependencies = { 'shared-fixture': '1.0.0' }
       lock.packages['node_modules/required-parent'] = { version: '1.0.0', dependencies: { 'shared-fixture': '1.0.0' } }
-      lock.packages['node_modules/shared-fixture'] = { version: '1.0.0', optional: true, os: [process.platform === 'win32' ? 'linux' : 'win32'] }
+      lock.packages['node_modules/shared-fixture'] = { version: '1.0.0', optional: true, os: [excludedOs], resolved: `file:${sharedPath}`, integrity: integrity(sharedBytes) }
       await mkdir(join(subject.appPath, 'node_modules', 'required-parent'), { recursive: true })
       await writeFile(join(subject.appPath, 'node_modules', 'required-parent', 'package.json'), JSON.stringify({ name: 'required-parent', version: '1.0.0', dependencies: { 'shared-fixture': '1.0.0' } }))
       await writeFile(join(subject.appPath, 'package-lock.json'), `${JSON.stringify(lock, null, 2)}\n`)
@@ -437,6 +441,41 @@ test('does not let an omitted optional path satisfy a later required edge', asyn
     assert.match(result.error, /ADOPTION_FILE_CONFLICT/)
     const lock = JSON.parse(await readFile(join(subject.appPath, 'package-lock.json'), 'utf8'))
     assert.equal(lock.packages['node_modules/shared-fixture'].optional, true)
+    assert.equal(npm.commands.some(({ args }) => args[0] === 'ci'), false)
+  } finally { await rm(subject.root, { recursive: true, force: true }) }
+})
+
+for (const tamper of ['dependency edges', 'archive bytes']) test(`rejects forged omitted-package ${tamper}`, async () => {
+  const subject = await fixture()
+  const name = 'optional-fixture'
+  const os = [process.platform === 'win32' ? 'linux' : 'win32']
+  const packagePath = join(subject.root, 'optional-fixture.tgz')
+  const archive = packageTarball({ name, version: '1.0.0', os })
+  await writeFile(packagePath, tamper === 'archive bytes' ? packageTarball({ name, version: '2.0.0', os }) : archive)
+  const optionalDependencies = { [name]: `file:${packagePath}` }
+  const releaseBytes = packageTarball({ name: PACKAGE_NAME, version: subject.release.version, optionalDependencies })
+  subject.release.integrity = integrity(releaseBytes)
+  await writeFile(subject.release.packagePath, releaseBytes)
+  const npm = fakeNpm(subject)
+  const run = async (file, args, options) => {
+    const result = await npm.run(file, args, options)
+    if (file === 'npm' && args[0] === 'install') {
+      const lock = JSON.parse(await readFile(join(subject.appPath, 'package-lock.json'), 'utf8'))
+      lock.packages[`node_modules/${PACKAGE_NAME}`].optionalDependencies = optionalDependencies
+      lock.packages[`node_modules/${name}`] = { version: '1.0.0', optional: true, os, resolved: `file:${packagePath}`, integrity: integrity(archive) }
+      if (tamper === 'dependency edges') {
+        lock.packages[`node_modules/${name}`].dependencies = { 'external-edit': '1.0.0' }
+        lock.packages['node_modules/external-edit'] = { version: '1.0.0', optional: true }
+      }
+      await writeFile(join(subject.appPath, 'package-lock.json'), `${JSON.stringify(lock, null, 2)}\n`)
+    }
+    return result
+  }
+  try {
+    const result = await updateApplication({ ...subject, run })
+    assert.equal(result.status, 'failed')
+    assert.match(result.error, /ADOPTION_FILE_CONFLICT/)
+    assert.equal(JSON.parse(await readFile(join(subject.appPath, 'package-lock.json'), 'utf8')).packages[`node_modules/${name}`].version, '1.0.0')
     assert.equal(npm.commands.some(({ args }) => args[0] === 'ci'), false)
   } finally { await rm(subject.root, { recursive: true, force: true }) }
 })
@@ -688,7 +727,7 @@ test('real npm accepts lockfile changes in the adopted package transitive graph'
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 
-test('real npm accepts an omitted optional dependency excluded from the current platform', async () => {
+test('real npm accepts an omitted optional dependency and its omitted descendants', async () => {
   const root = await mkdtemp(join(tmpdir(), 'ds-real-optional-platform-'))
   const appPath = join(root, 'app')
   const dataDir = join(root, 'data')
@@ -705,7 +744,13 @@ test('real npm accepts an omitted optional dependency excluded from the current 
   }
   try {
     const excludedOs = process.platform === 'win32' ? 'linux' : 'win32'
-    const optionalPath = await pack('optional-package', { name: 'ds-optional-platform-fixture', version: '1.0.0', os: [excludedOs] })
+    const childPath = await pack('optional-child', { name: 'ds-optional-child-fixture', version: '1.0.0' })
+    const optionalPath = await pack('optional-package', {
+      name: 'ds-optional-platform-fixture',
+      version: '1.0.0',
+      os: [excludedOs],
+      dependencies: { 'ds-optional-child-fixture': `file:${childPath}` },
+    })
     const firstPath = await pack('design-system-1.0.0', { name: PACKAGE_NAME, version: '1.0.0' })
     const secondPath = await pack('design-system-1.0.1', { name: PACKAGE_NAME, version: '1.0.1', optionalDependencies: { 'ds-optional-platform-fixture': `file:${optionalPath}` } })
     const release = { version: '1.0.1', packagePath: secondPath, integrity: integrity(await readFile(secondPath)), sourceCommit: 'commit-1.0.1', summary: 'Release 1.0.1' }
@@ -724,7 +769,9 @@ test('real npm accepts an omitted optional dependency excluded from the current 
     assert.deepEqual(await updateApplication({ config: { appPath, checkScripts: ['check'] }, release, dataDir, requestId: 'optional-platform', run }), { status: 'installed' })
     const lock = JSON.parse(await readFile(join(appPath, 'package-lock.json'), 'utf8'))
     assert.equal(lock.packages['node_modules/ds-optional-platform-fixture'].optional, true)
+    assert.equal(lock.packages['node_modules/ds-optional-child-fixture'].optional, true)
     await assert.rejects(readFile(join(appPath, 'node_modules', 'ds-optional-platform-fixture', 'package.json')), { code: 'ENOENT' })
+    await assert.rejects(readFile(join(appPath, 'node_modules', 'ds-optional-child-fixture', 'package.json')), { code: 'ENOENT' })
   } finally { await rm(root, { recursive: true, force: true }) }
 })
 

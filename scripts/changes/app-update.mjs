@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { link, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from 'node:fs/promises'
+import { link, mkdir, mkdtemp, readFile, readdir, rename, rm, stat, unlink, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { validateConfig } from './protocol.mjs'
@@ -362,15 +363,45 @@ function validateLockGraphEntry(entry, manifest, path) {
   }
 }
 
-async function releaseDependencyClosure(packages, start, appPath, manifest) {
+async function omittedPackageManifest(entry, appPath, run) {
+  let bytes
+  const localPath = artifactPath(entry.resolved, appPath)
+  if (localPath) {
+    bytes = await readFile(localPath)
+  } else {
+    if (typeof entry.resolved !== 'string' || !/^https?:\/\//.test(entry.resolved)) throw coded('ADOPTION_FILE_CONFLICT', 'omitted dependency has no retrievable package archive')
+    const destination = await mkdtemp(join(tmpdir(), 'ds-adoption-package-'))
+    try {
+      await run('npm', ['pack', '--ignore-scripts', '--json', '--pack-destination', destination, entry.resolved], { cwd: appPath, timeoutMs: CHECK_TIMEOUT_MS })
+      const archives = (await readdir(destination)).filter((name) => name.endsWith('.tgz'))
+      if (archives.length !== 1) throw coded('ADOPTION_FILE_CONFLICT', 'omitted dependency archive could not be identified')
+      bytes = await readFile(join(destination, archives[0]))
+    } finally {
+      await rm(destination, { recursive: true, force: true })
+    }
+  }
+  const matches = typeof entry.integrity === 'string' && entry.integrity.split(/\s+/).some((token) => {
+    const match = /^(sha512|sha384|sha256|sha1)-([A-Za-z0-9+/]+={0,2})$/.exec(token)
+    return match && createHash(match[1]).update(bytes).digest('base64') === match[2]
+  })
+  if (!matches) throw coded('ADOPTION_FILE_CONFLICT', 'omitted dependency archive checksum does not match the lockfile')
+  const manifest = releaseManifest(bytes)
+  for (const field of ['os', 'cpu']) {
+    if (canonical(entry[field] ?? []) !== canonical(manifest[field] ?? [])) throw coded('ADOPTION_FILE_CONFLICT', `omitted dependency ${field} metadata does not match its archive`)
+  }
+  return manifest
+}
+
+async function releaseDependencyClosure(packages, start, appPath, manifest, run) {
   const closure = new Set()
   const validation = new Map()
   const pending = [{ path: start, manifest }]
   while (pending.length) {
     const item = pending.pop()
-    if (validation.get(item.path) === 'installed' || !packages[item.path]) continue
+    const state = validation.get(item.path)
+    if (state === 'installed' || (state === 'omittedOptional' && item.omitted) || !packages[item.path]) continue
     validateLockGraphEntry(packages[item.path], item.manifest, item.path)
-    validation.set(item.path, 'installed')
+    validation.set(item.path, item.omitted ? 'omittedOptional' : 'installed')
     closure.add(item.path)
     for (const edge of graphEdges(item.manifest)) {
       const path = resolveLockedDependency(packages, item.path, edge.name)
@@ -380,12 +411,14 @@ async function releaseDependencyClosure(packages, start, appPath, manifest) {
         throw coded('ADOPTION_FILE_CONFLICT', `package-lock.json is missing ${edge.optional ? 'optional' : 'required'} dependency ${edge.name} from ${item.path}`)
       }
       const state = validation.get(path)
-      if (state === 'installed' || (state === 'omittedOptional' && edge.optional)) continue
+      if (state === 'installed' || (state === 'omittedOptional' && (edge.optional || item.omitted))) continue
       let dependency
       try { dependency = JSON.parse(await readFile(join(appPath, path, 'package.json'), 'utf8')) } catch (error) {
-        if (error.code === 'ENOENT' && edge.optional && packages[path]?.optional === true && excludedFromCurrentPlatform(packages[path])) {
-          validation.set(path, 'omittedOptional')
-          closure.add(path)
+        if (error.code === 'ENOENT' && packages[path]?.optional === true && (item.omitted || (edge.optional && excludedFromCurrentPlatform(packages[path])))) {
+          // npm retains an omitted package's entire optional subtree in the lockfile.
+          // Its archive supplies the edges that missing installed metadata cannot attest.
+          const omittedManifest = await omittedPackageManifest(packages[path], appPath, run)
+          pending.push({ path, manifest: omittedManifest, omitted: true })
           continue
         }
         throw coded('ADOPTION_FILE_CONFLICT', `installed dependency metadata is unavailable at ${path}: ${error.message}`)
@@ -396,7 +429,7 @@ async function releaseDependencyClosure(packages, start, appPath, manifest) {
   return closure
 }
 
-async function validateOwnedLockMutation(journal) {
+async function validateOwnedLockMutation(journal, run) {
   const original = snapshotJson(journal.previous.packageLock, 'package-lock.json')
   const current = await readJson(join(journal.appPath, 'package-lock.json'), 'ADOPTION_FILE_CONFLICT', 'package-lock.json changed to invalid JSON during installation')
   const declaration = dependencyDeclaration(original.packages?.[''] ?? {})
@@ -419,7 +452,7 @@ async function validateOwnedLockMutation(journal) {
   if (canonical(normalizedRoot) !== canonical(originalRoot)) throw coded('ADOPTION_FILE_CONFLICT', 'package-lock.json root package contains changes outside the expected release adoption')
 
   const packagePath = `node_modules/${PACKAGE_NAME}`
-  const releaseClosure = await releaseDependencyClosure(current.packages, packagePath, journal.appPath, manifest)
+  const releaseClosure = await releaseDependencyClosure(current.packages, packagePath, journal.appPath, manifest, run)
   const allowed = new Set([
     ...lockedDependencyClosure(original.packages, packagePath),
     ...releaseClosure,
@@ -432,7 +465,7 @@ async function validateOwnedLockMutation(journal) {
   }
 }
 
-async function establishMutationOwnership(journal) {
+async function establishMutationOwnership(journal, run) {
   const current = await dependencyIdentity(journal.appPath)
   const validators = { packageJson: validateOwnedPackageMutation, packageLock: validateOwnedLockMutation }
   const owned = { ...journal.currentIdentity }
@@ -446,7 +479,7 @@ async function establishMutationOwnership(journal) {
       if (!sameFileIdentity(current[key], recorded)) throw coded('ADOPTION_FILE_CONFLICT', `${key} changed after this transaction recorded its installed state`)
       continue
     }
-    try { await validators[key](journal) }
+    try { await validators[key](journal, run) }
     catch (error) { throw coded('ADOPTION_FILE_CONFLICT', errorText(error)) }
     owned[key] = current[key]
   }
@@ -497,7 +530,7 @@ async function verifyPreconditions({ config, release, dataDir, requestId, run })
 
 async function restoreJournal({ journal, path, run, recoveredAfterInterruption = false, failure }) {
   let current
-  try { current = await establishMutationOwnership(journal) } catch {
+  try { current = await establishMutationOwnership(journal, run) } catch {
     const text = 'ADOPTION_FILE_CONFLICT: dependency files changed outside this transaction; backups were retained'
     await saveJournal(path, journal, { phase: 'conflict', error: text })
     return { status: 'failed', error: text }
@@ -609,7 +642,7 @@ export async function updateApplication({ config, release, dataDir, requestId, r
       await run('npm', ['install', '--save-exact', '--ignore-scripts', '--no-audit', '--no-fund', release.packagePath], { cwd: appPath, timeoutMs: CHECK_TIMEOUT_MS })
     } catch (error) {
       let currentIdentity
-      try { currentIdentity = await establishMutationOwnership(journal) } catch (ownershipError) {
+      try { currentIdentity = await establishMutationOwnership(journal, run) } catch (ownershipError) {
         const text = errorText(ownershipError)
         await saveJournal(path, journal, { phase: 'conflict', error: text })
         return { status: 'failed', error: text }
@@ -619,7 +652,7 @@ export async function updateApplication({ config, release, dataDir, requestId, r
     }
 
     let currentIdentity
-    try { currentIdentity = await establishMutationOwnership(journal) } catch (ownershipError) {
+    try { currentIdentity = await establishMutationOwnership(journal, run) } catch (ownershipError) {
       const text = errorText(ownershipError)
       await saveJournal(path, journal, { phase: 'conflict', error: text })
       return { status: 'failed', error: text }
