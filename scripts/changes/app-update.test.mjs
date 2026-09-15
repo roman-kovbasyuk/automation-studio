@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto'
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
+import { gzipSync } from 'node:zlib'
 import { runCommand } from './process.mjs'
 import { updateApplication } from './app-update.mjs'
 
@@ -11,6 +12,24 @@ const PACKAGE_NAME = 'brutalist-design-system'
 
 function integrity(bytes) {
   return `sha512-${createHash('sha512').update(bytes).digest('base64')}`
+}
+
+function packageTarball(manifest) {
+  const contents = Buffer.from(JSON.stringify(manifest))
+  const header = Buffer.alloc(512)
+  header.write('package/package.json')
+  header.write('0000644\0', 100)
+  header.write('0000000\0', 108)
+  header.write('0000000\0', 116)
+  header.write(`${contents.length.toString(8).padStart(11, '0')}\0`, 124)
+  header.write('00000000000\0', 136)
+  header.fill(0x20, 148, 156)
+  header.write('0', 156)
+  header.write('ustar\0', 257)
+  header.write('00', 263)
+  const checksum = header.reduce((sum, byte) => sum + byte, 0)
+  header.write(`${checksum.toString(8).padStart(6, '0')}\0 `, 148)
+  return gzipSync(Buffer.concat([header, contents, Buffer.alloc((512 - contents.length % 512) % 512), Buffer.alloc(1024)]))
 }
 
 async function fixture({ requestId = 'app-1' } = {}) {
@@ -33,7 +52,7 @@ async function fixture({ requestId = 'app-1' } = {}) {
       [`node_modules/${PACKAGE_NAME}`]: { version: '0.1.0', dev: true },
     },
   }, null, 2)}\n`)
-  const tarball = Buffer.from('immutable package bytes')
+  const tarball = packageTarball({ name: PACKAGE_NAME, version: '0.1.0-change.1' })
   await mkdir(join(appPath, 'src'), { recursive: true })
   await mkdir(join(appPath, 'node_modules', PACKAGE_NAME), { recursive: true })
   await mkdir(dirname(packagePath), { recursive: true })
@@ -75,7 +94,7 @@ async function installVersion(appPath, release) {
   await writeFile(join(appPath, 'node_modules', PACKAGE_NAME, 'package.json'), JSON.stringify({ name: PACKAGE_NAME, version: release.version }))
 }
 
-function fakeNpm(fixture, { failInstall = false, failCheck, failRestore = false, mutateDuringFailedCheck = false, mutateDuringInstall = false, mutateLockDuringInstall = false } = {}) {
+function fakeNpm(fixture, { failInstall = false, failCheck, failRestore = false, mutateDuringFailedCheck = false, mutateDuringInstall = false, mutateLockDuringInstall = false, forgeDesignSystemEdge = false } = {}) {
   const commands = []
   const run = async (file, args, options = {}) => {
     commands.push({ file, args: [...args], cwd: options.cwd })
@@ -90,6 +109,12 @@ function fakeNpm(fixture, { failInstall = false, failCheck, failRestore = false,
       }
       if (mutateLockDuringInstall) {
         const lock = JSON.parse(await readFile(join(fixture.appPath, 'package-lock.json'), 'utf8'))
+        lock.packages['node_modules/external-edit'] = { version: '1.0.0' }
+        await writeFile(join(fixture.appPath, 'package-lock.json'), `${JSON.stringify(lock, null, 2)}\n`)
+      }
+      if (forgeDesignSystemEdge) {
+        const lock = JSON.parse(await readFile(join(fixture.appPath, 'package-lock.json'), 'utf8'))
+        lock.packages[`node_modules/${PACKAGE_NAME}`].dependencies = { 'external-edit': '1.0.0' }
         lock.packages['node_modules/external-edit'] = { version: '1.0.0' }
         await writeFile(join(fixture.appPath, 'package-lock.json'), `${JSON.stringify(lock, null, 2)}\n`)
       }
@@ -303,7 +328,7 @@ test('adopts two successive immutable file releases after the app records the fi
 
     const requestId = 'second'
     const packagePath = join(subject.dataDir, 'releases', '0.1.0-change.2', 'package.tgz')
-    const bytes = Buffer.from('second immutable package bytes')
+    const bytes = packageTarball({ name: PACKAGE_NAME, version: '0.1.0-change.2' })
     await mkdir(dirname(packagePath), { recursive: true })
     await writeFile(packagePath, bytes)
     await writeFile(join(subject.dataDir, 'requests', `${requestId}.json`), JSON.stringify({ input: { requestId, installedVersion: subject.release.version, component: 'Button', change: 'Change it twice' }, status: 'ready' }))
@@ -337,6 +362,20 @@ test('treats an unrelated lock entry made during npm install as an external conf
     assert.equal(result.status, 'failed')
     assert.match(result.error, /ADOPTION_FILE_CONFLICT/)
     const lock = JSON.parse(await readFile(join(subject.appPath, 'package-lock.json'), 'utf8'))
+    assert.equal(lock.packages['node_modules/external-edit'].version, '1.0.0')
+    assert.equal(npm.commands.some(({ args }) => args[0] === 'ci'), false)
+  } finally { await rm(subject.root, { recursive: true, force: true }) }
+})
+
+test('does not claim a forged design-system dependency edge and package as install output', async () => {
+  const subject = await fixture()
+  const npm = fakeNpm(subject, { forgeDesignSystemEdge: true })
+  try {
+    const result = await updateApplication({ ...subject, run: npm.run })
+    assert.equal(result.status, 'failed')
+    assert.match(result.error, /ADOPTION_FILE_CONFLICT/)
+    const lock = JSON.parse(await readFile(join(subject.appPath, 'package-lock.json'), 'utf8'))
+    assert.deepEqual(lock.packages[`node_modules/${PACKAGE_NAME}`].dependencies, { 'external-edit': '1.0.0' })
     assert.equal(lock.packages['node_modules/external-edit'].version, '1.0.0')
     assert.equal(npm.commands.some(({ args }) => args[0] === 'ci'), false)
   } finally { await rm(subject.root, { recursive: true, force: true }) }

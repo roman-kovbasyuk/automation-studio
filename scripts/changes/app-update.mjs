@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { link, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
+import { gunzipSync } from 'node:zlib'
 import { validateConfig } from './protocol.mjs'
 import { runCommand } from './process.mjs'
 
@@ -229,6 +230,36 @@ function sameArtifactSpec(left, right, appPath) {
   return Boolean(leftPath && rightPath && leftPath === rightPath)
 }
 
+function tarText(bytes) {
+  return bytes.subarray(0, bytes.indexOf(0) < 0 ? bytes.length : bytes.indexOf(0)).toString('utf8')
+}
+
+function releaseManifest(bytes) {
+  let archive
+  try { archive = gunzipSync(bytes) } catch (error) { throw coded('PACKAGE_CONTENT_INVALID', `release archive is not a readable gzip stream: ${error.message}`) }
+  for (let offset = 0; offset + 512 <= archive.length;) {
+    const header = archive.subarray(offset, offset + 512)
+    if (header.every((byte) => byte === 0)) break
+    const name = [tarText(header.subarray(345, 500)), tarText(header.subarray(0, 100))].filter(Boolean).join('/').replace(/^\.\//, '')
+    const sizeText = tarText(header.subarray(124, 136)).trim()
+    const size = Number.parseInt(sizeText || '0', 8)
+    if (!Number.isSafeInteger(size) || size < 0 || offset + 512 + size > archive.length) throw coded('PACKAGE_CONTENT_INVALID', 'release archive has an invalid tar entry')
+    if (name === 'package/package.json') {
+      try { return JSON.parse(archive.subarray(offset + 512, offset + 512 + size).toString('utf8')) } catch (error) { throw coded('PACKAGE_CONTENT_INVALID', `release package.json is invalid: ${error.message}`) }
+    }
+    offset += 512 + Math.ceil(size / 512) * 512
+  }
+  throw coded('PACKAGE_CONTENT_INVALID', 'release archive does not contain package/package.json')
+}
+
+async function readReleaseManifest(release) {
+  const bytes = await readFile(release.packagePath)
+  if (sha512(bytes) !== release.integrity) throw coded('PACKAGE_CHECKSUM_MISMATCH', 'release package changed after validation')
+  const manifest = releaseManifest(bytes)
+  if (manifest?.name !== PACKAGE_NAME || manifest?.version !== release.version) throw coded('PACKAGE_CONTENT_INVALID', 'release package identity does not match the adoption journal')
+  return manifest
+}
+
 async function validateCurrentDependency({ manifest, lock, installed, input, appPath }) {
   const declared = dependencyDeclaration(manifest)
   const lockedRoot = lock?.packages?.['']?.[declared.section]?.[PACKAGE_NAME]
@@ -275,7 +306,7 @@ function resolveLockedDependency(packages, fromPath, name) {
   return null
 }
 
-function dependencyClosure(packages, start) {
+function lockedDependencyClosure(packages, start) {
   const closure = new Set()
   const pending = [start]
   while (pending.length) {
@@ -296,6 +327,46 @@ function dependencyClosure(packages, start) {
   return closure
 }
 
+const LOCK_GRAPH_FIELDS = ['dependencies', 'optionalDependencies', 'peerDependencies', 'peerDependenciesMeta']
+
+function graphNames(manifest) {
+  return new Set([
+    ...Object.keys(manifest.dependencies ?? {}),
+    ...Object.keys(manifest.optionalDependencies ?? {}),
+    ...Object.keys(manifest.peerDependencies ?? {}),
+  ])
+}
+
+function validateLockGraphEntry(entry, manifest, path) {
+  if (entry?.version !== manifest?.version) throw coded('ADOPTION_FILE_CONFLICT', `package-lock.json version does not match the installed package at ${path}`)
+  for (const field of LOCK_GRAPH_FIELDS) {
+    if (canonical(entry?.[field] ?? {}) !== canonical(manifest?.[field] ?? {})) {
+      throw coded('ADOPTION_FILE_CONFLICT', `package-lock.json ${field} do not match the package at ${path}`)
+    }
+  }
+}
+
+async function releaseDependencyClosure(packages, start, appPath, manifest) {
+  const closure = new Set()
+  const pending = [{ path: start, manifest }]
+  while (pending.length) {
+    const item = pending.pop()
+    if (closure.has(item.path) || !packages[item.path]) continue
+    validateLockGraphEntry(packages[item.path], item.manifest, item.path)
+    closure.add(item.path)
+    for (const name of graphNames(item.manifest)) {
+      const path = resolveLockedDependency(packages, item.path, name)
+      if (!path || closure.has(path)) continue
+      let dependency
+      try { dependency = JSON.parse(await readFile(join(appPath, path, 'package.json'), 'utf8')) } catch (error) {
+        throw coded('ADOPTION_FILE_CONFLICT', `installed dependency metadata is unavailable at ${path}: ${error.message}`)
+      }
+      pending.push({ path, manifest: dependency })
+    }
+  }
+  return closure
+}
+
 async function validateOwnedLockMutation(journal) {
   const original = snapshotJson(journal.previous.packageLock, 'package-lock.json')
   const current = await readJson(join(journal.appPath, 'package-lock.json'), 'ADOPTION_FILE_CONFLICT', 'package-lock.json changed to invalid JSON during installation')
@@ -307,6 +378,8 @@ async function validateOwnedLockMutation(journal) {
     || !sameArtifactSpec(currentPackage?.resolved, `file:${journal.release.packagePath}`, journal.appPath)
     || currentPackage?.integrity !== journal.release.integrity) throw coded('ADOPTION_FILE_CONFLICT', 'package-lock.json does not identify the expected release artifact')
 
+  const manifest = await readReleaseManifest(journal.release)
+
   const originalMetadata = { ...original, packages: undefined }
   const currentMetadata = { ...current, packages: undefined }
   if (canonical(currentMetadata) !== canonical(originalMetadata)) throw coded('ADOPTION_FILE_CONFLICT', 'package-lock.json metadata changed outside the expected release adoption')
@@ -317,9 +390,10 @@ async function validateOwnedLockMutation(journal) {
   if (canonical(normalizedRoot) !== canonical(originalRoot)) throw coded('ADOPTION_FILE_CONFLICT', 'package-lock.json root package contains changes outside the expected release adoption')
 
   const packagePath = `node_modules/${PACKAGE_NAME}`
+  const releaseClosure = await releaseDependencyClosure(current.packages, packagePath, journal.appPath, manifest)
   const allowed = new Set([
-    ...dependencyClosure(original.packages, packagePath),
-    ...dependencyClosure(current.packages, packagePath),
+    ...lockedDependencyClosure(original.packages, packagePath),
+    ...releaseClosure,
   ])
   for (const path of new Set([...Object.keys(original.packages), ...Object.keys(current.packages)])) {
     if (path === '') continue
@@ -385,6 +459,8 @@ async function verifyPreconditions({ config, release, dataDir, requestId, run })
   let packageBytes
   try { packageBytes = await readFile(release.packagePath) } catch (error) { throw coded('PACKAGE_CHECKSUM_MISMATCH', `release package could not be read: ${error.message}`) }
   if (sha512(packageBytes) !== release.integrity) throw coded('PACKAGE_CHECKSUM_MISMATCH', 'release package SHA-512 does not match its manifest')
+  const packageManifest = releaseManifest(packageBytes)
+  if (packageManifest?.name !== PACKAGE_NAME || packageManifest?.version !== release.version) throw coded('PACKAGE_CONTENT_INVALID', 'release package identity does not match its manifest')
   const verifiedIdentity = await dependencyIdentity(checkedConfig.appPath)
   if (!sameIdentity(initialIdentity, verifiedIdentity)) throw coded('ADOPTION_FILE_CONFLICT', 'dependency files changed during application validation')
   return { config: checkedConfig, input, verifiedIdentity }
