@@ -30,6 +30,12 @@ test('CodeExample groups tabs and the transparent copy action in one header cont
   expect(copy).toHaveClass('b-code-example__copy')
 })
 
+test('CodeExample can omit Copy for non-copyable foundation previews', () => {
+  render(<CodeExample title="Typography" filename="typography.tsx" source="const typeScale = {}" copyable={false} preview={<Text>Type scale</Text>} />)
+  expect(screen.getByRole('tab', { name: 'Preview' })).toBeVisible()
+  expect(screen.queryByRole('button', { name: 'Copy Typography code' })).not.toBeInTheDocument()
+})
+
 test('clipboard rejection exposes selectable source without claiming success', async () => {
   const user = userEvent.setup()
   vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValueOnce(new Error('Denied'))

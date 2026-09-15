@@ -14,6 +14,12 @@ test('direct links select the requested page; history changes update the article
   expect(screen.getByRole('heading', { name: 'Spacing', level: 1 })).toBeVisible()
 })
 
+test('foundation previews do not offer global source copying', () => {
+  window.history.replaceState({}, '', '/page-20.html?basic=typography#overview')
+  render(<BasicsDocs />)
+  expect(screen.queryByRole('button', { name: 'Copy Typography overview code' })).not.toBeInTheDocument()
+})
+
 test('unknown pages recover to Color and all eight Basics destinations work', async () => {
   window.history.replaceState({}, '', '/page-20.html?basic=missing')
   const user = userEvent.setup()

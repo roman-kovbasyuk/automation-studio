@@ -21,12 +21,13 @@ export type CodeExampleProps = {
   source: string
   preview?: ReactNode
   controls?: ReactNode
+  copyable?: boolean
   headingLevel?: HeadingProps['level']
   className?: string
 }
 
 /** Canonical documentation example: existing Panel, controls and layout atoms. */
-export function CodeExample({ title, description, filename, source, preview, controls, headingLevel = 2, className = '' }: CodeExampleProps) {
+export function CodeExample({ title, description, filename, source, preview, controls, copyable = true, headingLevel = 2, className = '' }: CodeExampleProps) {
   const [view, setView] = useState('preview')
   const [message, setMessage] = useState('')
   const copyVersion = useRef(0)
@@ -52,7 +53,8 @@ export function CodeExample({ title, description, filename, source, preview, con
   </Stack>
   const viewItems = [{ id: 'preview', label: 'Preview', content: null }, { id: 'code', label: 'Code', content: null }] as const
   const viewTabs = preview != null ? <Tabs listOnly size="compact" className="b-code-example__view-tabs" label={`${title} view`} value={view} onChange={setView} items={viewItems} /> : null
-  const headerControls = <Inline className="b-code-example__header-controls" gap={2}>{viewTabs}{controls}<Button size="compact" className="b-code-example__copy" icon="copy" aria-label={`Copy ${title} code`} onClick={copy}>Copy</Button></Inline>
+  const copyButton = copyable ? <Button size="compact" className="b-code-example__copy" icon="copy" aria-label={`Copy ${title} code`} onClick={copy}>Copy</Button> : null
+  const headerControls = viewTabs || controls || copyButton ? <Inline className="b-code-example__header-controls" gap={2}>{viewTabs}{controls}{copyButton}</Inline> : null
   const content = preview != null ? <div role="tabpanel" aria-label={`${title} ${view}`} className="b-code-example__content">{view === 'preview' ? <div className="b-code-example__preview">{preview}</div> : code}</div> : code
   return <Panel title={title} description={description} headingLevel={headingLevel} variant="split" density="compact" className={`b-code-example ${className}`.trim()} filters={headerControls}>
     {content}
