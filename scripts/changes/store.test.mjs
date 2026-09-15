@@ -11,9 +11,20 @@ test('same ID and content returns one automatically approved request', async () 
   try { const store = openStore(dir); const input = { requestId: 'r1', installedVersion: '0.1.0', component: 'Button', change: 'Add an optional busy label.' }; const [a, b] = await Promise.all([store.submit(input), store.submit(input)]); assert.deepEqual(a, b); assert.equal((await store.listWorking()).length, 1); await assert.rejects(store.submit({ ...input, change: 'Different request' }), /conflict/i) } finally { await rm(dir, { recursive: true, force: true }) }
 })
 
-test('updates preserve input and reserves unique versions', async () => {
+test('updates preserve input and reserves unique versions across store restarts', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'ds-queue-'))
-  try { const store = openStore(dir); await store.submit({ requestId: 'r2', installedVersion: '0.1.0', component: 'Button', change: 'Change it' }); await store.update('r2', { status: 'ready', version: '0.1.1' }); assert.equal((await store.get('r2')).version, '0.1.1'); assert.deepEqual((await Promise.all([store.reserveVersion('0.1.0'), store.reserveVersion('0.1.0')])).sort(), ['0.1.1', '0.1.2']) } finally { await rm(dir, { recursive: true, force: true }) }
+  try {
+    const store = openStore(dir)
+    await store.submit({ requestId: 'r2', installedVersion: '0.1.0', component: 'Button', change: 'Change it' })
+    await store.update('r2', { status: 'ready', version: '0.1.0-change.1' })
+    assert.equal((await store.get('r2')).version, '0.1.0-change.1')
+    const versions = await Promise.all([store.reserveVersion('0.1.0'), store.reserveVersion('0.1.0')])
+    assert.equal(new Set(versions).size, 2)
+    assert.ok(versions.every((version) => /^0\.1\.0-change\.[1-9][0-9]*$/.test(version)))
+    assert.equal(await openStore(dir).reserveVersion('0.1.0'), '0.1.0-change.3')
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
 })
 
 test('rejects unknown and traversal IDs', async () => {

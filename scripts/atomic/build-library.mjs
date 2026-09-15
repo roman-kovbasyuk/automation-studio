@@ -3,10 +3,14 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 const root = resolve(import.meta.dirname, '../..')
+const manifest = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
+const version = process.env.DS_RELEASE_VERSION ?? `${manifest.version}-atomic.0`
+if (!/^\d+\.\d+\.\d+(?:-[0-9A-Za-z]+(?:[.-][0-9A-Za-z]+)*)?$/.test(version)) {
+  throw new Error('Invalid release version')
+}
 for (const args of [['vite', 'build', '--config', 'vite.atomic.library.config.ts'], ['tsc', '-p', 'tsconfig.atomic.library.json']]) {
   execFileSync('npm', ['exec', '--', ...args], { cwd: root, stdio: 'inherit' })
 }
-const manifest = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'))
 // Vite extracts CSS to one public entry; declaration files must not reference
 // the source-only per-component stylesheets that are absent from that artifact.
 function cleanDeclarations(directory) {
@@ -19,7 +23,7 @@ function cleanDeclarations(directory) {
 cleanDeclarations(resolve(root, 'dist-atomic-library'))
 writeFileSync(resolve(root, 'dist-atomic-library/styles.css.d.ts'), 'declare const stylesheet: string\nexport default stylesheet\n')
 writeFileSync(resolve(root, 'dist-atomic-library/package.json'), JSON.stringify({
-  name: 'brutalist-design-system', version: `${manifest.version}-atomic.0`, private: true, type: 'module',
+  name: 'brutalist-design-system', version, private: true, type: 'module',
   exports: { '.': { types: './index.d.ts', import: './index.js' }, './styles.css': { types: './styles.css.d.ts', default: './styles.css' } },
   files: ['**/*.js', '**/*.d.ts', '**/*.css'], sideEffects: ['**/*.css'],
   peerDependencies: { react: '>=19', 'react-dom': '>=19' },
