@@ -23,6 +23,7 @@
     "verify": "npm run verify:atomic",
     "verify:consumer": "node scripts/atomic/verify-consumer.mjs",
     "changes": "node scripts/changes/cli.mjs",
+    "changes:worker": "node scripts/changes/worker.mjs --watch",
     "test:changes": "node --test scripts/changes/*.test.mjs"
   },
   "dependencies": {

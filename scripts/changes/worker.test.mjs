@@ -1,0 +1,358 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+import { openStore } from './store.mjs'
+import { runCommand } from './process.mjs'
+import { drainQueue, processRequest } from './worker.mjs'
+
+const input = { requestId: 'r1', installedVersion: '0.1.0', component: 'Button', change: 'Add an optional busy label.' }
+
+async function fakeFixture() {
+  const root = await mkdtemp(join(tmpdir(), 'ds-worker-'))
+  const repositoryDir = join(root, 'repository')
+  const dataDir = join(root, 'data')
+  await mkdir(repositoryDir, { recursive: true })
+  const store = openStore(dataDir)
+  await store.submit(input)
+  return { root, repositoryDir, dataDir, store }
+}
+
+function fakeGit({ dirtyAfterCommit = false, failVerify = false, failPromotion = false } = {}) {
+  const commands = []
+  let mainHead = 'base-commit'
+  let candidateHead = 'base-commit'
+  let candidateChanged = false
+  let staged = false
+  let committed = false
+  const run = async (file, args, options = {}) => {
+    const command = [file, ...args].join(' ')
+    commands.push(command)
+    if (file === 'git' && args[0] === 'rev-parse' && args[1] === 'refs/heads/main') return { stdout: `${mainHead}\n`, stderr: '' }
+    if (file === 'git' && args[0] === 'branch') return { stdout: 'main\n', stderr: '' }
+    if (file === 'git' && args[0] === 'worktree') {
+      const candidateDir = args[3]
+      await mkdir(join(candidateDir, 'src', 'atomic'), { recursive: true })
+      await writeFile(join(candidateDir, 'package.json'), '{"version":"0.1.0"}\n')
+      return { stdout: '', stderr: '' }
+    }
+    if (file === 'npm' && args.join(' ') === 'ci') return { stdout: '', stderr: '' }
+    if (file === 'npm' && args.join(' ') === 'run verify') {
+      if (failVerify) throw new Error('verification failed')
+      return { stdout: '', stderr: '' }
+    }
+    if (file === 'git' && args[0] === 'status') {
+      if (!options.cwd.includes('worktrees')) return { stdout: '', stderr: '' }
+      if (dirtyAfterCommit && committed) return { stdout: ' M package.json\n', stderr: '' }
+      if (!candidateChanged) return { stdout: '', stderr: '' }
+      return { stdout: staged ? 'M  src/atomic/Button.js\n' : ' M src/atomic/Button.js\n', stderr: '' }
+    }
+    if (file === 'git' && args[0] === 'add') { staged = true; return { stdout: '', stderr: '' } }
+    if (file === 'git' && args.includes('commit')) { candidateHead = 'candidate-commit'; candidateChanged = false; staged = false; committed = true; return { stdout: '', stderr: '' } }
+    if (file === 'git' && args[0] === 'rev-parse' && args[1] === 'HEAD') return { stdout: `${options.cwd.includes('worktrees') ? candidateHead : mainHead}\n`, stderr: '' }
+    if (file === 'git' && args[0] === 'merge') {
+      if (failPromotion) throw new Error('fast-forward failed')
+      mainHead = args.at(-1)
+      return { stdout: '', stderr: '' }
+    }
+    throw new Error(`unexpected command: ${command}`)
+  }
+  return { commands, run, changed() { candidateChanged = true } }
+}
+
+async function successfulRelease({ dataDir, sourceCommit, summary }) {
+  const packagePath = join(dataDir, 'releases', '0.1.0-change.1', 'package.tgz')
+  await mkdir(dirname(packagePath), { recursive: true })
+  await writeFile(packagePath, 'package bytes')
+  return {
+    version: '0.1.0-change.1',
+    packagePath,
+    integrity: `sha512-${createHash('sha512').update('package bytes').digest('base64')}`,
+    sourceCommit,
+    summary,
+    manifestPath: join(dirname(packagePath), 'manifest.json'),
+  }
+}
+
+test('failed agent output never verifies or promotes main', async () => {
+  const fixture = await fakeFixture()
+  const git = fakeGit()
+  try {
+    const result = await processRequest({
+      ...fixture,
+      requestId: 'r1',
+      run: git.run,
+      implement: async () => ({ outcome: 'failed', summary: 'Could not implement.', error: 'Requirements are ambiguous.' }),
+      release: successfulRelease,
+    })
+    assert.equal(result.status, 'failed')
+    assert.equal(git.commands.includes('npm run verify'), false)
+    assert.equal(git.commands.some((command) => command.startsWith('git merge --ff-only')), false)
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('failed verification never promotes main', async () => {
+  const fixture = await fakeFixture()
+  const git = fakeGit({ failVerify: true })
+  try {
+    const result = await processRequest({
+      ...fixture,
+      requestId: 'r1',
+      run: git.run,
+      implement: async ({ candidateDir }) => {
+        git.changed()
+        await writeFile(join(candidateDir, 'src', 'atomic', 'Button.js'), 'export const busy = true\n')
+        return { outcome: 'implemented', summary: 'Button supports a busy label.', error: null }
+      },
+      release: successfulRelease,
+    })
+    assert.equal(result.status, 'failed')
+    assert.equal(git.commands.some((command) => command.startsWith('git merge --ff-only')), false)
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('verification precedes promotion and failed promotion never returns ready', async () => {
+  const fixture = await fakeFixture()
+  const git = fakeGit({ failPromotion: true })
+  try {
+    const result = await processRequest({
+      ...fixture,
+      requestId: 'r1',
+      run: git.run,
+      implement: async ({ candidateDir }) => {
+        git.changed()
+        await writeFile(join(candidateDir, 'src', 'atomic', 'Button.js'), 'export const busy = true\n')
+        return { outcome: 'implemented', summary: 'Button supports a busy label.', error: null }
+      },
+      release: successfulRelease,
+    })
+    const commands = git.commands
+    assert.ok(commands.findIndex((command) => command === 'npm run verify') < commands.findIndex((command) => command.startsWith('git merge --ff-only')))
+    assert.equal(result.status, 'failed')
+    assert.equal(commands.some((command) => command.startsWith('git reset --hard')), false)
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('generated changes outside the allowed scope fail before packaging', async () => {
+  const fixture = await fakeFixture()
+  const git = fakeGit({ dirtyAfterCommit: true })
+  let releases = 0
+  try {
+    const result = await processRequest({
+      ...fixture,
+      requestId: 'r1',
+      run: git.run,
+      implement: async ({ candidateDir }) => {
+        git.changed()
+        await writeFile(join(candidateDir, 'src', 'atomic', 'Button.js'), 'export const busy = true\n')
+        return { outcome: 'implemented', summary: 'Button supports a busy label.', error: null }
+      },
+      release: async (options) => { releases += 1; return successfulRelease(options) },
+    })
+    assert.equal(result.status, 'failed')
+    assert.match(result.error, /unexpected|scope|clean/i)
+    assert.equal(releases, 0)
+    assert.equal(git.commands.some((command) => command.startsWith('git merge --ff-only')), false)
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('a stopped worker resumes the packaged phase without invoking the agent twice', async () => {
+  const fixture = await fakeFixture()
+  const git = fakeGit()
+  let implementations = 0
+  let releases = 0
+  const implement = async ({ candidateDir }) => {
+    implementations += 1
+    git.changed()
+    await writeFile(join(candidateDir, 'src', 'atomic', 'Button.js'), 'export const busy = true\n')
+    return { outcome: 'implemented', summary: 'Button supports a busy label.', error: null }
+  }
+  const release = async (options) => {
+    releases += 1
+    if (releases === 1) throw Object.assign(new Error('worker stopped'), { code: 'WORKER_STOPPED' })
+    return successfulRelease(options)
+  }
+  try {
+    await assert.rejects(processRequest({ ...fixture, requestId: 'r1', run: git.run, implement, release }), /worker stopped/)
+    const result = await processRequest({ ...fixture, requestId: 'r1', run: git.run, implement, release })
+    assert.equal(result.status, 'ready')
+    assert.equal(implementations, 1)
+    assert.equal(releases, 2)
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('a failed ready-result write is recovered after promotion without reimplementation or repackaging', async () => {
+  const fixture = await fakeFixture()
+  const git = fakeGit()
+  let implementations = 0
+  let releases = 0
+  let failReadyOnce = true
+  const store = {
+    ...fixture.store,
+    update: async (id, patch) => {
+      if (patch.status === 'ready' && failReadyOnce) {
+        failReadyOnce = false
+        throw new Error('simulated result publication failure')
+      }
+      return fixture.store.update(id, patch)
+    },
+  }
+  try {
+    const options = {
+      ...fixture,
+      store,
+      requestId: 'r1',
+      run: git.run,
+      implement: async ({ candidateDir }) => {
+        implementations += 1
+        git.changed()
+        await writeFile(join(candidateDir, 'src', 'atomic', 'Button.js'), 'export const busy = true\n')
+        return { outcome: 'implemented', summary: 'Button supports a busy label.', error: null }
+      },
+      release: async (releaseOptions) => { releases += 1; return successfulRelease(releaseOptions) },
+    }
+    const interrupted = await processRequest(options)
+    assert.equal(interrupted.status, 'failed')
+    assert.match(interrupted.error, /promotion succeeded.*recovery/i)
+    const recovered = await processRequest(options)
+    assert.equal(recovered.status, 'ready')
+    assert.equal(implementations, 1)
+    assert.equal(releases, 1)
+    assert.equal(git.commands.filter((command) => command.startsWith('git merge --ff-only')).length, 1)
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('drainQueue claims queued requests under the worker lock in creation order', async () => {
+  const fixture = await fakeFixture()
+  let lockCalls = 0
+  const store = {
+    ...fixture.store,
+    withWorkerLock: async (fn) => { lockCalls += 1; return fixture.store.withWorkerLock(fn) },
+  }
+  try {
+    await new Promise((done) => setTimeout(done, 5))
+    await fixture.store.submit({ ...input, requestId: 'r2' })
+    const seen = []
+    const results = await drainQueue({
+      ...fixture,
+      store,
+      process: async ({ requestId }) => {
+        seen.push(requestId)
+        await fixture.store.update(requestId, { status: 'failed', error: 'synthetic completion' })
+        return { requestId, status: 'failed', error: 'synthetic completion' }
+      },
+    })
+    assert.deepEqual(seen, ['r1', 'r2'])
+    assert.equal(results.length, 2)
+    assert.ok(lockCalls >= 2)
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('drainQueue recovers an unfinished journal before claiming new work', async () => {
+  const fixture = await fakeFixture()
+  try {
+    await fixture.store.submit({ ...input, requestId: 'r2' })
+    const journalsDir = join(fixture.dataDir, 'journals')
+    await mkdir(journalsDir, { recursive: true })
+    await writeFile(join(journalsDir, 'r2.json'), JSON.stringify({ requestId: 'r2', phase: 'verifying', ownerPid: 999_999_999, updatedAt: new Date().toISOString() }))
+    const seen = []
+    await drainQueue({
+      ...fixture,
+      process: async ({ requestId }) => {
+        seen.push(requestId)
+        await fixture.store.update(requestId, { status: 'failed', error: 'synthetic completion' })
+        return { requestId, status: 'failed', error: 'synthetic completion' }
+      },
+    })
+    assert.deepEqual(seen, ['r2', 'r1'])
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
+
+async function realRepositoryFixture(requestId) {
+  const root = await mkdtemp(join(tmpdir(), 'ds-worker-git-'))
+  const repositoryDir = join(root, 'repository')
+  const dataDir = join(root, 'data')
+  await mkdir(join(repositoryDir, 'src', 'atomic'), { recursive: true })
+  await writeFile(join(repositoryDir, 'package.json'), JSON.stringify({ name: 'fixture', version: '0.1.0', scripts: { verify: "node -e 'process.exit(0)'" } }, null, 2))
+  await writeFile(join(repositoryDir, 'package-lock.json'), JSON.stringify({ name: 'fixture', version: '0.1.0', lockfileVersion: 3, requires: true, packages: { '': { name: 'fixture', version: '0.1.0' } } }, null, 2))
+  await writeFile(join(repositoryDir, 'src', 'atomic', 'Button.js'), 'export const label = "Button"\n')
+  await runCommand('git', ['init', '-b', 'main'], { cwd: repositoryDir })
+  await runCommand('git', ['config', 'user.name', 'Worker Test'], { cwd: repositoryDir })
+  await runCommand('git', ['config', 'user.email', 'worker@example.invalid'], { cwd: repositoryDir })
+  await runCommand('git', ['add', '.'], { cwd: repositoryDir })
+  await runCommand('git', ['commit', '-m', 'base'], { cwd: repositoryDir })
+  const store = openStore(dataDir)
+  await store.submit({ ...input, requestId })
+  return { root, repositoryDir, dataDir, store }
+}
+
+test('a disposable Git repository is verified and fast-forwarded to the candidate commit', async () => {
+  const fixture = await realRepositoryFixture('git-ff')
+  try {
+    const result = await processRequest({
+      ...fixture,
+      requestId: 'git-ff',
+      run: runCommand,
+      implement: async ({ candidateDir }) => {
+        await writeFile(join(candidateDir, 'src', 'atomic', 'Button.js'), 'export const label = "Busy button"\n')
+        return { outcome: 'implemented', summary: 'Button supports a busy label.', error: null }
+      },
+      release: successfulRelease,
+    })
+    assert.equal(result.status, 'ready')
+    assert.equal(await readFile(join(fixture.repositoryDir, 'src', 'atomic', 'Button.js'), 'utf8'), 'export const label = "Busy button"\n')
+    const journal = JSON.parse(await readFile(join(fixture.dataDir, 'journals', 'git-ff.json'), 'utf8'))
+    assert.equal((await runCommand('git', ['rev-parse', 'HEAD'], { cwd: fixture.repositoryDir })).stdout.trim(), journal.candidateCommit)
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('a conflicting main advance returns a retryable failure and preserves main', async () => {
+  const fixture = await realRepositoryFixture('git-conflict')
+  let advanced = false
+  const release = async (options) => {
+    if (!advanced) {
+      advanced = true
+      await writeFile(join(fixture.repositoryDir, 'src', 'atomic', 'Button.js'), 'export const label = "Concurrent main"\n')
+      await runCommand('git', ['add', 'src/atomic/Button.js'], { cwd: fixture.repositoryDir })
+      await runCommand('git', ['commit', '-m', 'concurrent main change'], { cwd: fixture.repositoryDir })
+    }
+    return successfulRelease(options)
+  }
+  try {
+    const result = await processRequest({
+      ...fixture,
+      requestId: 'git-conflict',
+      run: runCommand,
+      implement: async ({ candidateDir }) => {
+        await writeFile(join(candidateDir, 'src', 'atomic', 'Button.js'), 'export const label = "Requested change"\n')
+        return { outcome: 'implemented', summary: 'Button supports a busy label.', error: null }
+      },
+      release,
+    })
+    assert.equal(result.status, 'failed')
+    assert.match(result.error, /retryable.*conflict/i)
+    assert.equal(await readFile(join(fixture.repositoryDir, 'src', 'atomic', 'Button.js'), 'utf8'), 'export const label = "Concurrent main"\n')
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
