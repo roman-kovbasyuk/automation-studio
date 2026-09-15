@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { createHash, randomUUID } from 'node:crypto'
 import { access, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from 'node:fs/promises'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { implementChange } from './agent.mjs'
 import { runCommand } from './process.mjs'
@@ -10,7 +10,15 @@ import { openStore } from './store.mjs'
 
 const PHASES = new Set(['queued', 'implementing', 'verifying', 'packaged', 'promoting', 'released'])
 const REQUEST_ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,79}$/
-const sleep = (ms) => new Promise((done) => setTimeout(done, ms))
+
+function pollDelay(ms, signal) {
+  if (signal?.aborted) return Promise.resolve()
+  return new Promise((done) => {
+    const timer = setTimeout(finish, ms)
+    function finish() { clearTimeout(timer); signal?.removeEventListener('abort', finish); done() }
+    signal?.addEventListener('abort', finish, { once: true })
+  })
+}
 
 function message(error) {
   return (error instanceof Error ? error.message : String(error)).replace(/\s+/g, ' ').trim().slice(0, 2000) || 'Unknown worker failure'
@@ -97,6 +105,14 @@ function validateAgentChanges(entries) {
   return [...new Set(entries.map(({ path }) => path))]
 }
 
+async function validateCommittedScope(run, candidateDir, baseCommit, candidateCommit) {
+  if (candidateCommit === baseCommit) return []
+  const paths = (await git(run, candidateDir, ['diff', '--name-only', '--no-renames', `${baseCommit}..${candidateCommit}`])).split(/\r?\n/).filter(Boolean)
+  const unexpected = paths.filter((path) => !allowedPath(path))
+  if (unexpected.length) throw new Error(`Committed candidate contains unexpected paths: ${unexpected.join(', ')}`)
+  return paths
+}
+
 async function git(run, cwd, args) {
   return (await run('git', args, { cwd })).stdout.trim()
 }
@@ -113,11 +129,12 @@ async function ensureObservatoryTask({ repositoryDir, input, run, existingTaskId
   const env = { ...process.env, TASKS_FILE: tasksFile }
   delete env.CODEX_THREAD_ID
   const listed = JSON.parse((await run(process.execPath, [cliPath, 'list'], { cwd: repositoryDir, env })).stdout)
-  const marker = `Design-system request ID: ${input.requestId}`
-  const existing = listed.find((task) => task?.description?.includes(marker))
+  const marker = `[design-system-request:${input.requestId}]`
+  const legacyMarker = `Design-system request ID: ${input.requestId}.`
+  const existing = listed.find((task) => task?.description?.includes(marker) || task?.description?.includes(legacyMarker))
   if (existing?.id) return existing.id
   const title = `Process design-system request ${input.requestId}`
-  const description = `${marker}. Automatically approved by the owner's single-app policy; implement in the canonical atomic layer, verify, package, and promote locally.`
+  const description = `${marker}\nDesign-system request ID: ${input.requestId}. Automatically approved by the owner's single-app policy; implement in the canonical atomic layer, verify, package, and promote locally.`
   const created = JSON.parse((await run(process.execPath, [cliPath, 'add', title, description, '', '', 'Design-system change worker', 'specification'], { cwd: repositoryDir, env })).stdout)
   if (!created?.id) throw new Error('Observatory did not return a task ID')
   return created.id
@@ -187,19 +204,65 @@ async function cleanMain(context) {
 async function packageCandidate(context, candidateCommit, summary) {
   const head = await git(context.run, context.candidateDir, ['rev-parse', 'HEAD'])
   if (head !== candidateCommit) throw new Error('Candidate HEAD does not match the verified commit')
+  await validateCommittedScope(context.run, context.candidateDir, context.journal.baseCommit, candidateCommit)
   const remaining = statusPaths(await gitStatus(context.run, context.candidateDir))
   if (remaining.length) {
     const unexpected = remaining.filter(({ path }) => !allowedPath(path)).map(({ path }) => path)
     if (unexpected.length) throw new Error(`Candidate contains unexpected generated changes: ${unexpected.join(', ')}`)
     throw new Error(`Candidate is not clean after committing verified changes: ${remaining.map(({ path }) => path).join(', ')}`)
   }
-  await setPhase(context, 'packaged', { candidateCommit, summary })
+  await setPhase(context, 'packaged', { candidateCommit, summary, operation: undefined })
   const recovered = await findRelease(context.dataDir, candidateCommit)
   const release = recovered ?? await context.release({ candidateDir: context.candidateDir, dataDir: context.dataDir, store: context.store, sourceCommit: candidateCommit, summary, run: context.run })
   if (release.sourceCommit !== candidateCommit) throw new Error('Release source commit does not match the verified candidate')
   if (!await verifiedRelease(release)) throw new Error('Release artifact failed its integrity check')
   await setPhase(context, 'promoting', { release, candidateCommit, summary })
   return release
+}
+
+function validateWorkerOwnedStatus(entries, changedPaths) {
+  const expected = new Set(changedPaths ?? [])
+  if (!expected.size) throw new Error('Worker staging journal has no changed paths')
+  const unexpected = entries.map(({ path }) => path).filter((path) => !expected.has(path) || !allowedPath(path))
+  if (unexpected.length) throw new Error(`Worker staging found unexpected paths: ${unexpected.join(', ')}`)
+}
+
+async function rebaseInProgress(context) {
+  for (const name of ['rebase-merge', 'rebase-apply']) {
+    const gitPath = await git(context.run, context.candidateDir, ['rev-parse', '--git-path', name])
+    if (await pathExists(isAbsolute(gitPath) ? gitPath : resolve(context.candidateDir, gitPath))) return true
+  }
+  return false
+}
+
+async function resumeRebase(context) {
+  const { preRebaseCommit, rebaseOnto, summary } = context.journal
+  if (!preRebaseCommit || !rebaseOnto) throw new Error('Rebase recovery journal is incomplete')
+  let head = await git(context.run, context.candidateDir, ['rev-parse', 'HEAD'])
+  let status = statusPaths(await gitStatus(context.run, context.candidateDir))
+  const activeRebase = await rebaseInProgress(context)
+  if (activeRebase || status.length) {
+    if (activeRebase) await context.run('git', ['rebase', '--abort'], { cwd: context.candidateDir }).catch(() => {})
+    throw new Error('Retryable promotion conflict: an interrupted rebase left unresolved candidate state')
+  }
+  if (head === preRebaseCommit) {
+    try { await context.run('git', ['rebase', rebaseOnto], { cwd: context.candidateDir }) }
+    catch (error) {
+      if (error?.code === 'WORKER_STOPPED') throw error
+      await context.run('git', ['rebase', '--abort'], { cwd: context.candidateDir }).catch(() => {})
+      throw new Error(`Retryable promotion conflict: ${message(error)}`)
+    }
+    head = await git(context.run, context.candidateDir, ['rev-parse', 'HEAD'])
+    status = statusPaths(await gitStatus(context.run, context.candidateDir))
+    if (status.length || await rebaseInProgress(context)) throw new Error('Retryable promotion conflict: rebase did not finish cleanly')
+  }
+  try { await context.run('git', ['merge-base', '--is-ancestor', rebaseOnto, head], { cwd: context.candidateDir }) }
+  catch { throw new Error('Retryable promotion failure: rebased candidate is not based on the current main commit') }
+  await validateCommittedScope(context.run, context.candidateDir, rebaseOnto, head)
+  await context.run('npm', ['run', 'verify'], { cwd: context.candidateDir, timeoutMs: 30 * 60 * 1000 })
+  if (await gitStatus(context.run, context.candidateDir)) throw new Error('Candidate is not clean after rebase verification')
+  await setPhase(context, 'packaged', { candidateCommit: head, verifiedCommit: head, operation: undefined })
+  await packageCandidate(context, head, summary)
 }
 
 export async function processRequest({
@@ -269,35 +332,63 @@ export async function processRequest({
         observatoryTasksFile: resolve(process.env.TASKS_FILE || join(repository, 'observatory', 'data', 'tasks.json')),
       })
       if (agent.outcome !== 'implemented') return await failRequest(context, agent.error || agent.summary)
+      const agentHead = await git(run, candidateDir, ['rev-parse', 'HEAD'])
+      await validateCommittedScope(run, candidateDir, context.journal.baseCommit, agentHead)
       const entries = statusPaths(await gitStatus(run, candidateDir))
       const changedPaths = validateAgentChanges(entries)
-      await setPhase(context, 'verifying', { summary: agent.summary, changedPaths })
+      await setPhase(context, 'verifying', { summary: agent.summary, changedPaths, operation: 'verify' })
     }
 
     if (context.journal.phase === 'verifying') {
-      let candidateCommit = context.journal.candidateCommit
-      let verifiedNow = false
-      if (!candidateCommit) {
-        const head = await git(run, candidateDir, ['rev-parse', 'HEAD'])
-        const status = statusPaths(await gitStatus(run, candidateDir))
-        if (head !== context.journal.baseCommit && status.length === 0) {
-          const committed = (await git(run, candidateDir, ['diff', '--name-only', `${context.journal.baseCommit}..${head}`])).split(/\r?\n/).filter(Boolean)
-          const unexpected = committed.filter((path) => !allowedPath(path))
-          if (unexpected.length) throw new Error(`Committed candidate contains unexpected paths: ${unexpected.join(', ')}`)
-          candidateCommit = head
-        } else {
-          const changedPaths = validateAgentChanges(status)
-          await run('npm', ['run', 'verify'], { cwd: candidateDir, timeoutMs: 30 * 60 * 1000 })
-          verifiedNow = true
-          await run('git', ['add', '--', ...changedPaths], { cwd: candidateDir })
+      if (context.journal.operation === 'rebasing') {
+        await resumeRebase(context)
+      } else {
+        let candidateCommit = context.journal.candidateCommit
+        let head = await git(run, candidateDir, ['rev-parse', 'HEAD'])
+        await validateCommittedScope(run, candidateDir, context.journal.baseCommit, head)
+
+        if (context.journal.operation === 'committing') {
+          if (!context.journal.preCommitHead) throw new Error('Worker commit recovery journal is incomplete')
+          if (head !== context.journal.preCommitHead) {
+            if (await gitStatus(run, candidateDir)) throw new Error('Worker commit recovery found an advanced HEAD with uncommitted changes')
+            candidateCommit = head
+          } else {
+            const entries = statusPaths(await gitStatus(run, candidateDir))
+            validateWorkerOwnedStatus(entries, context.journal.changedPaths)
+            await run('git', ['-c', 'user.name=Design System Worker', '-c', 'user.email=design-system-worker@localhost', 'commit', '-m', `feat(atomic): ${record.input.component} change ${id}`], { cwd: candidateDir })
+            candidateCommit = await git(run, candidateDir, ['rev-parse', 'HEAD'])
+          }
+        } else if (context.journal.operation === 'staging') {
+          const entries = statusPaths(await gitStatus(run, candidateDir))
+          validateWorkerOwnedStatus(entries, context.journal.changedPaths)
+          await run('git', ['add', '--', ...context.journal.changedPaths], { cwd: candidateDir })
+          await setPhase(context, 'verifying', { operation: 'committing', preCommitHead: head })
           await run('git', ['-c', 'user.name=Design System Worker', '-c', 'user.email=design-system-worker@localhost', 'commit', '-m', `feat(atomic): ${record.input.component} change ${id}`], { cwd: candidateDir })
           candidateCommit = await git(run, candidateDir, ['rev-parse', 'HEAD'])
+        } else if (!candidateCommit) {
+          const status = statusPaths(await gitStatus(run, candidateDir))
+          if (head !== context.journal.baseCommit && status.length === 0) {
+            await run('npm', ['run', 'verify'], { cwd: candidateDir, timeoutMs: 30 * 60 * 1000 })
+            candidateCommit = head
+          } else {
+            validateAgentChanges(status)
+            await run('npm', ['run', 'verify'], { cwd: candidateDir, timeoutMs: 30 * 60 * 1000 })
+            const verifiedEntries = statusPaths(await gitStatus(run, candidateDir))
+            const changedPaths = validateAgentChanges(verifiedEntries)
+            await setPhase(context, 'verifying', { operation: 'staging', changedPaths, preCommitHead: undefined })
+            await run('git', ['add', '--', ...changedPaths], { cwd: candidateDir })
+            await setPhase(context, 'verifying', { operation: 'committing', preCommitHead: head })
+            await run('git', ['-c', 'user.name=Design System Worker', '-c', 'user.email=design-system-worker@localhost', 'commit', '-m', `feat(atomic): ${record.input.component} change ${id}`], { cwd: candidateDir })
+            candidateCommit = await git(run, candidateDir, ['rev-parse', 'HEAD'])
+          }
+        } else if (context.journal.verifiedCommit !== candidateCommit) {
+          await run('npm', ['run', 'verify'], { cwd: candidateDir, timeoutMs: 30 * 60 * 1000 })
         }
+
+        await validateCommittedScope(run, candidateDir, context.journal.baseCommit, candidateCommit)
+        if (await gitStatus(run, candidateDir)) throw new Error('Candidate is not clean after the worker commit')
+        await setPhase(context, 'packaged', { candidateCommit, verifiedCommit: candidateCommit, operation: undefined, preCommitHead: undefined })
       }
-      if (!verifiedNow && (!context.journal.verifiedCommit || context.journal.verifiedCommit !== candidateCommit)) {
-        await run('npm', ['run', 'verify'], { cwd: candidateDir, timeoutMs: 30 * 60 * 1000 })
-      }
-      await setPhase(context, 'packaged', { candidateCommit, verifiedCommit: candidateCommit })
     }
 
     if (context.journal.phase === 'packaged') {
@@ -315,16 +406,17 @@ export async function processRequest({
       if (mainHead === context.journal.candidateCommit) return await finishReleased(context)
       if (mainHead !== context.journal.baseCommit) {
         if (context.journal.rebased) throw new Error('Retryable promotion failure: main advanced repeatedly')
-        await setPhase(context, 'verifying', { baseCommit: mainHead, rebased: true, release: undefined, verifiedCommit: undefined })
-        try { await run('git', ['rebase', mainHead], { cwd: candidateDir }) }
-        catch (error) {
-          await run('git', ['rebase', '--abort'], { cwd: candidateDir }).catch(() => {})
-          throw new Error(`Retryable promotion conflict: ${message(error)}`)
-        }
-        const rebasedCommit = await git(run, candidateDir, ['rev-parse', 'HEAD'])
-        await run('npm', ['run', 'verify'], { cwd: candidateDir, timeoutMs: 30 * 60 * 1000 })
-        await setPhase(context, 'packaged', { candidateCommit: rebasedCommit, verifiedCommit: rebasedCommit })
-        await packageCandidate(context, rebasedCommit, context.journal.summary)
+        await setPhase(context, 'verifying', {
+          baseCommit: mainHead,
+          candidateCommit: undefined,
+          preRebaseCommit: context.journal.candidateCommit,
+          rebaseOnto: mainHead,
+          operation: 'rebasing',
+          rebased: true,
+          release: undefined,
+          verifiedCommit: undefined,
+        })
+        await resumeRebase(context)
         await cleanMain(context)
         mainHead = await git(run, repository, ['rev-parse', 'HEAD'])
         if (mainHead !== context.journal.baseCommit) throw new Error('Retryable promotion failure: main advanced repeatedly')
@@ -377,10 +469,12 @@ function pidAlive(pid) {
 }
 
 export async function drainQueue(options) {
-  const { dataDir, store, process: processOne = processRequest } = options
+  const { dataDir, signal, shouldStop, store, process: processOne = processRequest } = options
   const results = []
   for (;;) {
+    if (signal?.aborted || shouldStop?.()) break
     const requestId = await store.withWorkerLock(async () => {
+      if (signal?.aborted || shouldStop?.()) return null
       const records = await workingRecords(dataDir)
       if (!records.length) return null
       const candidates = await Promise.all(records.map(async (record) => {
@@ -409,13 +503,14 @@ async function main() {
   const dataDir = join(repositoryDir, '.design-system-changes')
   const store = openStore(dataDir)
   let stopping = false
-  const stop = () => { stopping = true }
+  const controller = new AbortController()
+  const stop = () => { stopping = true; controller.abort() }
   process.once('SIGINT', stop)
   process.once('SIGTERM', stop)
   do {
-    await drainQueue({ repositoryDir, dataDir, store, run: runCommand })
+    await drainQueue({ repositoryDir, dataDir, store, run: runCommand, signal: controller.signal, shouldStop: () => stopping })
     if (!args.includes('--watch') || stopping) break
-    await sleep(2000)
+    await pollDelay(2000, controller.signal)
   } while (!stopping)
 }
 
