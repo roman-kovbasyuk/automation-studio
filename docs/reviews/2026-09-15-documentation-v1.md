@@ -15,6 +15,7 @@ The complete-coverage pass adds `/page-23.html`, a generated index of every Basi
 - The same grouped sidebar, search, responsive Drawer, contents Menu, Panel-wrapped examples, installation steps with npm/pnpm/yarn controls, live Preview/Code tabs, copy action, usage guidance and API reference tables are shared across all three layers.
 - Component previews render the actual exported controls. Source blocks show public imports and the exact usage shape for each page.
 - Code examples wrap long source lines within their panels and apply lightweight token highlighting for keywords, strings, tags, numbers and comments.
+- Preview/Code switching is centered in each CodeExample Panel header, while installation package-manager controls remain in their step headers.
 
 ## Verification
 

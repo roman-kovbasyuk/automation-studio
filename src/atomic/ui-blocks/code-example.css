@@ -4,4 +4,7 @@
 .b-code-example__token--tag { color: var(--a-color-danger); }
 .b-code-example__token--number { color: var(--a-color-secondary); }
 .b-code-example__token--comment { color: var(--a-color-secondary); font-style: italic; }
+.b-code-example__header-controls { display: flex; justify-content: center; align-items: center; width: 100%; }
+.b-code-example__view-tabs { max-width: 100%; }
+.b-code-example__content { min-width: 0; }
 .b-code-example__preview { padding-block: var(--a-space-4); min-width: 0; }
