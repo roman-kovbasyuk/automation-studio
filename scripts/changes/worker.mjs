@@ -25,6 +25,10 @@ function message(error) {
   return (error instanceof Error ? error.message : String(error)).replace(/\s+/g, ' ').trim().slice(0, 2000) || 'Unknown worker failure'
 }
 
+function unrecoverableRelease(messageText) {
+  return Object.assign(new Error(messageText), { code: 'UNRECOVERABLE_RELEASE' })
+}
+
 function ensureRequestId(requestId) {
   if (typeof requestId !== 'string' || !REQUEST_ID.test(requestId)) throw new Error('requestId has an invalid format')
   return requestId
@@ -175,10 +179,13 @@ async function failRequest(context, error, extra = {}) {
 
 async function finishReleased(context) {
   const { release, candidateCommit } = context.journal
-  if (!await verifiedRelease(release)) throw new Error('Released artifact is missing or failed its integrity check')
+  if (!await verifiedRelease(release)) throw unrecoverableRelease('Released artifact is missing or failed its integrity check')
   if (context.record.status !== 'ready') {
     const mainHead = await git(context.run, context.repositoryDir, ['rev-parse', 'HEAD'])
-    if (mainHead !== candidateCommit) throw new Error('Retryable recovery failure: main does not contain the journaled candidate commit')
+    if (mainHead !== candidateCommit) {
+      try { await context.run('git', ['merge-base', '--is-ancestor', candidateCommit, mainHead], { cwd: context.repositoryDir }) }
+      catch { throw unrecoverableRelease('Released candidate is no longer contained in the current main history') }
+    }
     if (context.journal.phase !== 'released') await setPhase(context, 'released')
   }
   const ready = await context.store.update(context.requestId, {
@@ -461,6 +468,7 @@ export async function processRequest({
   } catch (error) {
     if (error?.code === 'WORKER_STOPPED') throw error
     if (context.journal.phase === 'released') {
+      if (error?.code === 'UNRECOVERABLE_RELEASE' && context.record.status !== 'ready') return failRequest(context, error)
       const release = context.journal.release
       return {
         requestId: id,

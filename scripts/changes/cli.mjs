@@ -1,4 +1,5 @@
-import { readFile, access } from 'node:fs/promises'
+import { readFile } from 'node:fs/promises'
+import { realpathSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { openStore } from './store.mjs'
@@ -20,4 +21,4 @@ export async function dispatch(argv = process.argv.slice(2)) {
   if (command === 'get') return store.get(parsed._[1])
   throw new Error('usage: changes configure|request|<get>')
 }
-if (import.meta.url === `file://${process.argv[1]}`) { try { process.stdout.write(`${JSON.stringify(await dispatch())}\n`) } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1 } }
+if (process.argv[1] && fileURLToPath(import.meta.url) === realpathSync(process.argv[1])) { try { process.stdout.write(`${JSON.stringify(await dispatch())}\n`) } catch (error) { process.stderr.write(`${error.message}\n`); process.exitCode = 1 } }
