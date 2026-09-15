@@ -24,7 +24,7 @@ function Installation() {
 
 export function BasicsDocs() {
   const [page, setPage] = useState(pageFromUrl)
-  const contents = [{id:'overview',label:'Overview'}, ...((page.id === 'color') ? [] : [{id:'installation',label:'Installation'}, {id:'examples',label:'Examples'}, {id:'example-preview',label:page.example.title,icon:'arrowRight' as const}, {id:'usage',label:'Usage guidance'}, {id:'reference',label:'Reference'}])]
+  const contents = [{id:'overview',label:'Overview'}, ...((page.id === 'color' || page.id === 'typography') ? [] : [{id:'installation',label:'Installation'}, {id:'examples',label:'Examples'}, {id:'example-preview',label:page.example.title,icon:'arrowRight' as const}, {id:'usage',label:'Usage guidance'}, {id:'reference',label:'Reference'}])]
   const [query, setQuery] = useState('')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [activeSection, setActiveSection] = useState('overview')
@@ -109,6 +109,7 @@ export function BasicsDocs() {
   const indexItems = contents.map(item => ({...item,href:`#${item.id}`,current:activeSection===item.id}))
 
   const isColor = page.id === 'color'
+  const isTypography = page.id === 'typography'
   return <AtomsRoot className="docs-page">
     <a className="docs-skip" href="#docs-title">Skip to content</a>
     <header className="docs-header">
@@ -126,7 +127,7 @@ export function BasicsDocs() {
             <div className="docs-inline-index"><Menu label="On this page" icon="chevronDown" items={contents} onSelect={id => { window.location.hash = id }} /></div>
             {isColor ? <Panel title="Color overview" headingLevel={2} variant="split"><Color /></Panel> : <CodeExample title={`${page.title} overview`} headingLevel={2} filename={`${page.sourceFile}.tsx`} source={publicSource(page.sourceFile)} preview={page.preview} />}
           </Stack></section>
-          {!isColor && <section id="installation"><Stack gap={6}><Heading level={2} variant="h3">Installation</Heading><Text tone="secondary">Use the shared library and its stylesheet in your application.</Text><Installation /></Stack></section>}
+          {!isColor && !isTypography && <section id="installation"><Stack gap={6}><Heading level={2} variant="h3">Installation</Heading><Text tone="secondary">Use the shared library and its stylesheet in your application.</Text><Installation /></Stack></section>}
           {!isColor && <section id="examples"><Stack gap={6}><Heading level={2} variant="h3">Examples</Heading><div id="example-preview"><CodeExample title={page.example.title} description={page.example.description} filename={`${page.sourceFile}.tsx · named example export`} source={publicSource(page.sourceFile)} preview={page.example.preview} /></div></Stack></section>}
           {!isColor && <section id="usage"><Panel title="Usage guidance" headingLevel={2} variant="split"><Stack gap={3}>{page.notes.map(note => <Text key={note}>{note}</Text>)}</Stack></Panel></section>}
           {!isColor && <section id="reference"><Stack gap={6}><Heading level={2} variant="h3">Reference</Heading><Panel title={`${page.title} tokens and props`} description="Values come from our shared library. CSS variables are available within AtomsRoot." variant="split"><Table label={`${page.title} reference`} rows={page.reference} rowKey={row=>row.name} columns={[{id:'name',header:'Token / prop',render:row=><code>{row.name}</code>},{id:'value',header:'Value / type',render:row=><Text variant="small">{row.value}</Text>},{id:'purpose',header:'Reference',render:row=><Text variant="small" tone="secondary">{row.purpose}</Text>}]} /></Panel></Stack></section>}
