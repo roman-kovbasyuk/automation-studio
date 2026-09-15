@@ -150,7 +150,7 @@ export function ComponentInstallation({ page }: { page?: Pick<ComponentSpec, 'id
     </Stack>
   </Panel>
   return <Stack gap={6} className="docs-component-installation">
-    <CodeExample headingLevel={3} title="1. Install the shared package" description="Install the package that provides the shared design-system foundation and this component." filename="terminal · consuming application" source={`${command} ./vendor/brutalist-design-system-0.1.0-atomic.0.tgz`} controls={<Tabs label="Package manager" size="compact" value={manager} onChange={setManager} options={[{ value: 'npm', label: 'npm' }, { value: 'pnpm', label: 'pnpm' }, { value: 'yarn', label: 'yarn' }]} />} />
-    <CodeExample headingLevel={3} title={`2. Add ${page.title} to your application`} description={`Import ${page.title} from the public package and use it in your application.`} filename={`${page.id}.tsx`} source={page.source} />
+    <Text variant="small" tone="secondary">{page.title} is included in the shared package. Install the library once from Getting Started, then use the public component export below.</Text>
+    <CodeExample headingLevel={3} title={`1. Add ${page.title} to your application`} description={`Import ${page.title} from the public package and use it in your application.`} filename={`${page.id}.tsx`} source={page.source} />
   </Stack>
 }
