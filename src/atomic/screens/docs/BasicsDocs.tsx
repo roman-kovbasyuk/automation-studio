@@ -131,7 +131,7 @@ export function BasicsDocs() {
           <Divider /><footer><Text variant="small" tone="secondary">Documentation structure inspired by <a href="https://alignui.com/docs/v1.2/ui/button" target="_blank" rel="noreferrer">AlignUI</a>.</Text></footer>
         </Stack></Container>
       </main>
-      <aside className="docs-index" aria-label="On this page"><Stack gap={3}><Text variant="small" tone="secondary">ON THIS PAGE</Text><NavigationList label="Article sections" items={indexItems} /></Stack></aside>
+      <aside className="docs-index" aria-label="On this page"><Stack gap={3}><NavigationList label="Article sections" items={indexItems} /></Stack></aside>
     </div>
   </AtomsRoot>
 }

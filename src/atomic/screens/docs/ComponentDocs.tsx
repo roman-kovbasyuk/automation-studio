@@ -71,6 +71,6 @@ export function ComponentDocs() {
       <section id="usage"><Panel title="Usage guidance" headingLevel={2} variant="split"><Stack gap={3}>{page.notes.map(note => <Text key={note}>{note}</Text>)}</Stack></Panel></section>
       <section id="reference"><Stack gap={6}><Heading level={2} variant="h3">Reference</Heading><Panel title={`${page.title} props`} description="These rows reflect the public component signature and supported values." variant="split"><Table label={`${page.title} reference`} rows={page.reference} rowKey={row => row.name} columns={[{ id: 'name', header: 'Prop', render: row => <code>{row.name}</code> }, { id: 'value', header: 'Value / type', render: row => <Text variant="small">{row.value}</Text> }, { id: 'purpose', header: 'Description', render: row => <Text variant="small" tone="secondary">{row.purpose}</Text> }]} /></Panel></Stack></section>
       <Divider /><footer><Text variant="small" tone="secondary">Documentation structure inspired by <a href="https://alignui.com/docs/v1.2/ui/button" target="_blank" rel="noreferrer">AlignUI</a>.</Text></footer>
-    </Stack></Container></main><aside className="docs-index" aria-label="On this page"><Stack gap={3}><Text variant="small" tone="secondary">ON THIS PAGE</Text><NavigationList label="Article sections" items={indexItems} /></Stack></aside></div>
+    </Stack></Container></main><aside className="docs-index" aria-label="On this page"><Stack gap={3}><NavigationList label="Article sections" items={indexItems} /></Stack></aside></div>
   </AtomsRoot>
 }
