@@ -19,7 +19,8 @@
 .docs-typography-preview__sample:first-child { padding-top: 0; }
 .docs-typography-preview__sample:last-child { padding-bottom: 0; border-bottom: 0; }
 .docs-typography-preview__meta { flex-wrap: wrap; }
-.docs-typography-preview__meta > span { padding: var(--a-space-2) var(--a-space-3); border: var(--a-border-width) solid var(--a-color-editHighlight); border-radius: var(--a-radius-small); color: var(--a-color-secondary); background: var(--a-color-surface); }
+.docs-typography-preview__meta > span { padding: 0; border: 0; border-radius: 0; color: var(--a-color-secondary); background: transparent; }
+.docs-typography-preview__meta > span + span::before { content: '·'; margin-right: var(--a-space-2); color: var(--a-color-secondary); }
 .docs-typography-preview__meta strong { color: var(--a-color-ink); font-weight: 500; }
 .docs-color-group--separated { border-top: var(--a-border-width) solid var(--a-color-secondary); padding-top: var(--a-space-4); }
 .docs-color-cell { transition: transform var(--a-motion-fast) var(--a-motion-ease), box-shadow var(--a-motion-fast) var(--a-motion-ease); }
