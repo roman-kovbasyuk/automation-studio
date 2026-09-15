@@ -8,3 +8,12 @@
 .b-code-example__view-tabs { max-width: 100%; }
 .b-code-example__content { min-width: 0; padding: var(--a-space-6); }
 .b-code-example__preview { min-width: 0; }
+.b-code-example .c-panel__header > .a-stack { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; }
+.b-code-example .c-panel__heading-row { display: contents; }
+.b-code-example .c-panel__heading-row > .a-stack { grid-column: 1; }
+.b-code-example .c-panel__actions { grid-column: 3; grid-row: 1; justify-self: end; }
+.b-code-example .b-code-example__header-controls { grid-column: 2; grid-row: 1; }
+.docs-typography-preview { background: var(--a-color-surface); margin: calc(-1 * var(--a-space-6)); padding: var(--a-space-6); }
+.docs-typography-preview__sample { padding-block: var(--a-space-6); border-bottom: var(--a-border-width) solid var(--a-color-secondary); }
+.docs-typography-preview__sample:first-child { padding-top: 0; }
+.docs-typography-preview__sample:last-child { padding-bottom: 0; border-bottom: 0; }
