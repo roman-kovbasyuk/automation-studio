@@ -467,6 +467,28 @@ test('pending adoption uses its immutable ready package after main advances', as
   } finally { await rm(fixture.root, { recursive: true, force: true }) }
 })
 
+test('drainQueue durably fails a ready record whose immutable package is missing', async () => {
+  const fixture = await fakeFixture()
+  const git = fakeGit()
+  const release = await successfulRelease({ dataDir: fixture.dataDir, sourceCommit: 'candidate-commit', summary: 'Button changed.' })
+  try {
+    await fixture.store.update('r1', { status: 'ready', release, candidateCommit: 'candidate-commit', adoption: { status: 'pending' } })
+    await rm(release.packagePath)
+    let calls = 0
+    const results = await drainQueue({
+      ...fixture,
+      run: git.run,
+      adopt: async () => ({ status: 'installed' }),
+      process: async (options) => { calls += 1; return processRequest(options) },
+    })
+    assert.equal(results.length, 1)
+    assert.equal(calls, 1)
+    assert.equal(results[0].status, 'failed')
+    assert.equal((await fixture.store.get('r1')).status, 'failed')
+    assert.equal((await fixture.store.listWorking()).length, 0)
+  } finally { await rm(fixture.root, { recursive: true, force: true }) }
+})
+
 test('drainQueue recovers an unfinished journal before claiming new work', async () => {
   const fixture = await fakeFixture()
   try {

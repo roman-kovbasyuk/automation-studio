@@ -468,7 +468,7 @@ export async function processRequest({
   } catch (error) {
     if (error?.code === 'WORKER_STOPPED') throw error
     if (context.journal.phase === 'released') {
-      if (error?.code === 'UNRECOVERABLE_RELEASE' && context.record.status !== 'ready') return failRequest(context, error)
+      if (error?.code === 'UNRECOVERABLE_RELEASE') return failRequest(context, error)
       const release = context.journal.release
       return {
         requestId: id,
