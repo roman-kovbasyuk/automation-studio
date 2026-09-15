@@ -26,7 +26,7 @@ export type CodeExampleProps = {
 }
 
 /** Canonical documentation example: existing Panel, controls and layout atoms. */
-export function CodeExample({ title, description, filename, source, preview, controls, headingLevel = 3, className = '' }: CodeExampleProps) {
+export function CodeExample({ title, description, filename, source, preview, controls, headingLevel = 2, className = '' }: CodeExampleProps) {
   const [view, setView] = useState('preview')
   const [message, setMessage] = useState('')
   const copyVersion = useRef(0)
@@ -48,7 +48,7 @@ export function CodeExample({ title, description, filename, source, preview, con
   }
   const code = <Stack gap={2}>
     <Text variant="small" tone="secondary">{filename}</Text>
-    <ScrollArea label={`${title} source`} maxHeight="28rem"><pre className="b-code-example__source"><code>{highlightedSource(source)}</code></pre></ScrollArea>
+    <ScrollArea label={`${title} source`} maxHeight="none"><pre className="b-code-example__source"><code>{highlightedSource(source)}</code></pre></ScrollArea>
   </Stack>
   const viewItems = [{ id: 'preview', label: 'Preview', content: null }, { id: 'code', label: 'Code', content: null }] as const
   const viewTabs = preview != null ? <Tabs listOnly className="b-code-example__view-tabs" label={`${title} view`} value={view} onChange={setView} items={viewItems} /> : null
