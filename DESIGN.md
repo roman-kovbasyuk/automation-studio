@@ -125,10 +125,10 @@ The palette is deliberately small: neutral paper and ink establish the field, wh
 **Body Font:** Avenir Next (with the same fallback stack)
 **Label/Mono Font:** Inherited sans-serif; code examples use the browser monospace face.
 
-**Character:** Avenir Next gives the system a clean, friendly technical voice. Weight and line-height changes establish hierarchy while the shared family keeps catalogs and controls coherent.
+**Character:** Avenir Next gives the system a clean, friendly technical voice. Weight and line-height changes establish hierarchy while the shared family keeps documentation and controls coherent.
 
 ### Hierarchy
-- **Display** (500, 48px, 52px): Page titles and major catalog headings.
+- **Display** (500, 48px, 52px): Page titles and major documentation headings.
 - **Headline** (500, 32px, 36px): Section-level headings.
 - **Title** (500, 24px, 28px): Component and specimen headings.
 - **Body** (400, 16px, 22px): Explanations, field content, and readable prose.
@@ -138,7 +138,7 @@ The palette is deliberately small: neutral paper and ink establish the field, wh
 
 ## Layout
 
-The catalog uses a two-part desktop frame: a sticky navigation rail with a structural right border and a flexible content column. Main content uses generous horizontal padding (32px desktop, 16px narrow screens) and a 12px to 32px spacing rhythm. Component grids collapse through auto-fit columns, while dense typography rows become a single column below the responsive breakpoint. Scrollable regions preserve minimum widths and use thin, themed scrollbars.
+The documentation uses a three-part desktop frame: a sticky navigation rail, a flexible content column, and a compact on-page index. Main content uses generous horizontal padding (32px desktop, 16px narrow screens) and a 12px to 32px spacing rhythm. Component previews collapse through the responsive breakpoint, while dense reference rows remain readable in narrow viewports. Scrollable regions preserve minimum widths and use thin, themed scrollbars.
 
 Documentation surfaces are grouped by foundation, component, and UI-block category. Header actions, centered view tabs, and content panels remain aligned to the same container so preview, code, and copy actions are easy to scan.
 

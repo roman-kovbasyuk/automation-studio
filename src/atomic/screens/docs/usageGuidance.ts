@@ -1,4 +1,4 @@
-import guidanceDocument from '../../../../docs/guides/2026-09-16-component-usage-guidance.md?raw'
+import guidanceDocument from '../../../../docs/guides/component-usage.md?raw'
 
 export type GuidanceParagraph = { label: string; text: string }
 

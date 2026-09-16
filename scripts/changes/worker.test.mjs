@@ -6,9 +6,17 @@ import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { openStore } from './store.mjs'
 import { runCommand } from './process.mjs'
-import { drainQueue, processRequest } from './worker.mjs'
+import { allowedPath, drainQueue, processRequest } from './worker.mjs'
 
 const input = { requestId: 'r1', installedVersion: '0.1.0', component: 'Button', change: 'Add an optional busy label.' }
+
+test('automated component scope includes the real consumer and canonical usage guide only', () => {
+  assert.equal(allowedPath('fixtures/atomic-consumer/src/App.tsx'), true)
+  assert.equal(allowedPath('docs/guides/component-usage.md'), true)
+  assert.equal(allowedPath('fixtures/other-app/src/App.tsx'), false)
+  assert.equal(allowedPath('docs/external-changes.md'), false)
+  assert.equal(allowedPath('package.json'), false)
+})
 
 async function fakeFixture() {
   const root = await mkdtemp(join(tmpdir(), 'ds-worker-'))

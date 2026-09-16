@@ -45,7 +45,7 @@ test('implementChange sends change data on stdin and accepts only the structured
     assert.equal(invocation.args[invocation.args.indexOf('--output-last-message') + 1], resultPath)
     assert.equal(invocation.options.timeoutMs, 5_000)
     assert.match(invocation.options.input, /read AGENTS\.md/i)
-    assert.match(invocation.options.input, /Basics.*Components.*UI blocks.*Screens\/catalog/is)
+    assert.match(invocation.options.input, /Basics.*Components.*UI blocks.*Screens/is)
     assert.match(invocation.options.input, /task-123/)
     assert.match(invocation.options.input, /standing automatic approval/i)
     assert.match(invocation.options.input, /leave committing and promotion to the worker/i)

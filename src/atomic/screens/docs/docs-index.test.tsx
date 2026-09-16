@@ -14,8 +14,9 @@ test('documentation index links every published page family', () => {
   expect(screen.getByRole('heading', { name: '1. Build and pack the library', level: 3 })).toBeVisible()
   expect(screen.getByRole('heading', { name: '2. Install the local package', level: 3 })).toBeVisible()
   expect(screen.getByRole('heading', { name: '3. Provide the shared foundation', level: 3 })).toBeVisible()
-  expect(screen.queryByRole('heading', { name: 'Components', level: 2 })).not.toBeInTheDocument()
-  expect(screen.queryByRole('heading', { name: 'UI Blocks', level: 3 })).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Browse the system', level: 2 })).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'Components', level: 3 })).toBeVisible()
+  expect(screen.getByRole('heading', { name: 'UI Blocks', level: 3 })).toBeVisible()
 })
 
 test('installation steps retain the canonical Panel styling', () => {

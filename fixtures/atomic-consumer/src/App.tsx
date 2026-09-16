@@ -8,7 +8,7 @@ import {
 import 'brutalist-design-system/styles.css'
 import { FinalExamples, finalCoverage } from './FinalExamples'
 
-// Coverage is verified against the catalog inventory, not a second hand-maintained expected count.
+// Coverage is verified against the public component manifest, not a second hand-maintained expected count.
 export const coveredBlocks = { SidebarPanel, PromptInput, CodeExample }
 export const coveredComponents = { NavigationList, AttachmentArea, Button, Panel, TextField, Checkbox, RadioGroup, Toggle, TextArea, Select, Tag, SegmentedControl, Breadcrumbs, Pagination, NumberStepper, Slider, RangeSlider, Rating, ProgressBar, ProgressRing, StatusBadge, Alert, ...finalCoverage }
 

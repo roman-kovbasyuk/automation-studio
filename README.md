@@ -7,7 +7,7 @@ One canonical implementation, built with Atomic Design. The previous implementat
 - `src/atomic/atoms`: Basics (Atoms)—tokens, typography, icons, layout and surfaces.
 - `src/atomic/components`: Components (Molecules)—shared controls and interaction patterns.
 - `src/atomic/ui-blocks`: UI Blocks (Organisms)—SidebarPanel and PromptInput compose shared components.
-- `src/atomic/catalog`: the interactive reference app, using the same public components.
+- `src/atomic/screens/docs`: the canonical interactive documentation for Basics, Components and UI Blocks.
 
 Dependencies flow from higher layers to lower layers only. Blocks do not introduce private controls or restyle shared interaction states. Automated boundary checks enforce the source dependency direction.
 
@@ -21,9 +21,9 @@ npm run dev
 npm run verify
 ```
 
-`npm run build` builds the catalog into `dist`. Both `/` and `/atomic.html` serve the same catalog; the latter preserves existing review links.
+`npm run build` builds the documentation into `dist`. The root route is Getting Started; `/atomic.html` remains a compatibility redirect for old review links.
 
-`npm run verify` checks layer boundaries, tests, TypeScript, catalog and package builds, then installs the packed package in an independent consumer and checks its client and server builds.
+`npm run verify` checks layer boundaries, tests, TypeScript, documentation and package builds, then installs the packed package in an independent consumer and checks its client and server builds.
 
 ## Package
 
@@ -33,6 +33,8 @@ npm pack ./dist-atomic-library
 ```
 
 Install the generated tarball in the consuming application. Import components from `brutalist-design-system` and import `brutalist-design-system/styles.css` once. Do not import source files or catalog CSS.
+
+The permanent repository guides are collected in [`docs/README.md`](docs/README.md). The external application protocol is documented in [`docs/external-changes.md`](docs/external-changes.md); the interactive pages are linked from the root documentation route.
 
 The `:atomic` command aliases remain available for existing local workflows. They invoke the same implementation, not a second design system.
 

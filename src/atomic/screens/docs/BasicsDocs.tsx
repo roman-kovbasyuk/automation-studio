@@ -106,7 +106,7 @@ export function BasicsDocs() {
       <DocsNavGroup title={group.title} label={`${mobile?'Mobile ':''}${group.title}`} items={group.items} collapsed={Boolean(collapsed[group.title])} forceOpen={Boolean(normalized)} onToggle={() => setCollapsed(old => ({...old,[group.title]:!old[group.title]}))} />
     </Stack>)}
     {!groups.length && <Text role="status" variant="small">No matching pages. Try another search.</Text>}
-    <Divider /><Text variant="small" tone="secondary">Basics has the new documentation. Components and UI Blocks open in the existing catalog.</Text>
+    <Divider /><Text variant="small" tone="secondary">Use the documentation navigation to move between Basics, Components and UI Blocks.</Text>
   </Stack>
   const indexItems = contents.map(item => ({...item,href:`#${item.id}`,current:activeSection===item.id}))
 
@@ -116,7 +116,7 @@ export function BasicsDocs() {
     <header className="docs-header">
       <DocsBrand />
       <div className="docs-search" ref={searchRef}><SearchField label="Quick search" value={query} onChange={value => { setQuery(value); if (value.trim() && window.matchMedia?.('(max-width: 800px)').matches) setMobileOpen(true) }} placeholder="Find a page… /" onKeyDown={event => { if(event.key==='Escape') setQuery('') }} /></div>
-      <div className="docs-catalog-link"><NavigationList label="Catalog" items={[{id:'catalog',label:'Component catalog',href:'/atomic.html',icon:'externalLink'}]} /></div>
+      <div className="docs-catalog-link"><NavigationList label="Documentation" items={[{id:'components',label:'Components',href:'/page-21.html?component=button'},{id:'blocks',label:'UI Blocks',href:'/page-22.html?block=sidebar'}]} /></div>
       <div className="docs-mobile"><Drawer title="Documentation" trigger="Browse documentation" open={mobileOpen} onOpenChange={setMobileOpen}>{navigation(true)}</Drawer></div>
     </header>
     <div className="docs-shell">

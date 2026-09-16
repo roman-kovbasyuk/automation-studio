@@ -3,7 +3,6 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { test, expect } from 'vitest'
 import { Panel, Checkbox, Button } from './index'
-import { ComponentsCatalog } from '../catalog/ComponentsCatalog'
 
 test('split panel keeps interactive filters with the heading and content separate', async () => {
   function Example() {
@@ -41,14 +40,4 @@ test('header actions remain outside the heading and can act on compact panel con
   expect(screen.getByRole('heading', { name:'Document' })).not.toContainElement(action)
   await userEvent.click(action)
   expect(within(panel).getByText('Saved')).toBeVisible()
-})
-
-test('catalog variables are in the shared panel header and still control specimens', async () => {
-  render(<ComponentsCatalog />)
-  const group = screen.getByRole('region', { name: /^Button$/ })
-  const header = group.querySelector('header')!
-  expect(header).not.toBeNull()
-  await userEvent.click(within(header).getByRole('checkbox', { name: 'Disable buttons' }))
-  expect(within(group).getByRole('button', { name: 'Create campaign' })).toBeDisabled()
-  expect(header.contains(within(group).getByRole('button', { name: 'Create campaign' }))).toBe(false)
 })

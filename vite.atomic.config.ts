@@ -8,7 +8,7 @@ export default defineConfig({
     name: 'atomic-layer-boundary',
     generateBundle() {
       const root = `${resolve(import.meta.dirname, 'src/atomic')}/`
-      const layers = ['atoms', 'components', 'ui-blocks', 'screens', 'catalog']
+      const layers = ['atoms', 'components', 'ui-blocks', 'screens']
       const layerOf = (id: string) => id.startsWith(root) ? layers.indexOf(id.slice(root.length).split('/')[0]) : -1
       for (const id of this.getModuleIds()) {
         const owner = layerOf(id)

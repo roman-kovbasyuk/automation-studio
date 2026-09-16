@@ -95,10 +95,11 @@ function statusPaths(stdout) {
   })
 }
 
-function allowedPath(path) {
+export function allowedPath(path) {
   return path.startsWith('src/atomic/')
     || /^scripts\/atomic\/[^/]+\.test\.mjs$/.test(path)
-    || /^(?:test|tests|fixtures)\/atomic\//.test(path)
+    || path.startsWith('fixtures/atomic-consumer/')
+    || path === 'docs/guides/component-usage.md'
 }
 
 function validateAgentChanges(entries) {

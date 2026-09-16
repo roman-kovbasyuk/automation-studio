@@ -25,7 +25,7 @@ Users browse a categorized documentation site, inspect live component previews, 
 ## Capabilities and Constraints
 
 - React 19 and TypeScript implementation.
-- Shared atomic design-system layers: atoms, components, UI blocks, and screens/catalog.
+- Shared atomic design-system layers: atoms, components, UI blocks, and documentation screens.
 - Components expose interaction behavior through reusable APIs and shared tokens.
 - Documentation should support click-to-copy element IDs and code, live interaction, previews, and clear variation coverage.
 - Existing component APIs, accessibility behavior, and the AlignUI structure for documentation grouping and page layout should be preserved.

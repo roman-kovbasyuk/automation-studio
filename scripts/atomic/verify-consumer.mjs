@@ -2,7 +2,7 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, write
 import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { isAbsolute, join, resolve } from 'node:path'
-import { componentManifest } from '../../src/atomic/catalog/componentManifest.js'
+import { componentManifest } from '../../src/atomic/componentManifest.js'
 
 const root = resolve(import.meta.dirname, '../..')
 const artifact = join(root, 'dist-atomic-library')

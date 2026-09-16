@@ -39,4 +39,7 @@ body { margin: 0; }
 .docs-icon-button { width: 64px; min-width: 64px; height: 64px; min-height: 64px; box-sizing: border-box; padding: var(--a-space-2); display: inline-flex; align-items: center; justify-content: center; }
 .docs-component-example .b-code-example__preview { display: flex; align-items: center; justify-content: center; }
 .docs-button-full-width { width: 100%; }
+.docs-index-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--a-space-4); }
+.docs-index-cards .c-panel { height: 100%; }
 .docs-article .c-table code { color: #517ee6; font-size: 14px; }
+@media (max-width: 800px) { .docs-index-cards { grid-template-columns: 1fr; } }

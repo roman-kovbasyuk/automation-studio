@@ -1,6 +1,6 @@
 # Atomic Design rules
 
-- Dependency direction: Basics → Components → UI blocks → Screens/catalog. Lower layers never import higher layers.
+- Dependency direction: Basics → Components → UI blocks → Screens. Lower layers never import higher layers.
 - Basics owns tokens, typography, icons and layout in `src/atomic/atoms`.
 - Components owns reusable controls and interaction behavior in `src/atomic/components`.
 - UI blocks compose only Basics and Components; do not introduce private controls or depend on another block as a building block.
@@ -13,7 +13,7 @@
 
 ## Component usage guidance
 
-Before choosing or documenting a component, check the [Component Usage Guidance](docs/guides/2026-09-16-component-usage-guidance.md). The component’s purpose, context, alternatives, and application responsibilities must be consistent with that document.
+Before choosing or documenting a component, check the [Component Usage Guidance](docs/guides/component-usage.md). The component’s purpose, context, alternatives, and application responsibilities must be consistent with that document.
 
 <!-- task-observatory:start -->
 ## Task Observatory

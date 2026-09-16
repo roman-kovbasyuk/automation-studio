@@ -8,7 +8,6 @@ const allowed = {
   components: ['atoms', 'components'],
   'ui-blocks': ['atoms', 'components'],
   screens: ['atoms', 'components', 'ui-blocks', 'screens'],
-  catalog: ['atoms', 'components', 'ui-blocks', 'screens', 'catalog'],
   public: ['atoms', 'components', 'ui-blocks'],
 }
 const external = /^(react|react-dom|lucide-react|radix-ui)(\/|$)/
@@ -26,7 +25,7 @@ export function checkAtomicBoundaries(root) {
   const errors = []
   const layer = path => {
     const local = relative(root, path).replaceAll('\\', '/')
-    if (local === 'index.ts') return 'public'
+    if (local === 'index.ts' || local === 'componentManifest.js') return 'public'
     return local.split('/')[0]
   }
   for (const file of filesIn(root)) {
