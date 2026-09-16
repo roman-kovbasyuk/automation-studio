@@ -44,6 +44,8 @@ function harness(overrides = {}) {
   const userRepository = {
     createInvitation: vi.fn(async (input) => ({ ...input, acceptedUserId: null, acceptedAt: null, revokedAt: null })),
     findByIdForUpdate: vi.fn(async (id) => ({ id, email: 'person@example.com', role: 'designer', disabled: false })),
+    findById: vi.fn(async (id) => ({ id, email: 'person@example.com', role: 'designer', disabled: false, passwordConfigured: true, googleConnected: true })),
+    setAuthMethodState: vi.fn(async ({ id, passwordConfigured, googleConnected }) => ({ id, email: 'person@example.com', role: 'designer', disabled: false, passwordConfigured: passwordConfigured ?? true, googleConnected: googleConnected ?? true })),
     setDisabled: vi.fn(async ({ id, disabled }) => ({ id, email: 'person@example.com', role: 'designer', disabled })),
   }
   const repositories = {
@@ -66,6 +68,15 @@ function harness(overrides = {}) {
 }
 
 describe('workflow service', () => {
+  test('records a password-authenticated Firebase session before allowing Google disconnect', async () => {
+    const { service, userRepository } = harness()
+    const passwordActor = { ...actor, authProvider: 'password' }
+    await expect(service.syncPasswordAuth({ actor: passwordActor })).resolves.toMatchObject({ passwordConfigured: true })
+    await expect(service.disconnectGoogle({ actor: passwordActor })).resolves.toMatchObject({ googleConnected: false })
+    expect(userRepository.setAuthMethodState).toHaveBeenCalledWith({ id: actor.id, passwordConfigured: true })
+    expect(userRepository.setAuthMethodState).toHaveBeenCalledWith({ id: actor.id, googleConnected: false })
+  })
+
   test('orders campaign edits as lock/load, revision and command validation, persist, then audit', async () => {
     const { service, calls, campaignRepository, auditRepository } = harness()
     const commandValidation = vi.fn(() => { calls.push('validate'); return true })
@@ -143,6 +154,31 @@ describe('workflow service', () => {
     expect(auditRepository.append).toHaveBeenCalledWith(expect.objectContaining({ action: 'campaign.archived', entityId: 'campaign-1', beforeStatus: 'draft', afterStatus: 'draft' }))
   })
 
+  test.each(['banners', 'reels', 'landing-page', 'website-page', 'presentations', 'business-cards', 'email-signature'])('creates and duplicates a %s project without losing its category', async projectType => {
+    const { service, campaignRepository } = harness({ briefingEnabled: projectType === 'banners' })
+    const created = await service.createCampaign({ actor, input: { title: 'Typed project', brief, projectType } })
+    expect(created.projectType).toBe(projectType)
+    campaignRepository.findByIdForUpdate.mockResolvedValueOnce({ ...created, projectType })
+    const duplicate = await service.duplicateCampaign({ actor, campaignId: created.id })
+    expect(duplicate.projectType).toBe(projectType)
+  })
+
+  test('server initializes the canonical briefing for a banner campaign even when the client omits the marker', async () => {
+    const { service } = harness({ briefingEnabled: true })
+
+    const created = await service.createCampaign({
+      actor,
+      input: { title: 'Canonical banner', brief },
+    })
+
+    expect(created.brief.briefing).toMatchObject({
+      schemaVersion: 2,
+      sourceIds: [],
+      analysisJobId: null,
+      confirmation: null,
+    })
+  })
+
   test('duplicates a campaign as a fresh draft with the original brief', async () => {
     const { service, calls, campaignRepository, auditRepository } = harness()
     const duplicated = { ...currentCampaign, id: 'generated-1', title: 'Autumn copy', status: 'draft', revision: 0, brief }
@@ -152,7 +188,7 @@ describe('workflow service', () => {
 
     expect(calls).toEqual(['lock/load', 'audit'])
     expect(campaignRepository.create).toHaveBeenCalledWith({
-      id: 'generated-1', title: 'Autumn copy', brief, createdBy: actor.id,
+      id: 'generated-1', title: 'Autumn copy', brief, createdBy: actor.id, projectType: 'banners',
     })
     expect(result).toEqual(duplicated)
     expect(auditRepository.append).toHaveBeenCalledWith(expect.objectContaining({

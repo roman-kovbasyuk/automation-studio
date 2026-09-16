@@ -1,13 +1,7 @@
-export const MAX_BRIEF_CHARACTERS = 20000
-export const MAX_BRIEF_FILE_BYTES = 5 * 1024 * 1024
+import { MAX_BRIEF_UPLOAD_BYTES } from '../../shared/briefUploadLimits.js'
 
-const MIME_TYPE_BY_EXTENSION = new Map([
-  ['txt', 'text/plain'],
-  ['md', 'text/markdown'],
-  ['markdown', 'text/markdown'],
-  ['pdf', 'application/pdf'],
-  ['docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'],
-])
+export const MAX_BRIEF_CHARACTERS = 20000
+export const MAX_BRIEF_FILE_BYTES = MAX_BRIEF_UPLOAD_BYTES
 
 export function briefToText(brief) {
   if (!brief) return ''
@@ -26,7 +20,7 @@ export function briefToText(brief) {
 export function combineBrief(message, files) {
   return [
     message.trim(),
-    ...files.map((file) => `Attached brief: ${file.name}\n${file.text.trim()}`),
+    ...files.filter((file) => !file.error).map((file) => `Attached brief: ${file.name}\n${file.text.trim()}`),
   ]
     .filter(Boolean)
     .join('\n\n')
@@ -43,13 +37,9 @@ export function briefTitle(text) {
 }
 
 export function readBriefFile(file) {
-  const extension = file.name.match(/\.([^.]+)$/)?.[1]?.toLowerCase()
-  const extensionMimeType = MIME_TYPE_BY_EXTENSION.get(extension)
-  if (!extensionMimeType)
-    return Promise.reject(new Error('Use a TXT, Markdown, PDF, or DOCX brief.'))
   if (!file.size || file.size > MAX_BRIEF_FILE_BYTES)
     return Promise.reject(
-      new Error('Choose a non-empty brief file up to 5 MB.'),
+      new Error('Choose a non-empty file. Campaign materials can total up to 25 MB.'),
     )
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -60,7 +50,7 @@ export function readBriefFile(file) {
         name: file.name,
         mimeType:
           !file.type || file.type.toLowerCase() === 'application/octet-stream'
-            ? extensionMimeType
+            ? 'application/octet-stream'
             : file.type,
         data: String(reader.result).split(',')[1],
       })

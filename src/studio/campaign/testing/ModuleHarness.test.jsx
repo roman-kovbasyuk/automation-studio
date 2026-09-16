@@ -1,3 +1,4 @@
+import { selectOption } from "../../../test/selectOption.js"
 import { render, screen, cleanup, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
@@ -7,7 +8,7 @@ import { makeScenario } from './workspaceFixtures.js'
 afterEach(cleanup)
 it.each([
   ['brief', 'draft', 'Campaign description'], ['copy', 'copy-ready', 'Copy module'],
-  ['visuals', 'visuals-ready', 'Soft daylight image'], ['banners', 'composed', 'Banners module'],
+  ['visuals', 'visuals-ready', 'Visual results'], ['banners', 'composed', 'Banners module'],
   ['review', 'in-review', 'Review module'], ['distribute', 'approved', 'Distribute module'],
 ])('renders %s independently without a shell or real API', async (moduleId, scenario, label) => {
   render(<ModuleHarness moduleId={moduleId} scenario={makeScenario(scenario)} />)
@@ -39,7 +40,7 @@ it('records a retry when Visuals prompt preparation failed', async () => {
   expect(record).toHaveBeenCalledWith({ moduleId: 'visuals', action: 'preparePrompts', args: [{ retry: true }] })
 })
 
-it('records Visuals bulk generation and a deterministic PNG upload', async () => {
+it('records campaign generation and an explicitly scoped PNG upload', async () => {
   const user = userEvent.setup()
   const record = vi.fn()
   const scenario = makeScenario('visuals-ready')
@@ -47,12 +48,13 @@ it('records Visuals bulk generation and a deterministic PNG upload', async () =>
   const png = new File([new Uint8Array([137, 80, 78, 71])], 'fixture.png', { type: 'image/png' })
   render(<ModuleHarness moduleId="visuals" scenario={scenario} record={record} />)
 
-  await user.click(await screen.findByRole('button', { name: 'Generate All Static Visuals' }))
-  const selectedCopyCard = screen.getByRole('heading', { name: 'Visuals for selected copy' }).closest('article')
-  await user.click(within(selectedCopyCard).getByRole('button', { name: 'Upload visual' }))
+  await user.click(await screen.findByRole('button', { name: 'Generate campaign-wide visuals' }))
+  await user.click(screen.getAllByRole('button', { name: 'Upload visual' })[0])
+  await selectOption(screen.getByRole('combobox', { name: 'Upload destination: Campaign-wide' }), 'Option 1 — Find your quiet')
+  await user.click(screen.getByRole('button', { name: 'Choose file' }))
   await user.upload(screen.getByLabelText('Upload image file'), png)
 
-  expect(record).toHaveBeenCalledWith(expect.objectContaining({ moduleId: 'visuals', action: 'generateAll' }))
+  expect(record).toHaveBeenCalledWith({ moduleId: 'visuals', action: 'generate', args: ['campaign', expect.objectContaining({onProgress:expect.any(Function)})] })
   expect(record).toHaveBeenCalledWith({ moduleId: 'visuals', action: 'upload', args: [
     { mode: 'selected_copy', copyId: 'copy-1' }, expect.objectContaining({ name: 'fixture.png', type: 'image/png' }),
   ] })
@@ -68,6 +70,13 @@ it('records Banners selection save before review preparation', async () => {
   await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm and prepare review' }))
 
   await vi.waitFor(() => expect(record.mock.calls.filter(([event]) => event.action).map(([event]) => event.action)).toEqual(['saveBatch', 'prepareReview']))
+})
+
+it('shows the embedded review status in Banners once a version is in review', async () => {
+  render(<ModuleHarness moduleId="banners" scenario={makeScenario('in-review')} />)
+
+  expect(await screen.findByLabelText('Review module')).toBeInTheDocument()
+  expect(screen.getByText('Waiting for the designer to check this version.')).toBeVisible()
 })
 
 it('keeps a custom action override on the real interaction path', async () => {

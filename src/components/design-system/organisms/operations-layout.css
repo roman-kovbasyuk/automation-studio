@@ -1,0 +1,24 @@
+/* Keep the application shell at viewport height even though the shared
+   design-system root also declares a lower-specificity percentage height. */
+
+.v2-operations-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 24px 16px;
+}
+.v2-operations-navigation__title {
+  font-size: var(--a-type-h4-size);
+  font-weight: 600;
+  margin: 0 8px 24px;
+}
+.v2-operations-navigation__back {
+  margin-top: 32px;
+  border-top: 1px solid var(--a-color-ink);
+  border-radius: 0;
+}
+
+.app-operations-layout { display: grid; grid-template-columns: minmax(12rem, 17rem) minmax(0, 1fr); min-height: 100vh; }
+.app-operations-layout__main { min-width: 0; }
+.app-operations-layout__navigation { border-right: 1px solid var(--a-color-ink); }
+@media (max-width: 760px) { .app-operations-layout { grid-template-columns: minmax(0, 1fr); } .app-operations-layout__navigation { display: none; } }

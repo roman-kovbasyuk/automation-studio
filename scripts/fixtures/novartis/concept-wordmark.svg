@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="150" viewBox="0 0 760 150" role="img" aria-labelledby="title">
+  <title id="title">Novartis concept wordmark</title>
+  <g transform="translate(12 12)">
+    <path fill="#ff5c35" d="M42 4c-5 18-4 37 5 51 6 10 6 22-1 31-8 10-23 9-31-2-7-10-4-25 6-37 5-6 9-13 11-21Z"/>
+    <path fill="#ffad1f" d="M42 4c8 14 11 29 7 42-3 10-1 22 7 31 7 8 20 9 28 2 10-9 9-25 1-36-8-11-17-17-25-22-7-4-12-10-18-17Z"/>
+    <path fill="#003da6" d="M44 0h18l-3 53c-1 12-7 21-15 21-8 0-14-9-13-21Z"/>
+  </g>
+  <text x="128" y="103" fill="#003da6" font-family="Georgia, 'Times New Roman', serif" font-size="74" letter-spacing="2">NOVARTIS</text>
+</svg>

@@ -14,8 +14,23 @@ const placementSchema = z.strictObject({
 
 const placementsSchema = z.record(z.string(), placementSchema)
 const colorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/)
+const brandColorRole = z.enum(['primary', 'accent', 'canvas', 'surface', 'primaryText', 'inverseText'])
+const brandBindingSchema = z.strictObject({
+  systemId: nonEmptyString, versionId: nonEmptyString, versionNumber: positivePixel, name: nonEmptyString,
+  backgroundRole: brandColorRole,
+  slotColorRoles: z.record(z.string(), brandColorRole),
+  shapeColorRoles: z.array(brandColorRole).max(12),
+  fontRoles: z.record(z.string(), z.enum(['heading', 'body'])),
+})
+const graphicSchema = z.strictObject({
+  id: nonEmptyString, assetId: nonEmptyString,
+  dataUrl: z.string().max(700000).regex(/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/),
+  backgroundColor: colorSchema,
+  placements: placementsSchema,
+})
 const presentationSchema = z.strictObject({
   backgroundColor: colorSchema,
+  graphics: z.array(graphicSchema).max(4).optional(),
   slotColors: z.record(z.string(), colorSchema),
   shapes: z.array(z.strictObject({
     type: z.enum(['rect', 'ellipse']),
@@ -78,6 +93,7 @@ export const templateManifestSchema = z.strictObject({
   ratios: z.array(ratioSchema).min(1),
   slots: z.array(slotSchema).min(1),
   presentation: presentationSchema.optional(),
+  brand: brandBindingSchema.optional(),
 }).superRefine((manifest, context) => {
   const ratios = new Map()
   const slots = new Set()
@@ -133,6 +149,22 @@ export const templateManifestSchema = z.strictObject({
         context.addIssue({ code: 'custom', path: ['slots', slotIndex, 'placements', placementRatioId], message: `Slot ${slot.id} has a placement for unknown ratio: ${placementRatioId}.` })
       }
     }
+  }
+  for (const graphic of manifest.presentation?.graphics ?? []) {
+    for (const ratio of manifest.ratios) {
+      const p = graphic.placements[ratio.id]
+      const a = ratio.safeArea
+      if (!p || p.x < a.left || p.y < a.top || p.x + p.width > ratio.width - a.right || p.y + p.height > ratio.height - a.bottom) {
+        context.addIssue({ code: 'custom', path: ['presentation', 'graphics'], message: 'Brand graphic must fit every format safe area.' })
+      }
+    }
+    if (Object.keys(graphic.placements).some(id => !ratios.has(id))) context.addIssue({ code: 'custom', path: ['presentation', 'graphics'], message: 'Unknown graphic ratio.' })
+  }
+  if (manifest.brand) {
+    for (const id of [...Object.keys(manifest.brand.slotColorRoles), ...Object.keys(manifest.brand.fontRoles)]) {
+      if (!manifest.slots.some(slot => slot.id === id && slot.type !== 'image')) context.addIssue({ code: 'custom', path: ['brand'], message: 'Brand mapping must reference a text slot.' })
+    }
+    if (manifest.brand.shapeColorRoles.length !== manifest.presentation?.shapes.length) context.addIssue({ code: 'custom', path: ['brand'], message: 'Brand shape mapping must cover the geometry.' })
   }
   if (manifest.presentation) {
     for (const id of Object.keys(manifest.presentation.slotColors)) {

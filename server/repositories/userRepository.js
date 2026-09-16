@@ -21,6 +21,10 @@ function mapUser(row) {
     firebaseUid: row.firebase_uid,
     role: row.role,
     displayName: row.display_name,
+    firstName: row.first_name ?? null,
+    lastName: row.last_name ?? null,
+    passwordConfigured: row.password_configured === true,
+    googleConnected: row.google_connected !== false,
     disabled: row.disabled === true || row.disabled_at != null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -34,9 +38,12 @@ function mapActor(row) {
     email: row.email,
     firebaseUid: row.firebase_uid,
     role: row.role,
+    workspaceId: `account:${row.id}`,
     displayName: row.display_name,
     disabled: row.disabled === true,
     disabledAt: row.disabled_at,
+    passwordConfigured: row.password_configured === true,
+    googleConnected: row.google_connected !== false,
   }
 }
 
@@ -113,14 +120,17 @@ export function createUserRepository(client) {
          FROM users u
          JOIN invitations i ON i.accepted_user_id = u.id
          WHERE u.firebase_uid = $1
-           AND u.email = $2
-           AND i.email = $2
            AND i.accepted_at IS NOT NULL
            AND i.revoked_at IS NULL`,
-        [firebaseUid, normalizedEmail],
+        [firebaseUid],
       )
       if (byUid.rowCount > 0) {
-        return byUid.rows[0].email === normalizedEmail ? mapActor(byUid.rows[0]) : null
+        const current = byUid.rows[0]
+        if (current.email === normalizedEmail) return mapActor(current)
+        const conflictingEmail = await client.query('SELECT id FROM users WHERE email = $1 AND id <> $2', [normalizedEmail, current.id])
+        if (conflictingEmail.rowCount > 0) return null
+        const updated = await client.query('UPDATE users SET email = $2, updated_at = now() WHERE id = $1 RETURNING *', [current.id, normalizedEmail])
+        return mapActor(updated.rows[0])
       }
 
       const existingEmail = await client.query(
@@ -193,6 +203,27 @@ export function createUserRepository(client) {
 
     async findByIdForUpdate(id) {
       const result = await client.query('SELECT * FROM users WHERE id = $1 FOR UPDATE', [id])
+      return mapUser(result.rows[0])
+    },
+
+    async updateDisplayName({ id, displayName, firstName = null, lastName = null }) {
+      const result = await client.query(
+        `UPDATE users SET display_name = $2, first_name = $3, last_name = $4, updated_at = now() WHERE id = $1 RETURNING *`,
+        [id, displayName, firstName, lastName],
+      )
+      return mapUser(result.rows[0])
+    },
+
+    async setAuthMethodState({ id, passwordConfigured, googleConnected }) {
+      const result = await client.query(
+        `UPDATE users
+         SET password_configured = COALESCE($2, password_configured),
+             google_connected = COALESCE($3, google_connected),
+             updated_at = now()
+         WHERE id = $1
+         RETURNING *`,
+        [id, passwordConfigured ?? null, googleConnected ?? null],
+      )
       return mapUser(result.rows[0])
     },
 

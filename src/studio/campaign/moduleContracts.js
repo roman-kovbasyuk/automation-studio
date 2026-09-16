@@ -5,7 +5,11 @@
  * @typedef {import('zod').infer<typeof import('../../../shared/studioContracts.js').workspaceRecordSchema>} Workspace
  * @typedef {'brief'|'copy'|'visuals'|'banners'|'review'|'distribute'} ModuleId
  */
+import {copyProjection} from '../../../shared/briefingDependencies.js'
 export const MODULE_IDS = Object.freeze(['brief', 'copy', 'visuals', 'banners', 'review', 'distribute'])
+// Review remains an internal runtime projection because its immutable version and
+// authorization contract are still server-owned. It is displayed inside Banners.
+export const VISIBLE_MODULE_IDS = Object.freeze(['brief', 'copy', 'visuals', 'banners', 'distribute'])
 export const MODULE_LABELS = Object.freeze({
   brief: 'Brief', copy: 'Copy', visuals: 'Visuals', banners: 'Banners', review: 'Review', distribute: 'Distribute',
 })
@@ -54,29 +58,46 @@ function getAnalysis(workspace) {
     ? item : latest, null)?.result.analysis ?? null
 }
 
+function bannerCopies(workspace) {
+  const sets = workspace.copies.filter(set => !set.stale)
+  const approved = sets.flatMap(set => set.candidates
+    .filter(copy => (set.approvedCandidateIds ?? []).includes(copy.id) || (workspace.campaign.selectedCopyId === set.id && set.selectedCandidateId === copy.id))
+    .map(copy => ({ ...copy, copySetId: set.id })))
+  // Draft copy is display-only until server-authorized source selections exist.
+  const finalized = sets.some(set => set.hasApprovalHistory) && workspace.directions.some(direction => direction.previewAssetId)
+  return approved.length || finalized ? approved : sets.flatMap(set => set.candidates.map(copy => ({...copy, copySetId:set.id})))
+}
+
 /** @param {ModuleId} moduleId @param {Workspace} workspace */
-export function projectModuleInput(moduleId, workspace, { templates = [], reviewHistory = null } = {}) {
+export function projectModuleInput(moduleId, workspace, { templates = [], reviewHistory = null, figmaReview = null } = {}) {
   assertModuleId(moduleId)
   switch (moduleId) {
-    case 'brief': return { brief: workspace.campaign.brief, analysis: getAnalysis(workspace) }
+    case 'brief': return { brief: workspace.campaign.brief, analysis: getAnalysis(workspace),...(workspace.sources?{sources:workspace.sources}:{}) }
     case 'copy': return {
       brief: workspace.campaign.brief, analysis: getAnalysis(workspace), copies: workspace.copies,
       selectedCopyId: workspace.campaign.selectedCopyId,
+      hasVisuals: workspace.directions.some(direction => direction.previewAssetId),
+      hasApprovalHistory: workspace.copies.some(set => !set.stale && set.hasApprovalHistory),
+      staleVisualCopyIds: [...new Set(workspace.directions.filter(direction => direction.stale && direction.scope === 'selected_copy'
+        && workspace.copies.some(set => !set.stale && (set.approvedCandidateIds ?? []).includes(direction.copy?.id)
+          && set.candidates.some(copy => copy.id === direction.copy?.id && ['headline','body','offer','cta'].some(key => copy[key] !== direction.copy[key])))
+        && !workspace.directions.some(current => !current.stale && current.scope === 'selected_copy' && current.copy?.id === direction.copy?.id))
+        .map(direction => direction.copy.id))],
       previewAssetId: getSelectedDirection(workspace)?.previewAssetId ?? null,
       previewTemplateId: workspace.composition?.templateId ?? 'editorial-split',
+      previewManifest: templates.find(template => template.id === (workspace.composition?.templateId ?? 'editorial-split'))?.manifest,
     }
     case 'visuals': return { brief: workspace.campaign.brief, analysis: getAnalysis(workspace), selectedCopy: getSelectedCopy(workspace),
       copies: workspace.copies.filter(set => !set.stale).flatMap(set => set.candidates.map(copy => ({ ...copy,
         approved: (set.approvedCandidateIds ?? []).includes(copy.id) || set.selectedCandidateId === copy.id }))),
       directions: workspace.directions, selectedDirectionId: workspace.campaign.selectedDirectionId }
-    case 'banners': return { selectedCopy: getSelectedCopy(workspace), selectedDirection: getSelectedDirection(workspace),
-      copies: workspace.copies.filter(set => !set.stale).flatMap(set => set.candidates
-        .filter(copy => (set.approvedCandidateIds ?? []).includes(copy.id) || (workspace.campaign.selectedCopyId === set.id && set.selectedCandidateId === copy.id))
-        .map(copy => ({ ...copy, copySetId: set.id }))),
+    case 'banners': return { hasVideos: workspace.jobs.some(job => job.step === 'video' && job.status === 'succeeded' && job.result?.video), selectedCopy: getSelectedCopy(workspace), selectedDirection: getSelectedDirection(workspace),
+      copies: bannerCopies(workspace),
       directions: workspace.directions.filter(direction => !direction.stale && direction.status === 'ready' && direction.previewAssetId)
         .map(direction => ({ ...direction, copy: !direction.scope || direction.scope === 'legacy' ? getSelectedCopy(workspace) : direction.copy })),
       templates, composition: workspace.composition }
-    case 'review': return { phase: getReviewPhase(workspace), composition: workspace.composition,
+    case 'review': return { ...(figmaReview ? {figma:figmaReview} : {}), phase: getReviewPhase(workspace), composition: workspace.composition,
+      availableVideos: workspace.jobs.filter(job => job.step === 'video' && job.status === 'succeeded' && job.result?.video).map(job => job.result.video),
       version: getCurrentVersion(workspace), history: getCurrentReviewHistory(workspace, reviewHistory),
       nextVersionNumber: workspace.campaign.currentVersionNumber + 1 }
     case 'distribute': {
@@ -100,7 +121,7 @@ export function moduleInputKey(moduleId, input) {
   assertModuleId(moduleId)
   switch (moduleId) {
     case 'brief': return stableInputKey(input.brief)
-    case 'copy': return stableInputKey({ brief: input.brief, copies: input.copies, selectedCopyId: input.selectedCopyId })
+    case 'copy': return stableInputKey({ brief: copyProjection(input.brief), copies: input.copies, selectedCopyId: input.selectedCopyId })
     case 'banners': return stableInputKey({ selectedCopy: input.selectedCopy, copies: input.copies,
       selectedDirection: input.selectedDirection, directions: input.directions, composition: input.composition })
     case 'review': return stableInputKey(input.phase !== 'prepare' && input.version

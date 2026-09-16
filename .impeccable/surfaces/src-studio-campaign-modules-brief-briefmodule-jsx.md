@@ -17,7 +17,7 @@ Existing semantic tokens supply the white fact cells, black text and rules, and 
 
 ## Typography
 
-The existing Avenir-family stack applies throughout. The summary uses the H4 size token (20px) with a reading line height of 1.5 and a maximum width of 70ch. Facts use body text (16px) with smaller labels (14px). Campaign title typography remains owned by the application shell.
+The existing Avenir-family stack applies throughout. The summary uses the H4 size token (20px) with a reading line height of 1.5 and fills the available content width. Its resting display is clamped to four lines. Facts use body text (16px) with smaller labels (14px). Campaign title typography remains owned by the application shell.
 
 ## Layout
 
@@ -35,7 +35,7 @@ Fact cells form one rectangular grid. Inline editing uses the existing 4px input
 
 ## Components
 
-InlineText displays editable values as text-first buttons and opens a labelled textarea with Save and Cancel. It captures the source key when editing begins, retains the draft on failure, and shows a notice when the saved source changes. Enter saves, Shift+Enter adds a line, and Escape cancels outside a save. Read-only values remain visible. The module owns schema validation, permissions, persistence, and dependent artifact semantics.
+InlineText displays editable values as text-first buttons. Summary uses its optional autosave mode: a four-row light-canvas editor without a border saves after 700ms of inactivity or blur, retains drafts on failure, and exposes Retry save. Enter inserts a line; Ctrl/Cmd+Enter saves and closes; Escape cancels edits since the last save. Other facts retain the manual Save and Cancel mode. It captures the source key when editing begins, retains the draft on failure, and shows a notice when the saved source changes. Enter saves, Shift+Enter adds a line, and Escape cancels outside a save. Read-only values remain visible. The module owns schema validation, permissions, persistence, and dependent artifact semantics.
 
 FactGrid owns the semantic definition list and responsive layout. AsyncStatus supplies indeterminate stage text in a status region. PromptComposer supplies the initial brief and later refinement entry. The caller owns requests, errors, busy state, and meaningful progress wording; no simulated percentages are shown.
 

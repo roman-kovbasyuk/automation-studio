@@ -1,0 +1,5 @@
+/* App layout only; visual components are supplied by brutalist-design-system. */
+.bs-settings { max-width: 1080px; margin-inline: auto; }
+
+/* Leave the fixed app header visible when opening a section directly. */
+.bs-settings [id$="-title"] { scroll-margin-top: calc(var(--a-space-16) + var(--a-space-6)); }

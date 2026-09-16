@@ -1,7 +1,8 @@
 import sharp from 'sharp'
+import { MAX_GENERATED_IMAGE_DIMENSION } from '../../shared/imageLimits.js'
+export { MAX_GENERATED_IMAGE_DIMENSION } from '../../shared/imageLimits.js'
 
 export const MAX_GENERATED_IMAGE_BYTES = 32 * 1024 * 1024
-export const MAX_GENERATED_IMAGE_DIMENSION = 4_096
 
 const formatsByMimeType = new Map([
   ['image/png', 'png'],
@@ -105,6 +106,23 @@ export async function decodeGeneratedImage(value, mimeType) {
     const { info } = await sharp(buffer, options).raw().toBuffer({ resolveWithObject: true })
     if (info.width !== metadata.width || info.height !== metadata.height) return null
     return { bytes: new Uint8Array(buffer), mimeType, width: metadata.width, height: metadata.height }
+  } catch {
+    return null
+  }
+}
+
+// Providers return native model sizes, which need not equal the campaign canvas.
+// Validate the source first, then fit without stretching and validate the encoded result.
+export async function prepareGeneratedImage(value, mimeType, { width, height }) {
+  if (![width, height].every(size => Number.isInteger(size) && size >= 64 && size <= MAX_GENERATED_IMAGE_DIMENSION)) return null
+  const decoded = await decodeGeneratedImage(value, mimeType)
+  if (!decoded || decoded.width === width && decoded.height === height) return decoded
+  try {
+    const bytes = await sharp(Buffer.from(decoded.bytes), { failOn: 'warning', limitInputPixels: MAX_GENERATED_IMAGE_DIMENSION ** 2 })
+      .resize(width, height, { fit: 'cover', position: 'centre' })
+      .toFormat(formatsByMimeType.get(mimeType), { quality: 95 })
+      .toBuffer()
+    return decodeGeneratedImage(bytes, mimeType)
   } catch {
     return null
   }

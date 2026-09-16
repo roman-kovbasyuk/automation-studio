@@ -33,7 +33,7 @@ test('visual methods preserve copy linkage, append batches and fence duplicate i
     const [first, second] = workspace.copies[0].candidates
     await directions({ mode: 'campaign' }, 'campaign-1')
     workspace = await read()
-    expect(workspace.directions).toHaveLength(3)
+    expect(workspace.directions).toHaveLength(5)
     expect(workspace.directions.every(item => item.scope === 'campaign' && item.copy === null && item.previewAssetId === null)).toBe(true)
     const snapshot = (await pool.query("SELECT input_snapshot FROM generation_jobs WHERE idempotency_key='campaign-1'")).rows[0].input_snapshot
     expect(snapshot.copies).toHaveLength(5)
@@ -43,7 +43,7 @@ test('visual methods preserve copy linkage, append batches and fence duplicate i
     await directions({ mode: 'selected_copy', copyIds: [second.id, first.id] }, 'selected-1')
     await directions({ mode: 'selected_copy', copyIds: [second.id, first.id] }, 'selected-1')
     workspace = await read()
-    expect(workspace.directions).toHaveLength(5)
+    expect(workspace.directions).toHaveLength(7)
     const linked = workspace.directions.filter(item => item.scope === 'selected_copy')
     expect(linked.map(item => item.copy.id)).toEqual([second.id, first.id])
     expect(linked[0].prompt).toContain(second.headline)
@@ -62,7 +62,7 @@ test('visual methods preserve copy linkage, append batches and fence duplicate i
     expect(workspace.directions.every(item => !item.stale)).toBe(true)
     await expect(service.generateImage({ actor, campaignId: 'campaign', input: imageInput, idempotencyKey: 'overwrite' })).rejects.toMatchObject({ code: 'visual_already_ready' })
     await directions({ mode: 'campaign' }, 'campaign-2')
-    expect((await read()).directions).toHaveLength(8)
+    expect((await read()).directions).toHaveLength(12)
   } finally {
     await pool.end()
     await maintenance.query(`DROP SCHEMA ${schema} CASCADE`)

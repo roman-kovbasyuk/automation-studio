@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react'
-import { AlertCircle, ArrowRight } from 'lucide-react'
-import { AppButton } from '../components/design-system/atoms/AppButton.jsx'
+import { ArrowRight } from 'lucide-react'
+import { AppButton, Alert } from "../components/design-system/compatibility.jsx"
 
-export function Button({ children, primary=false, busy=false, className='', ...props }) {
-  return <AppButton {...props} variant={primary ? 'primary' : 'secondary'} busy={busy} className={`bs-button ${primary ? 'bs-button--primary':''} ${className}`}>{children}</AppButton>
+export function Button({ children, primary=false, busy=false, ...props }) {
+  return <AppButton {...props} variant={primary ? 'primary' : 'secondary'} busy={busy}>{children}</AppButton>
 }
 export function ErrorNotice({error, onRetry}) {
   if (!error) return null
-  return <div className="bs-error" role="alert"><AlertCircle size={20} aria-hidden="true"/><div><strong>{error.status === 409 ? 'This campaign has changed' : 'Something needs attention'}</strong><p>{error.message ?? String(error)}</p>{error.details && <ul>{(Array.isArray(error.details)?error.details:[]).map((detail,index)=><li key={index}>{detail.path}: {detail.message}</li>)}</ul>}{onRetry && <Button onClick={onRetry}>Reload campaign</Button>}</div></div>
+  const settingsRequired = ['provider_unavailable', 'not_connected', 'credential_version_changed', 'provider_configuration_missing'].includes(error.code)
+  return <Alert tone="danger" title={error.status === 409 ? 'This campaign has changed' : 'Something needs attention'}><p>{error.message ?? String(error)}</p>{settingsRequired && <p><a href="/mvp/settings">Open Settings</a> to configure a personal AI provider.</p>}{error.details && <ul>{(Array.isArray(error.details)?error.details:[]).map((detail,index)=><li key={index}>{detail.path}: {detail.message}</li>)}</ul>}{onRetry && <Button onClick={onRetry}>Reload campaign</Button>}</Alert>
 }
 export function SectionHeading({ title, children, action, as: Heading = 'h2' }) {
   return <header className="bs-section-heading"><div><Heading>{title}</Heading>{children && <p>{children}</p>}</div>{action}</header>
@@ -31,4 +32,13 @@ export function AssetImage({api, assets, assetId, alt, ...props}) {
 export function saveBlob(blob, filename) {
   const url=URL.createObjectURL(blob), link=document.createElement('a')
   link.href=url; link.download=filename; link.click(); setTimeout(()=>URL.revokeObjectURL(url),10000)
+}
+
+
+export function AssetVideo({ assets, asset, label }) {
+  const { url, error } = useAssetUrl(assets, asset.id)
+  return <figure>{url ? <video src={url} controls preload="metadata" aria-label={label} style={{ width: '100%', maxHeight: 320 }} />
+    : <p role="status">{error ? 'Video could not be loaded.' : 'Loading video…'}</p>}
+    <figcaption>{asset.width} × {asset.height} · {asset.durationSeconds}s · {asset.hasAudio ? 'With audio' : 'Silent'}</figcaption>
+  </figure>
 }

@@ -16,8 +16,12 @@ import { createReviewService } from '../../server/services/reviewService.js'
 import { createVersionService } from '../../server/services/versionService.js'
 import { createVisualUploadService } from '../../server/services/visualUploadService.js'
 import { createWorkflowService } from '../../server/services/workflowService.js'
+import { createBriefingService } from '../../server/services/briefingService.js'
+import { createBriefSourceService } from '../../server/services/briefSourceService.js'
 import { createWorkspaceService } from '../../server/services/workspaceService.js'
 import { createLocalDemoAssetStore } from '../../server/storage/localDemoAssetStore.js'
+import { createAdminRepository } from '../../server/repositories/adminRepository.js'
+import { createAssetWorkflowService, seedAssetWorkflows } from '../../server/assetWorkflows/definitionService.js'
 
 const defaultConnectionString = 'postgresql:///banner_studio_test'
 const roles = ['marketer', 'designer', 'admin']
@@ -64,7 +68,7 @@ function assertOwnedAssetDirectory(directory) {
   }
 }
 
-export async function startIsolatedStudio({ connectionString = process.env.TEST_DATABASE_URL ?? defaultConnectionString } = {}) {
+export async function startIsolatedStudio({ connectionString = process.env.TEST_DATABASE_URL ?? defaultConnectionString,briefingEnabled=false } = {}) {
   if (process.env.NODE_ENV === 'production' || process.env.K_SERVICE) throw new Error('The isolated studio cannot run in production')
   validateConnectionString(connectionString)
   const id = randomUUID().replaceAll('-', '')
@@ -107,13 +111,15 @@ export async function startIsolatedStudio({ connectionString = process.env.TEST_
     await runMigrations({ pool })
     const actors = Object.fromEntries(roles.map((role) => [role, {
       id: `studio-demo-${role}`, email: `${role}@studio.local`, role,
+      workspaceId: 'default',
       displayName: `Demo ${role[0].toUpperCase()}${role.slice(1)}`,
     }]))
     for (const actor of Object.values(actors)) {
       await pool.query('INSERT INTO users (id, email, role, display_name) VALUES ($1, $2, $3, $4)',
         [actor.id, actor.email, actor.role, actor.displayName])
     }
-    const workflowService = createWorkflowService({ pool })
+    await seedAssetWorkflows({ pool, actor: actors.admin })
+    const workflowService = createWorkflowService({ pool,briefingEnabled })
     const settings = await workflowService.getSettings({ actor: actors.admin })
     await workflowService.updateSettings({ actor: actors.admin, expectedRevision: settings.revision, patch: {
       provider: 'mock', model: 'mock-v1', region: 'europe-west6', dailyBudgetMicrounits: 1_000_000_000,
@@ -133,9 +139,11 @@ export async function startIsolatedStudio({ connectionString = process.env.TEST_
         'SELECT id, email, role, display_name, disabled, disabled_at FROM users WHERE id = $1', [`studio-demo-${role}`],
       )
       const user = result.rows[0]
-      return user && { id: user.id, email: user.email, role: user.role, displayName: user.display_name, disabled: user.disabled, disabledAt: user.disabled_at }
+      return user && { id: user.id, email: user.email, role: user.role, workspaceId: 'default', displayName: user.display_name, disabled: user.disabled, disabledAt: user.disabled_at }
     }
     app = buildApp({
+      runtimeConfig:{firebase:{},capabilities:{sourceBriefing:briefingEnabled}},
+      ...(briefingEnabled?{briefSourceService:createBriefSourceService({pool,assetStore}),briefingService:createBriefingService({pool})}:{}),
       resolveActor, workflowService, workspaceService: createWorkspaceService({ pool }),
       readiness: async () => { await pool.query('SELECT 1'); return true },
       generationService: createGenerationService({
@@ -145,6 +153,8 @@ export async function startIsolatedStudio({ connectionString = process.env.TEST_
       visualUploadService: createVisualUploadService({ pool, assetStore }),
       versionService: createVersionService({ pool, assetStore }),
       reviewService: createReviewService({ pool }), deliveryService: createDeliveryService({ pool, assetStore }),
+      adminRepository: createAdminRepository(pool),
+      assetWorkflowService: createAssetWorkflowService({ pool }),
     })
     app.addHook('onRequest', async (request) => {
       if (!isLoopbackAddress(request.socket.remoteAddress) || !localHttpUrl(`http://${request.headers.host}`)

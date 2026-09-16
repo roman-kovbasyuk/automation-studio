@@ -1,4 +1,6 @@
 const BLOCKED_PATHS = ['/api', '/healthz', '/readyz']
+const BUNDLED_ASSET_PATHS = ['/assets/', '/fonts/', '/src/', '/@fs/', '/@id/']
+const BUNDLED_ASSET_EXTENSIONS = /\.(?:css|js|jsx|mjs|png|jpe?g|gif|svg|webp|woff2?|ttf|ico|mp4)(?:$|\?)/i
 
 function blockedError(url) {
   const error = new Error(`Prototype network access blocked: ${url}`)
@@ -13,7 +15,8 @@ export function installPrototypeNetworkGuard({ origin = globalThis.location?.ori
     const rawUrl = typeof input === 'string' || input instanceof URL ? input.toString() : input?.url
     let url
     try { url = new URL(rawUrl, origin) } catch { return Promise.reject(blockedError(rawUrl || 'unknown URL')) }
-    const blocked = url.origin !== origin || BLOCKED_PATHS.some(path => url.pathname === path || url.pathname.startsWith(`${path}/`))
+    const isBundledAsset = BUNDLED_ASSET_PATHS.some(path => url.pathname.startsWith(path)) || BUNDLED_ASSET_EXTENSIONS.test(url.pathname)
+    const blocked = url.origin !== origin || BLOCKED_PATHS.some(path => url.pathname === path || url.pathname.startsWith(`${path}/`)) || !isBundledAsset
     if (blocked) return Promise.reject(blockedError(url.href))
     return fetchImpl(input, init)
   }

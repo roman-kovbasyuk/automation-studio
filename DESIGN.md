@@ -1,34 +1,95 @@
-# Banner Studio application design system
+---
+name: Application visual guide
+description: Visual principles for composing and extending the Brutalist UI foundation.
+---
 
-This reference follows the active `/mvp` app and `/design-system` catalog. The earlier Inter/indigo direction is retained in [legacy visual reference](docs/design-system/legacy-visual-reference.md). Product documentation that still describes the original prototype requires a separate product review.
+# Application visual guide
 
-The application is an Operate surface: stable actions, readable state, clear workflow order, and quiet chrome around creative artwork. Preserve the current Avenir-family typography, cyan action color, black rules, 4px corners and deliberate hard interactive shadows.
+## Overview
 
-## Foundations
+Create a coherent working environment with clear hierarchy, readable state and deliberate emphasis. Useful content and actions receive the space. The interface remains visually consistent across components, surfaces and flows.
 
-Canonical values live in `src/components/design-system/foundations/tokens.css`, loaded by the compatibility entry `src/styles/tokens.css`. Components use semantic `--v2-*` roles; primitive palette values are defined once. Legacy unprefixed tokens remain available for older consumers.
+This guide explains how to apply the visual foundation. [FRONTEND.md](FRONTEND.md) governs process, behavior, ownership, master/descendant contracts and acceptance. The installed `brutalist-design-system` package owns actual tokens, component appearance and shared interactions. Read its public contracts before implementation; this file does not define a second token source.
 
-| Role | Current contract |
-| --- | --- |
-| Canvas / surface / ink | #f4f4f0 / #ffffff / #000000 |
-| Action / success / danger | #79d9ff / #23a094 / #dc341e |
-| Secondary text | #595959; `--v2-muted` is decorative only |
-| Typography | Avenir Next/Avenir fallback stack; H1–H5: 48/32/24/20/18px; Lead Large/Medium: 24/20px; Body: 16px; Small text: 14px. See [typography roles](docs/design-system/typography.md) for line heights and usage. |
-| Spacing | 4, 8, 12, 16, 24, 32, 48, 64px |
-| Sizing | 48px default control / 44px compact; icons 16, 20, 24px |
-| Shape | 4px standard radius; pills for tabs/status; 1px structural border; thicker control/focus borders must be documented by role |
-| Elevation / motion | 4px hard offset for interactive surfaces; feedback 150ms, disclosure 200ms, cubic-bezier(0.4, 0, 0.2, 1); reduced motion removes spatial movement |
+**Inherit the foundation.** Descendants use their master’s supported variants and composition rules. Content or domain differences do not justify a new visual language. Record instance-specific choices in the [design brief](docs/design-system/page-brief-template.md).
 
-Only the light application theme is supported. The SettingsBlock dark preview does not enable an app theme. Banner palettes/fonts/animation are creative content and do not inherit application appearance.
+**Keep design contexts separate.** Operational controls use the application foundation. Generated artifacts and bounded specimens use their published output system. Output styling must not escape into application controls or containers.
 
-## Ownership and usage
+## Colors
 
-Use atomic imports from `src/components/design-system/atoms`, `molecules` and `organisms`. Existing flat entry points remain compatibility exports. Example code lives in `examples`; template candidates are documented in `templates` without inventing a reusable shell API. `studio/` retains campaign, review and version rules.
+Use the foundation’s semantic color roles consistently: canvas, surface, text, action, selection and feedback. Select an available role for its meaning, not merely because its hue suits the composition.
 
-Shared exports: AppButton; TokenChip; TokenCopyTarget; PillTabs/PillTabPanel; WorkflowSteps; SelectMenu; PromptComposer. All others must be checked in the catalog before assuming a reusable contract. SelectMenu is currently adopted by catalog examples, not the active app. AppButton emphasis and icon shape are independent; states are native CSS/ARIA behavior rather than enumerated visual variants.
+- Let neutral surfaces carry most of the interface; reserve emphasis for meaningful actions and state.
+- Keep the same meaning for a role across every descendant. Pair status color with readable text or another accessible indicator.
+- Keep text, focus and state indicators legible against their actual backgrounds.
+- Use supported themes and variants. Do not introduce local palettes, redefine upstream tokens or theme the interface from an output system.
 
-Keep application keyboard/interaction behavior in the shared component. Product CSS may size/compose it. Keep visible labels and help/error associations; use labels/icons alongside color. Tabs require real labelled panels. A read-only brief is readable and focusable, with editing/submission blocked. Busy operations must not duplicate requests.
+Resolve exact values from the installed package. A specimen’s palette is artifact content, not an application theme.
 
-Validate local table overflow, long copy, narrow screens, native focus and reduced motion. The internal target policy is 44px minimum for ordinary controls; do not confuse this with WCAG 2.2's 24px AA criterion and its exceptions.
+## Typography
 
-See [audit](docs/design-system/audit.md), [migration map](docs/design-system/migration.md), [component contracts](docs/design-system/components.md), [roadmap](docs/design-system/roadmap.md), and [validation](docs/design-system/validation.md).
+Use the foundation’s public typography roles and font family. Establish a readable hierarchy through their supported size, weight and line-height relationships.
+
+- Make the primary subject clear, then distinguish sections, working content and supporting metadata.
+- Choose visual roles for information importance and semantic heading levels for document structure; these are separate decisions.
+- Keep labels concise and essential content readable. Allow realistic text to wrap instead of shrinking it to fit a preferred screenshot.
+- Preserve the same role for equivalent content across descendants. Do not introduce display fonts, decorative capitals or custom letter spacing locally.
+
+Artifact typography remains inside the output boundary and follows its own versioned contract.
+
+## Layout
+
+Compose from the approved master pattern. Preserve its hierarchy, action placement, reading order and responsive relationships. Arrange public components with supported layout APIs or plain application-owned containers.
+
+**Space expresses relationships.** Use the public spacing scale to distinguish related items from separate groups. Keep alignment and spacing consistent across siblings. Fix unnecessary nesting and poor width allocation before adding padding.
+
+- Give the task’s input, decision or result priority in the available area.
+- Keep controls close to the content they govern and feedback close to the operation it describes.
+- Use plain regions for ordinary grouping; each additional container must have a structural purpose.
+- Adapt columns and controls to the available width while preserving reading order and reachable actions. Contain genuinely two-dimensional content without forcing the entire document to scroll sideways.
+- Respect content proportions and long-content behavior. Resizing the interface must not distort embedded artifacts.
+
+Page dimensions and breakpoints belong in the governing pattern or instance brief. They are not universal values invented by this guide.
+
+## Elevation & Depth
+
+Use the foundation’s supported borders, surfaces and depth treatments to express containment, interactivity or layering. Preserve the treatment supplied by each component and variant.
+
+Reserve prominent elevation for a meaningful relationship. Avoid stacking decorated panels, adding shadows to every group or making static regions appear interactive. An overlay’s depth must agree with its actual focus and interaction behavior.
+
+Do not add local shadow, border or backdrop overrides to upstream components.
+
+## Shapes
+
+Inherit corner, outline, icon and control geometry from the component contract. Different component families may intentionally use different shapes; a universal radius or border rule would erase those distinctions.
+
+Use supported size variants for density and interaction needs. Preserve usable targets, focus treatment and text fit. App-owned layout must not stretch or clip a component into an unsupported shape.
+
+## Components
+
+Reuse public components directly and compose through supported props, variants and slots. A local adapter may translate application values or callbacks without changing visual identity or interaction.
+
+- Keep equivalent actions visually equivalent; use emphasis according to consequence and context.
+- Preserve meaningful selected, disabled, busy, error and focus states. A descendant must not redefine what those states communicate.
+- Keep accessible labels and keyboard behavior intact. Decorative icons must not replace necessary information.
+- Use upstream motion for shared interactions. Application-owned motion should explain a state or spatial change, use available motion tokens and respect reduced motion. Routine work must remain immediately accessible.
+
+Never target private component classes, pass local `className`/`style` skins to upstream roots or reproduce the skin through ancestor selectors. When the required interaction is unavailable, follow the native-fallback policy and record it in [component gaps](docs/design-system/missing-components.md).
+
+## Do's and Don'ts
+
+**Do**
+
+- Identify the master, its guarantees and the permitted variation before composing a descendant.
+- Read exact tokens and APIs from the installed foundation.
+- Use hierarchy, alignment and restrained emphasis to make work understandable.
+- Verify realistic content, narrow layouts, keyboard use and difficult states according to [the acceptance contract](FRONTEND.md#11-verification-and-acceptance).
+
+**Don't**
+
+- Copy token values or component skins into a competing local system.
+- Treat visual nesting as permission to override a child’s design ownership.
+- Add decoration that obscures task priority or implies an unavailable interaction.
+- Place named screens, brand examples, fixed flow sequences or implementation inventories in this general guide.
+
+Earlier guidance is retained in [the historical archive](DESIGN.history.md). It is not current implementation authority.

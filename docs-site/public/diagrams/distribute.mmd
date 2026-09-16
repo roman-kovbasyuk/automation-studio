@@ -1,0 +1,37 @@
+---
+config:
+  flowchart:
+    useMaxWidth: false
+    nodeSpacing: 70
+    rankSpacing: 100
+---
+flowchart LR
+  d1["D1  Choose delivery<br/>Archive / share / platform"]
+  d2{"D2  Channel enabled<br/>and authorized?"}
+  d3{"D3  Package meets<br/>channel rules?"}
+  d4["D4  Execute chosen action<br/>One version-bound delivery"]
+  d5{"D5  Delivery result<br/>verified?"}
+  d6["D6  Show outcome<br/>Download / link / receipts"]
+  d2x["Channel dependency<br/>Archive first. Share links planned.<br/>Google Ads / Meta / TikTok future.<br/>Disabled or unauthorized: connect if supported, or choose archive at D1."]
+  d3x["Compatibility dependency<br/>Check selected formats, sizes, duration and destination rules.<br/>Change selection at D1; creative changes require a new revision at BG1."]
+  d4x["Explicit delivery controls<br/>Archive: build or reuse ZIP.<br/>Share: access, expiry, revocation.<br/>Platform: confirm destination and upload; no publication or spend."]
+  d5x["Delivery recovery<br/>Retain confirmed receipts.<br/>Reconcile unknown uploads, then retry failed files / archive only at D4.<br/>Keep creative approval."]
+  d6x["Share access<br/>Deny invalid link access.<br/>Authorized owner may renew a link to the same immutable archive.<br/>No automatic public sharing."]
+  d1 --> d2
+  d2 -->|"Yes"| d3
+  d3 -->|"Yes"| d4
+  d4 -->|"Result"| d5
+  d5 -->|"Yes"| d6
+  d2 -->|"No"| d2x
+  d3 -->|"No"| d3x
+  d4 -->|"Action requirements"| d4x
+  d5 -->|"No / partial / unknown"| d5x
+  d6 -->|"Expired / revoked link"| d6x
+  classDef action fill:#C2E5FF,stroke:#3DADFF,color:#1E1E1E
+  classDef decision fill:#FFECBD,stroke:#FFC943,color:#1E1E1E
+  classDef success fill:#CDF4D3,stroke:#66D575,color:#1E1E1E
+  classDef recovery fill:#FFCDC2,stroke:#FF7556,color:#1E1E1E
+  class d1,d4 action
+  class d2,d3,d5 decision
+  class d6 success
+  class d2x,d3x,d4x,d5x,d6x recovery

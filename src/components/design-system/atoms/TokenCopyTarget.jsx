@@ -46,7 +46,7 @@ export function TokenCopyTarget({ copyValue, label, children, className = '' }) 
   }
 
   return <span className={`v2-token-copy-target ${className}`.trim()}>
-    <AppButton variant="quiet" size="compact" className="v2-token-copy-target__button"
+    <AppButton variant="quiet" size="compact"
       aria-label={`Copy ${label}`} aria-busy={state === 'copying' || undefined} disabled={state === 'copying'}
       onClick={copy}>
       {children}

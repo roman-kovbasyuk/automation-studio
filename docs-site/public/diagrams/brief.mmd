@@ -1,0 +1,37 @@
+---
+config:
+  flowchart:
+    useMaxWidth: false
+    nodeSpacing: 70
+    rankSpacing: 100
+---
+flowchart LR
+  b1["B1  Enter or resume<br/>Brief text / file + brand context"]
+  b2{"B2  Source readable<br/>and usable?"}
+  b3{"B3  Analysis access<br/>ready?"}
+  b4["B4  Analyze brief<br/>One explicit request"]
+  b5{"B5  Valid analysis<br/>for current source?"}
+  b6["B6  Review facts<br/>Refine and save brief"]
+  b2x["Unreadable / empty source<br/>Unsupported, corrupt or protected file.<br/>Keep draft; replace file or paste text.<br/>Return to B1."]
+  b3x["Access / quota dependency<br/>Check configuration and capability without generation.<br/>Restore access or wait<br/>Recheck B3."]
+  b4x["Provider job dependency<br/>Keep source. Reconcile unknown request first.<br/>Retry confirmed failure only, at B4."]
+  b5x["Invalid / stale analysis<br/>Missing facts, blocked response or changed source.<br/>Clarify at B1; reanalyze current version."]
+  b6x["Brief persistence dependency<br/>Edits invalidate dependent analysis.<br/>Reanalyze at B4 if facts changed.<br/>Save failure: stay at B6."]
+  b1 --> b2
+  b2 -->|"Yes"| b3
+  b3 -->|"Yes"| b4
+  b4 -->|"Result"| b5
+  b5 -->|"Yes"| b6
+  b2 -->|"No"| b2x
+  b3 -->|"No"| b3x
+  b4 -->|"Failed / unknown"| b4x
+  b5 -->|"No"| b5x
+  b6 -->|"Refine / save fails"| b6x
+  classDef action fill:#C2E5FF,stroke:#3DADFF,color:#1E1E1E
+  classDef decision fill:#FFECBD,stroke:#FFC943,color:#1E1E1E
+  classDef success fill:#CDF4D3,stroke:#66D575,color:#1E1E1E
+  classDef recovery fill:#FFCDC2,stroke:#FF7556,color:#1E1E1E
+  class b1,b4 action
+  class b2,b3,b5 decision
+  class b6 success
+  class b2x,b3x,b4x,b5x,b6x recovery

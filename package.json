@@ -41,7 +41,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@xyflow/react": "^12.11.6",
     "archiver": "8.0.0",
-    "brutalist-design-system": "file:vendor/brutalist-design-system-0.1.0-atomic.0-7b06e5e01c7a.tgz",
+    "brutalist-design-system": "file:vendor/brutalist-design-system-0.1.0-atomic.0-50c322c7fc38.tgz",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fastify": "^5.12.3",

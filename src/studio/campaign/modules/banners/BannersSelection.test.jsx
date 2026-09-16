@@ -1,3 +1,4 @@
+import { changeControl } from "../../../../test/selectOption.js"
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { makeScenario } from '../../testing/workspaceFixtures.js'
@@ -28,18 +29,42 @@ describe('Banners selection module', () => {
     expect(screen.queryByLabelText('Headline')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Send to Figma' })).toBeDisabled()
   })
-  it('counts designs times sizes, keeps selection through tab and category changes', () => {
+  it('explains why banner and format selection is locked before a visual is selected', () => {
+    const { port } = setup({ access: { canEdit: false, reason: 'Select a current image first.' } })
+    expect(screen.getByRole('status', { name: 'Banner selection unavailable' })).toHaveTextContent(
+      'Choose a visual in Visuals to unlock banner and format selection.',
+    )
+    expect(within(screen.getByRole('status', { name: 'Banner selection unavailable' }))
+      .getByRole('button', { name: 'Choose a visual' })).toBeEnabled()
+    expect(port.access.canEdit).toBe(false)
+  })
+  it('counts copies, templates, and sizes through tab and category changes', () => {
     setup()
     selectAll()
-    fireEvent.click(screen.getByRole('tab', { name: 'Sizes & formats' }))
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Sizes & formats' }))
+    expect(screen.getByRole('tabpanel', { name: 'Sizes & formats' })).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: /Select .*1080 × 1920/ }))
     expect(screen.getByRole('status', { name: 'Banner selection total' })).toHaveTextContent('3 designs × 2 sizes')
     expect(screen.getByRole('status', { name: 'Banner selection total' })).toHaveTextContent('6')
-    fireEvent.click(screen.getByRole('button', { name: 'Placement category' }))
-    fireEvent.click(screen.getByRole('option', { name: 'Stories' }))
+    changeControl(screen.getByRole('combobox', { name: 'Placement category' }), { target: { value: 'Stories' } })
     expect(screen.getByRole('button', { name: /Deselect .*1080 × 1920/ })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('tab', { name: 'Design' }))
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Design' }))
     expect(screen.getByRole('button', { name: 'Deselect Editorial split' })).toHaveAttribute('aria-pressed', 'true')
+  })
+  it('counts distinct selected copies, templates, and resize formats', () => {
+    const { workspace, templates } = makeScenario('visuals-ready')
+    const input = projectModuleInput('banners', workspace, { templates })
+    input.composition = {
+      designs: [
+        { templateId: templates[0].id, templateVersion: templates[0].version, copySetId: 'copy-set-1', copyId: 'copy-1', directionId: 'direction-1' },
+        { templateId: templates[1].id, templateVersion: templates[1].version, copySetId: 'copy-set-1', copyId: 'copy-2', directionId: 'direction-1' },
+      ],
+      ratioIds: ['square', 'story'],
+    }
+    setup({ input })
+
+    expect(screen.getByRole('status', { name: 'Banner selection total' })).toHaveTextContent('2 designs × 2 sizes')
+    expect(screen.getByRole('status', { name: 'Banner selection total' })).toHaveTextContent('4')
   })
   it('does not save before verification; cancellation is harmless', () => {
     const { port } = setup()
@@ -56,7 +81,7 @@ describe('Banners selection module', () => {
     const { port } = setup()
     selectAll(); openConfirmation()
     fireEvent.click(screen.getByRole('button', { name: 'Confirm and prepare review' }))
-    await waitFor(() => expect(port.navigate).toHaveBeenCalledWith('review'))
+    await waitFor(() => expect(port.navigate).toHaveBeenCalledWith('banners'))
     const [request, options] = port.actions.saveBatch.mock.calls[0]
     expect(request.designs).toHaveLength(3)
     expect(request.designs[0]).toEqual({ templateId: 'editorial-split', templateVersion: port.input.templates[0].version, copySetId: 'copy-set-1', copyId: 'copy-1', directionId: 'direction-1' })
@@ -86,7 +111,7 @@ describe('Banners selection module', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Confirm and prepare review' }))
     await screen.findByText('Render failed')
     fireEvent.click(screen.getByRole('button', { name: 'Retry review preparation' }))
-    await waitFor(() => expect(port.navigate).toHaveBeenCalledWith('review'))
+    await waitFor(() => expect(port.navigate).toHaveBeenCalledWith('banners'))
     expect(port.actions.saveBatch).toHaveBeenCalledTimes(1)
     expect(port.actions.prepareReview).toHaveBeenLastCalledWith({ expectedInputKey: 'saved-composition' })
   })
@@ -118,9 +143,15 @@ describe('Banners selection module', () => {
     input.composition = { ...input.composition, templateId: historic.id, templateVersion: 'old', ratioIds: ['custom-old'], designs: [{ templateId: historic.id, templateVersion: 'old', copySetId: 'copy-set-1', copyId: 'copy-1', directionId: 'direction-1' }] }
     const loadTemplateVersion = vi.fn().mockResolvedValue(historic)
     setup({ input, actions: { loadTemplateVersion, saveBatch: vi.fn(), prepareReview: vi.fn() } })
-    fireEvent.click(screen.getByRole('tab', { name: 'Sizes & formats' }))
+    fireEvent.mouseDown(screen.getByRole('tab', { name: 'Sizes & formats' }))
     expect(await screen.findByRole('button', { name: /Deselect custom-old · 600 × 400/ })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Send to Figma' })).toBeEnabled()
     expect(loadTemplateVersion).toHaveBeenCalledWith(historic.id, 'old')
   })
+})
+
+it('opens Visuals through guarded navigation when the current image is unavailable', () => {
+  const { port } = setup({ access: { canEdit: false, reason: 'Select a current image first.' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Choose a visual' }))
+  expect(port.navigate).toHaveBeenCalledWith('visuals')
 })

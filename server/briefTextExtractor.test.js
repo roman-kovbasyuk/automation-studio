@@ -63,6 +63,15 @@ async function expansionDocx() {
 }
 
 describe('brief text extraction', () => {
+  test.each(['context.csv','context.json','context.xml','context.html','context.custom','brief'])('reads textual %s by content rather than its extension',async name=>{
+    await expect(extractBriefText({name,mimeType:'application/octet-stream',data:Buffer.from('Campaign for students').toString('base64')})).resolves.toBe('Campaign for students')
+  })
+  test('rejects binary bytes renamed as a text file',async()=>{
+    await expect(extractBriefText({name:'brief.txt',mimeType:'text/plain',data:Buffer.from([0,1,2,65,66]).toString('base64')})).rejects.toMatchObject({code:'unreadable_brief_file'})
+  })
+  test('accepts a file larger than five megabytes within the campaign budget',async()=>{
+    await expect(extractBriefText({name:'brief.custom',mimeType:'application/octet-stream',data:Buffer.from(' '.repeat(6*1024*1024)+'Campaign').toString('base64')})).resolves.toBe('Campaign')
+  })
   test.each([
     ['brief.txt', 'text/plain'],
     ['brief.md', 'text/markdown'],
@@ -116,15 +125,15 @@ describe('brief text extraction', () => {
     })).rejects.toMatchObject({ code: 'brief_file_timeout' })
   })
 
-  test('rejects decoded content over five megabytes', async () => {
+  test('rejects decoded content over twenty-five megabytes', async () => {
     const data = Buffer.alloc(MAX_BRIEF_FILE_BYTES + 1, 97).toString('base64')
     await expect(extractBriefText({ name: 'brief.txt', mimeType: 'text/plain', data }))
       .rejects.toMatchObject({ statusCode: 413, code: 'brief_file_too_large' })
   })
 
-  test('rejects unsupported file types explicitly', async () => {
-    await expect(extractBriefText({ name: 'brief.rtf', mimeType: 'application/rtf', data: Buffer.from('hello').toString('base64') }))
-      .rejects.toMatchObject({ statusCode: 415, code: 'unsupported_brief_file' })
+  test('reports when native processing is not available', async () => {
+    await expect(extractBriefText({ name: 'brief.mp3', mimeType: 'audio/mpeg', data: Buffer.from('ID3').toString('base64') }))
+      .rejects.toMatchObject({ statusCode: 415, code: 'brief_format_unavailable' })
   })
 
   test('rejects empty extracted text with a paste-text fallback', async () => {

@@ -1,5 +1,9 @@
 # Campaign modules
 
+::: info Current implementation and next product flow
+This page describes the existing six-module architecture. The [10 September campaign flow specification](/recipes/campaign-flow) moves review and approval into Banners, defines its three layouts and makes final import follow approval. That five-step flow is the target for the next implementation.
+:::
+
 ## What owns what
 
 The page controls layout, navigation and the sidebar. Each module owns its editor and actions. A shared runtime refreshes server data; the workflow coordinator connects actions that cross module boundaries. The backend remains responsible for permissions, revisions and immutable files.

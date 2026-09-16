@@ -1,0 +1,9 @@
+.bs-ds-prompt { min-width: 0; margin: 0; }
+.bs-ds-prompt__surface { display: grid; gap: var(--a-space-4); padding: var(--a-space-6); }
+.bs-ds-prompt__surface[data-dragging="true"] { outline: 2px solid var(--a-color-accent); outline-offset: 2px; }
+.bs-ds-prompt__toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--a-space-2); min-width: 0; }
+.bs-ds-prompt__send { margin-left: auto; }
+.bs-ds-prompt__attachments { list-style: none; display: grid; gap: var(--a-space-2); margin: 0; padding: 0; }
+.bs-ds-prompt__attachments li { display: flex; align-items: center; gap: var(--a-space-2); min-width: 0; }
+.bs-ds-prompt__attachments li > span { flex: 1; overflow-wrap: anywhere; }
+@media (max-width: 600px) { .bs-ds-prompt__surface { padding: var(--a-space-4); } }

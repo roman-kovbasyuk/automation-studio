@@ -5,7 +5,7 @@ import { Transform } from 'node:stream'
 import { finished, pipeline } from 'node:stream/promises'
 import { ZipArchive } from 'archiver'
 
-const safeArchivePath = /^(?:banners\/banner-[0-9]{3}\.png|delivery-manifest\.json|render-manifest\.json)$/
+const safeArchivePath = /^(?:banners\/banner-[0-9]{3}\.png|videos\/video-[0-9]{3}\.mp4|delivery-manifest\.json|render-manifest\.json)$/
 
 function compareText(left, right) {
   return left < right ? -1 : left > right ? 1 : 0

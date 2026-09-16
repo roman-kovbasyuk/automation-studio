@@ -114,13 +114,15 @@ function textLayer({ lines, placement, fontSize, font, fill = '#111827' }) {
 
 export function createInProcessRenderer({ resolvedFontFiles = fontFiles } = {}) {
   const fonts = loadFonts(resolvedFontFiles)
+  const arimo = createFont(readFileSync(require.resolve('../../shared/fonts/Arimo.ttf')))
+  const families = { Inter: fonts, Arimo: Object.fromEntries([400, 600, 700].map(weight => [weight, arimo.getVariation({ wght: weight })])) }
   const measurements = new Map()
 
-  function measure(value, fontSize, fontWeight) {
+  function measure(value, fontSize, fontWeight, fontFamily) {
     if (value.length === 0) return 0
-    const key = `${fontWeight}:${fontSize}:${value}`
+    const key = `${fontFamily}:${fontWeight}:${fontSize}:${value}`
     if (measurements.has(key)) return measurements.get(key)
-    const width = shapeLine(fonts[fontWeight], value, fontSize).width
+    const width = shapeLine(families[fontFamily][fontWeight], value, fontSize).width
     measurements.set(key, width)
     return width
   }
@@ -136,11 +138,11 @@ export function createInProcessRenderer({ resolvedFontFiles = fontFiles } = {}) 
       }
       let line = ''
       for (const word of words) {
-        if (measure(word, slot.fontSize, slot.fontWeight) > placement.width) {
+        if (measure(word, slot.fontSize, slot.fontWeight, slot.fontFamily) > placement.width) {
           fail('unbreakable_overflow', `Slot ${slot.id} contains a word wider than its placement`)
         }
         const candidate = line ? `${line} ${word}` : word
-        if (measure(candidate, slot.fontSize, slot.fontWeight) <= placement.width) line = candidate
+        if (measure(candidate, slot.fontSize, slot.fontWeight, slot.fontFamily) <= placement.width) line = candidate
         else {
           lines.push(line)
           line = word
@@ -154,7 +156,7 @@ export function createInProcessRenderer({ resolvedFontFiles = fontFiles } = {}) 
     }
     const lineHeight = Math.ceil(slot.fontSize * 1.2)
     for (const [index, line] of lines.entries()) {
-      const shaped = shapeLine(fonts[slot.fontWeight], line, slot.fontSize)
+      const shaped = shapeLine(families[slot.fontFamily][slot.fontWeight], line, slot.fontSize)
       const baseline = slot.fontSize + index * lineHeight
       if (baseline - shaped.maxY < 0 || baseline - shaped.minY > placement.height) {
         fail('outline_overflow', `Slot ${slot.id} glyph outline exceeds its placement height`)
@@ -233,24 +235,36 @@ export function createInProcessRenderer({ resolvedFontFiles = fontFiles } = {}) 
 
         if (typeof value !== 'string') fail('invalid_input', `Text slot ${slot.id} must be a string`)
         if (value.length > slot.maxCharacters) fail('character_limit', `Slot ${slot.id} exceeds its character limit`)
-        if (slot.fontFamily !== 'Inter' || !supportedWeights.has(slot.fontWeight) || !fonts[slot.fontWeight]) {
+        if (!families[slot.fontFamily] || !supportedWeights.has(slot.fontWeight) || !families[slot.fontFamily][slot.fontWeight]) {
           fail('unsupported_font', `Slot ${slot.id} font is unsupported`)
         }
         if (slot.fontSize < slot.minFontSize) fail('minimum_font_size', `Slot ${slot.id} is below its minimum font size`)
         const lines = await wrapText(value, slot, placement)
         if (createComposites) {
           composites.push({
-            input: textLayer({ lines, placement, fontSize: slot.fontSize, font: fonts[slot.fontWeight], fill: manifest.presentation?.slotColors[slot.id] }),
+            input: textLayer({ lines, placement, fontSize: slot.fontSize, font: families[slot.fontFamily][slot.fontWeight], fill: manifest.presentation?.slotColors[slot.id] }),
             left: placement.x,
             top: placement.y,
           })
         }
         compiledSlots.push({
           id: slot.id, type: slot.type, lines, placement,
-          font: { family: 'Inter', weight: slot.fontWeight, size: slot.fontSize },
+          font: { family: slot.fontFamily, weight: slot.fontWeight, size: slot.fontSize },
         })
       }
 
+      for (const graphic of manifest.presentation?.graphics ?? []) {
+        const bytes = Buffer.from(graphic.dataUrl.split(',')[1], 'base64')
+        const decoded = await decodeGeneratedImage(bytes, 'image/png')
+        if (!decoded) fail('unsupported_image', 'Brand logo PNG is invalid')
+        const p = graphic.placements[ratio.id]
+        if (p.width <= 20 || p.height <= 20) fail('invalid_manifest', 'Brand logo placement is too small')
+        if (createComposites) {
+          const logo = await sharp(decoded.bytes).resize(p.width - 20, p.height - 20, { fit: 'contain', background: graphic.backgroundColor })
+            .extend({ top: 10, bottom: 10, left: 10, right: 10, background: graphic.backgroundColor }).flatten({ background: graphic.backgroundColor }).png().toBuffer()
+          composites.push({ input: logo, left: p.x, top: p.y })
+        }
+      }
       return { manifest, ratio, compiledSlots, composites }
   }
 

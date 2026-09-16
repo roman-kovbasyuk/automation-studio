@@ -1,0 +1,14 @@
+/* App-owned layout; cards, status badges and controls come from Brutalist. */
+.launcher { min-height: 100vh; padding: var(--a-space-8) var(--a-space-6); }
+.launcher__header, .launcher__grid, .launcher__status { width: min(1180px, 100%); margin-inline: auto; }
+.launcher__header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: var(--a-space-8); margin-bottom: var(--a-space-8); }
+.launcher__header h1 { font-size: var(--a-type-h1-size); line-height: var(--a-type-h1-line); font-weight: var(--a-type-h2-weight); }
+.launcher__lede { max-width: 620px; }
+.launcher__status { margin-block: var(--a-space-6); }
+.launcher__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--a-space-6); }
+.launcher-card-content { display: grid; gap: var(--a-space-4); }
+.launcher-card__topline, .launcher-card__actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--a-space-2); }
+.launcher-card__icon { display: inline-flex; }
+.launcher-card__result { overflow-wrap: anywhere; }
+@media (max-width: 980px) { .launcher__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 620px) { .launcher__grid { grid-template-columns: 1fr; } }

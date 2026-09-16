@@ -57,13 +57,23 @@ export function createReviewCommands(runtime) {
       if (workspace.campaign.status !== 'composed' || workspace.campaign.openVersionId) {
         throw error('review_phase_changed', 'The campaign is no longer ready to create this version.')
       }
-      await api.createVersion(workspace.campaign.id, {}, workspace.campaign.revision, idempotencyKey)
-    }, { expectedInputKey: expected(options), idempotent: true }),
+      await api.createVersion(workspace.campaign.id, options.videoAssetIds?.length ? { videoAssetIds: [...options.videoAssetIds].sort() } : {}, workspace.campaign.revision, idempotencyKey)
+    }, { expectedInputKey: expected(options), idempotent: true, intent: { videoAssetIds: [...(options.videoAssetIds ?? [])].sort() } }),
+    sendToFigma: (input, options = {}) => runtime.execute('review','sendToFigma',async({api,workspace,idempotencyKey})=>{
+      const version=currentHistory(workspace,runtime.getSnapshot('review').input.history,'in_review')
+      await api.sendToFigma(version.id,input,workspace.campaign.revision,idempotencyKey)
+    },{expectedInputKey:expected(options),idempotent:true,intent:input}),
+    refreshFigma: () => runtime.refresh({review:true}),
     markReady: (input, options = {}) => reviewAction('markReady', 'in_review', 'mark-ready', input, options,
       validReadyEvidence, { code: 'invalid_review_evidence', message: 'A Figma link and all designer checks are required.' }),
     requestChanges: (comment, options = {}) => reviewAction('requestChanges', 'in_review', 'request-changes', { comment }, options,
       validFeedback, { code: 'feedback_required', message: 'Describe the requested change.' }),
-    approve: (options = {}) => reviewAction('approve', 'ready', 'approve', {}, options),
+    approve: (options = {}) => {
+      const submission=runtime.getSnapshot('review').input.figma?.submission
+      const input=submission?{submissionId:options.submissionId,submissionHash:options.submissionHash}:{}
+      if(submission&&(submission.id!==input.submissionId||submission.submissionHash!==input.submissionHash))return Promise.resolve({ok:false,code:'figma_submission_changed',message:'Reload the returned artwork before approving.'})
+      return reviewAction('approve','ready','approve',input,options)
+    },
     reject: (comment, options = {}) => reviewAction('reject', 'ready', 'reject', { comment }, options,
       validFeedback, { code: 'feedback_required', message: 'Describe the requested change.' }),
     reopen: (options = {}) => runtime.execute('review', 'reopen', async ({ api, workspace, idempotencyKey }) => {

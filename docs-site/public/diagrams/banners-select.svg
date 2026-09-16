@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2340" height="650" viewBox="0 0 2340 650" role="img" aria-labelledby="title description">
+<title id="title">banners select logic</title>
+<desc id="description">Read left to right. Recovery paths appear below their owning step. Return IDs identify where to resume.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="#555" stroke-width="1.5"/></marker></defs>
+<rect width="100%" height="100%" fill="#fff"/>
+<path d="M 360 130 L 500 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="406.6" y="118" width="46.8" height="24" fill="#fff"/>
+<text x="430" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Send</text>
+<path d="M 820 130 L 960 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="870.45" y="118" width="39.1" height="24" fill="#fff"/>
+<text x="890" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Yes</text>
+<path d="M 1280 130 L 1420 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1318.9" y="118" width="62.2" height="24" fill="#fff"/>
+<text x="1350" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Queued</text>
+<path d="M 1740 130 L 1880 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1790.45" y="118" width="39.1" height="24" fill="#fff"/>
+<text x="1810" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Yes</text>
+<path d="M 200 185 L 200 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="130.4" y="250.5" width="139.2" height="24" fill="#fff"/>
+<text x="200" y="267.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Change selection</text>
+<path d="M 660 230 L 660 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="644.3" y="273" width="31.4" height="24" fill="#fff"/>
+<text x="660" y="290" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">No</text>
+<path d="M 1120 185 L 1120 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1046.55" y="250.5" width="146.9" height="24" fill="#fff"/>
+<text x="1120" y="267.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Failed / repeated</text>
+<path d="M 1580 230 L 1580 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1564.3" y="273" width="31.4" height="24" fill="#fff"/>
+<text x="1580" y="290" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">No</text>
+<path d="M 2040 185 L 2040 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1966.55" y="250.5" width="146.9" height="24" fill="#fff"/>
+<text x="2040" y="267.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Partial / restart</text>
+<rect x="40" y="75" width="320" height="110" rx="10" fill="#C2E5FF" stroke="#3DADFF"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="200" y="125">A1 Review selection</tspan>
+<tspan x="200" y="147">Previews + output count</tspan>
+</text>
+<polygon points="660,30 820,130 660,230 500,130" fill="#FFECBD" stroke="#FFC943"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="660" y="125">A2 Figma access</tspan>
+<tspan x="660" y="147">and sender allowed?</tspan>
+</text>
+<rect x="960" y="75" width="320" height="110" rx="10" fill="#C2E5FF" stroke="#3DADFF"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="1120" y="125">A3 Send to Figma</tspan>
+<tspan x="1120" y="147">Save immutable handoff</tspan>
+</text>
+<polygon points="1580,30 1740,130 1580,230 1420,130" fill="#FFECBD" stroke="#FFC943"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="1580" y="125">A4 Importer ready</tspan>
+<tspan x="1580" y="147">in this file?</tspan>
+</text>
+<rect x="1880" y="75" width="320" height="110" rx="10" fill="#CDF4D3" stroke="#66D575"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="2040" y="125">A5 Create mapped frames</tspan>
+<tspan x="2040" y="147">Report import receipt</tspan>
+</text>
+<rect x="40" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="64" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">New version</text>
+<text x="62" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="82" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Change copy, visual, template</text>
+<text x="82" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">or output requirements → BG1.</text>
+<text x="62" y="452" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="82" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Keep prior versions and</text>
+<text x="82" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">selections.</text>
+<rect x="500" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="524" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Figma access dependency</text>
+<text x="522" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="542" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Restore sender permission and</text>
+<text x="542" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">correct file / page access.</text>
+<text x="522" y="452" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="542" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Keep previews; recheck A2.</text>
+<rect x="960" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="984" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Handoff persistence</text>
+<text x="982" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1002" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Repeated clicks reuse the same</text>
+<text x="1002" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">identity.</text>
+<text x="982" y="452" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1002" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Reconcile unknown send; retry</text>
+<text x="1002" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">only confirmed failures.</text>
+<text x="982" y="502" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1002" y="502" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">No duplicate handoff.</text>
+<rect x="1420" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="1444" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Importer dependency</text>
+<text x="1442" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1462" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Show Waiting for Figma.</text>
+<text x="1442" y="430" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1462" y="430" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Open the connected importer in</text>
+<text x="1462" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">the destination file; recheck</text>
+<text x="1462" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">A4.</text>
+<text x="1442" y="502" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1462" y="502" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">An iframe is not an importer.</text>
+<rect x="1880" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="1904" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Import recovery</text>
+<text x="1902" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1922" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Reconcile expected output IDs</text>
+<text x="1922" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">with existing frames.</text>
+<text x="1902" y="452" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1922" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Repair missing frames in the</text>
+<text x="1922" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">same handoff; return to A5.</text>
+</svg>

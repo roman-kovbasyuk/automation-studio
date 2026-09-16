@@ -7,13 +7,10 @@ const items = [
   { label: 'Copy', href: '#copy', current: false, complete: false, disabled: false },
 ]
 
-test('commits the collapsed mobile timeline before navigation measures its target', () => {
-  const onChange = vi.fn(() => {
-    expect(screen.getByLabelText('Campaign progress')).toHaveAttribute('data-expanded', 'false')
-  })
+test('shows navigation directly without a step-summary toggle', () => {
+  const onChange = vi.fn()
   render(<CampaignTimeline items={items} activeModule="brief" onChange={onChange} />)
-  fireEvent.click(screen.getByRole('button', { name: /Step 1 of 2/ }))
-  expect(screen.getByLabelText('Campaign progress')).toHaveAttribute('data-expanded', 'true')
+  expect(screen.queryByRole('button', { name: /Step 1 of 2/ })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('link', { name: 'Copy' }))
   expect(onChange).toHaveBeenCalledWith(1)
 })

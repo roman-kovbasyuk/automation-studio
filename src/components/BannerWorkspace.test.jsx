@@ -1,3 +1,4 @@
+import { selectOption } from "../test/selectOption.js"
 import { useState } from 'react'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -185,7 +186,7 @@ describe('BannerWorkspace', () => {
       expect(within(detail).getByText(value)).toBeVisible()
     })
 
-    await user.selectOptions(within(detail).getByLabelText('Text motion'), 'type-reveal')
+    await selectOption(within(detail).getByLabelText('Text motion'), 'type-reveal')
     expect(within(detail).getByRole('article').querySelector('.motion-copy')).toHaveAttribute('data-motion-preset', 'type-reveal')
     const initialVersion = within(detail).getByRole('article').getAttribute('data-motion-version')
     fireEvent.click(within(detail).getByRole('button', { name: 'Replay motion' }))
@@ -202,12 +203,12 @@ describe('BannerWorkspace', () => {
 
     await user.click(screen.getByRole('button', { name: /Open Split frame, 1080×1350 preview/ }))
     let detail = screen.getByRole('dialog', { name: 'Banner detail preview' })
-    await user.selectOptions(within(detail).getByLabelText('Text motion'), 'type-reveal')
+    await selectOption(within(detail).getByLabelText('Text motion'), 'type-reveal')
 
     await user.click(screen.getByRole('button', { name: /Open Reverse split, 1080×1350 preview/ }))
     detail = screen.getByRole('dialog', { name: 'Banner detail preview' })
-    await user.selectOptions(within(detail).getByLabelText('Image motion'), 'pan-up')
-    await user.selectOptions(within(detail).getByLabelText('CTA motion'), 'pulse')
+    await selectOption(within(detail).getByLabelText('Image motion'), 'pan-up')
+    await selectOption(within(detail).getByLabelText('CTA motion'), 'pulse')
     expect(within(detail).getByRole('article').querySelector('.motion-copy')).toHaveAttribute('data-motion-preset', 'fade-up')
     expect(within(detail).getByRole('article').querySelector('.motion-media')).toHaveAttribute('data-motion-preset', 'pan-up')
     expect(within(detail).getByRole('article').querySelector('.motion-cta')).toHaveAttribute('data-motion-preset', 'pulse')

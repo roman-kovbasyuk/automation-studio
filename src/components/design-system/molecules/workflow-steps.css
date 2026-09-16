@@ -1,0 +1,6 @@
+.app-workflow-steps { display: grid; gap: var(--a-space-3); list-style: none; margin: 0; padding: 0; }
+.app-workflow-steps li { display: flex; align-items: center; gap: var(--a-space-2); min-width: 0; }
+.app-workflow-steps li > span { display: inline-flex; width: var(--a-space-4); flex-shrink: 0; font-size: var(--a-type-small-size); }
+.app-workflow-steps li > div { display: grid; gap: var(--a-space-1); min-width: 0; }
+.app-workflow-steps small { padding-inline: var(--a-space-2); color: var(--a-color-secondary); font-size: var(--a-type-small-size); }
+@media (max-width: 1050px) { .app-workflow-steps { display:flex; gap:var(--a-space-4); overflow-x:auto; padding-block:var(--a-space-3); } .app-workflow-steps li { flex-shrink:0; } }

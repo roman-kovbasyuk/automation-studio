@@ -4,6 +4,13 @@ import { buildApp } from './app.js'
 import { loadConfig } from './config.js'
 
 describe('Banner Studio API shell', () => {
+  test('uses the configured logger when the HTTP app is built', async () => {
+    const app = buildApp({ readiness: async () => true, logger: { level: 'warn' } })
+
+    expect(app.log.level).toBe('warn')
+    await app.close()
+  })
+
   test('reports process liveness with a request ID', async () => {
     const app = buildApp({ readiness: async () => true })
 
@@ -12,6 +19,22 @@ describe('Banner Studio API shell', () => {
     expect(response.statusCode).toBe(200)
     expect(response.json()).toMatchObject({ status: 'ok' })
     expect(response.json().requestId).toBe(response.headers['x-request-id'])
+    await app.close()
+  })
+
+  test('serves only the public browser runtime configuration', async () => {
+    const app = buildApp({
+      readiness: async () => true,
+      runtimeConfig: { firebase: { apiKey: 'public-key', authDomain: 'studio.example', projectId: 'studio-project', appId: 'public-app' } },
+    })
+
+    const response = await app.inject({ method: 'GET', url: '/api/v1/runtime-config' })
+
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual({
+      firebase: { apiKey: 'public-key', authDomain: 'studio.example', projectId: 'studio-project', appId: 'public-app' },
+      requestId: response.headers['x-request-id'],
+    })
     await app.close()
   })
 
@@ -157,6 +180,12 @@ describe('Banner Studio API shell', () => {
       port: 4000,
       databaseUrl: undefined,
       firebaseProjectId: undefined,
+      firebaseWeb: {
+        apiKey: undefined,
+        authDomain: undefined,
+        projectId: undefined,
+        appId: undefined,
+      },
       generation: {
         provider: 'mock',
         projectId: undefined,
@@ -174,12 +203,18 @@ describe('Banner Studio API shell', () => {
         root: resolve('dist'),
       },
       runMigrationsOnStartup: true,
+      logLevel: 'silent',
     })
     expect(Object.isFrozen(config)).toBe(true)
   })
 
   test('rejects a missing environment object', () => {
     expect(() => loadConfig()).toThrow('Environment configuration must be an object')
+  })
+
+  test('validates the configured log level', () => {
+    expect(loadConfig({ NODE_ENV: 'test', LOG_LEVEL: 'debug' }).logLevel).toBe('debug')
+    expect(() => loadConfig({ NODE_ENV: 'test', LOG_LEVEL: 'verbose' })).toThrow('LOG_LEVEL must be')
   })
 
   test('enables the production static build and allows an explicit local production-parity composition', () => {

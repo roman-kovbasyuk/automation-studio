@@ -1,0 +1,12 @@
+.bs-sidebar-account { position: absolute; right: var(--a-space-4); bottom: var(--a-space-4); left: var(--a-space-4); z-index: 2; }
+.bs-sidebar-account__trigger { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--a-space-2); width: 100%; min-height: var(--a-size-control); padding: var(--a-space-2); appearance: none; border: var(--a-border-width) solid var(--a-color-ink); border-radius: var(--a-radius-small); background: transparent; color: var(--a-color-ink); font: inherit; text-align: left; cursor: pointer; }
+.bs-sidebar-account__trigger:hover, .bs-sidebar-account__trigger[aria-expanded='true'] { background: var(--a-color-surface); }
+.bs-sidebar-account__trigger:focus-visible { outline: 2px solid var(--a-color-accent); outline-offset: 2px; }
+.bs-sidebar-account__avatar { display: grid; place-items: center; width: var(--a-size-small); height: var(--a-size-small); border: var(--a-border-width) solid var(--a-color-ink); border-radius: 50%; background: var(--a-color-surface); font-size: var(--a-type-small-size); font-weight: 600; line-height: 1; }
+.bs-sidebar-account__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--a-type-small-size); font-weight: 600; }
+.bs-sidebar-account__chevron { justify-self: end; }
+.bs-sidebar-account__menu { position: absolute; right: 0; bottom: calc(100% + var(--a-space-2)); left: 0; display: grid; gap: var(--a-space-1); padding: var(--a-space-2); border: var(--a-border-width) solid var(--a-color-ink); border-radius: var(--a-radius-small); background: var(--a-color-surface); box-shadow: var(--a-shadow-floating); }
+.bs-sidebar-account__item { display: block; width: 100%; min-height: var(--a-size-compact); padding: var(--a-space-2); appearance: none; border: 0; border-radius: var(--a-radius-small); background: transparent; color: var(--a-color-ink); font: inherit; font-size: var(--a-type-small-size); text-align: left; cursor: pointer; }
+.bs-sidebar-account__item:hover, .bs-sidebar-account__item:focus-visible { background: var(--a-color-canvas); outline: none; }
+.bs-sidebar-account__item:disabled { color: var(--a-color-secondary); cursor: not-allowed; }
+.bs-mobile-navigation .bs-sidebar-account { position: sticky; right: auto; bottom: auto; left: auto; margin-top: auto; }

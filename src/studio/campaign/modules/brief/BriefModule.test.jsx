@@ -20,8 +20,9 @@ it('shows summary before facts and refinement; inline edits save the analyzed so
   const port = analyzedPort()
   render(<BriefModule port={port} />)
   expect(screen.queryByRole('button', { name: /Analyze brief/ })).not.toBeInTheDocument()
+  expect(screen.getByRole('group', { name: 'Campaign details' })).toBeInTheDocument()
   const summary = screen.getByRole('button', { name: 'Edit summary' })
-  const audience = screen.getByRole('button', { name: 'Edit audience' })
+  const audience = screen.getByRole('button', { name: 'Edit Audience' })
   expect(summary.compareDocumentPosition(audience) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   fireEvent.click(audience)
   fireEvent.change(screen.getByRole('textbox', { name: 'Audience' }), { target: { value: 'Designers' } })
@@ -39,6 +40,15 @@ it('preserves refinement input on failure and submits it with the captured sourc
   await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('The source changed.'))
   expect(chat).toHaveValue('Make the audience designers')
   expect(port.actions.refine).toHaveBeenCalledWith('Make the audience designers', { expectedInputKey: 'analyzed-source' })
+})
+
+it('renders brief refinement as a dropdown-free prompt input block', () => {
+  const port = analyzedPort()
+  render(<BriefModule port={port} />)
+  const refinement = screen.getByRole('form', { name: 'Brief refinement' })
+  expect(refinement).toBeVisible()
+  expect(screen.queryByRole('button', { name: /prompt model/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /prompt effort/i })).not.toBeInTheDocument()
 })
 
 it('keeps a local raw draft when another editor publishes analysis', () => {

@@ -1,8 +1,14 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, expect, test, vi } from 'vitest'
-import { AssetImage } from './primitives.jsx'
+import { AssetImage, Button } from './primitives.jsx'
 
 afterEach(() => vi.unstubAllGlobals())
+
+test('Studio Button renders the canonical design-system action control', () => {
+  render(<Button primary>Save changes</Button>)
+
+  expect(screen.getByRole('button', { name: 'Save changes' })).toHaveClass('c-button')
+})
 
 test('module asset reader renders a blob and revokes its URL on unmount', async () => {
   const createObjectURL = vi.fn(() => 'blob:module-image')

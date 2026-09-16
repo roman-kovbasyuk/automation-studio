@@ -1,12 +1,20 @@
 import { z } from 'zod'
 import { campaignRecordSchema, copyVariantSchema, visualDirectionSchema, compositionSchema, campaignVersionRecordSchema, generationJobDetailsSchema, deliveryRecordSchema } from './contracts.js'
+import {authoredCopyVariantSchema,briefSourceSummarySchema} from './briefingContracts.js'
+
+const copySetSchema=z.strictObject({id:z.string().min(1),selectedCandidateId:z.string().nullable(),approvedCandidateIds:z.array(z.string().min(1)).default([]),hasApprovalHistory:z.boolean().optional(),stale:z.boolean(),sourceBriefKey:z.string().optional()})
+const storedCopySetSchema=z.union([
+  copySetSchema.extend({origin:z.literal('generated').optional(),candidates:z.array(copyVariantSchema)}),
+  copySetSchema.extend({origin:z.enum(['supplied','manual']),candidates:z.array(authoredCopyVariantSchema)}),
+])
 
 export const workspaceRecordSchema = z.strictObject({
   campaign: campaignRecordSchema,
-  copies: z.array(z.strictObject({ id: z.string().min(1), candidates: z.array(copyVariantSchema), selectedCandidateId: z.string().nullable(), approvedCandidateIds: z.array(z.string().min(1)).default([]), stale: z.boolean() })),
+  sources:z.array(briefSourceSummarySchema).optional(),
+  copies: z.array(storedCopySetSchema),
   directions: z.array(visualDirectionSchema.extend({ stale: z.boolean(),
     scope: z.enum(['legacy', 'campaign', 'selected_copy']).default('legacy'),
-    copy: copyVariantSchema.nullable().default(null), batchId: z.string().nullable().default(null),
+    copy: authoredCopyVariantSchema.nullable().default(null), batchId: z.string().nullable().default(null),
     source: z.enum(['upload', 'generation']).nullable().default(null),
     generation: z.strictObject({ id: z.string(), status: z.enum(['pending', 'unknown', 'succeeded', 'failed', 'blocked']), errorCode: z.string().nullable() }).nullable().default(null),
   })),

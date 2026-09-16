@@ -1,0 +1,19 @@
+.bs-home {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100dvh - 220px);
+  padding-block: var(--a-space-6);
+}
+.bs-home__entry {
+  width: min(760px, 100%);
+  min-width: 0;
+}
+.bs-root .bs-home__entry > h1 {
+  margin: 0 0 var(--a-space-6);
+  text-align: center;
+  text-wrap: balance;
+}
+@media (max-width: 760px) {
+  .bs-home { min-height: calc(100dvh - 160px); }
+}

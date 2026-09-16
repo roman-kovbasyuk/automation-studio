@@ -23,3 +23,9 @@ test('does not submit a form unless explicitly used as a submit button', () => {
   fireEvent.click(screen.getByRole('button', { name: 'Save' }))
   expect(submit).toHaveBeenCalledOnce()
 })
+
+test('uses the canonical external button styling contract', () => {
+  render(<AppButton variant="primary">Save profile</AppButton>)
+
+  expect(screen.getByRole('button', { name: 'Save profile' })).toHaveClass('c-button')
+})

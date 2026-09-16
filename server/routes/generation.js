@@ -10,6 +10,7 @@ import {
   generationJobResponseSchema,
   imageGenerationRequestSchema,
 } from '../../shared/contracts.js'
+import {authoredCopyFieldsSchema as copyEditRequestSchema} from '../../shared/briefingContracts.js'
 import { notFound, parse, parseIdempotencyKey, parseIfMatch, setRevisionEtag, strictResponse } from './support.js'
 
 const campaignParamsSchema = z.strictObject({ campaignId: z.string().trim().min(1) })
@@ -40,6 +41,13 @@ export function registerGenerationRoutes(app, { requireRole, generationService }
     return strictResponse(generationJobResponseSchema, request, job)
   })
 
+  app.put('/api/v1/campaigns/:campaignId/copy-retention', { preHandler: requireRole(...editors) }, async (request, reply) => {
+    const { campaignId } = parse(campaignParamsSchema, request.params)
+    parse(z.strictObject({}), request.body ?? {})
+    const campaign = await generationService.retainCopy({ actor: request.actor, campaignId, expectedRevision: parseIfMatch(request) })
+    return setRevisionEtag(reply, strictResponse(campaignResponseSchema, request, campaign))
+  })
+
   app.put('/api/v1/campaigns/:campaignId/copy-selection', { preHandler: requireRole(...editors) }, async (request, reply) => {
     const { campaignId } = parse(campaignParamsSchema, request.params)
     const expectedRevision = parseIfMatch(request)
@@ -48,11 +56,25 @@ export function registerGenerationRoutes(app, { requireRole, generationService }
     return setRevisionEtag(reply, strictResponse(campaignResponseSchema, request, campaign))
   })
 
+  app.delete('/api/v1/campaigns/:campaignId/copy-selection', { preHandler: requireRole(...editors) }, async (request, reply) => {
+    const { campaignId } = parse(campaignParamsSchema, request.params)
+    const campaign = await generationService.deselectCopy({ actor: request.actor, campaignId, expectedRevision: parseIfMatch(request) })
+    return setRevisionEtag(reply, strictResponse(campaignResponseSchema, request, campaign))
+  })
+
   app.put('/api/v1/campaigns/:campaignId/copies/:copyId/approval', { preHandler: requireRole(...editors) }, async (request, reply) => {
     const { campaignId, copyId } = parse(campaignParamsSchema.extend({ copyId: z.string().trim().min(1) }), request.params)
     const body = parse(z.strictObject({ revoke: z.boolean().optional() }), request.body ?? {})
     const campaign = await generationService.approveCopy({ actor: request.actor, campaignId,
       expectedRevision: parseIfMatch(request), input: { copyId, revoke: body.revoke } })
+    return setRevisionEtag(reply, strictResponse(campaignResponseSchema, request, campaign))
+  })
+
+  app.put('/api/v1/campaigns/:campaignId/copies/:copyId', { preHandler: requireRole(...editors) }, async (request, reply) => {
+    const { campaignId, copyId } = parse(campaignParamsSchema.extend({ copyId: z.string().trim().min(1) }), request.params)
+    const input = parse(copyEditRequestSchema, request.body)
+    const campaign = await generationService.editCopy({ actor: request.actor, campaignId,
+      expectedRevision: parseIfMatch(request), input: { ...input, copyId } })
     return setRevisionEtag(reply, strictResponse(campaignResponseSchema, request, campaign))
   })
 

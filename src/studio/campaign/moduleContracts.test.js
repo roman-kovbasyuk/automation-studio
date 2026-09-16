@@ -1,8 +1,32 @@
 import { describe, expect, test } from 'vitest'
 import { makeScenario } from './testing/workspaceFixtures.js'
 import { moduleInputKey, projectModuleInput } from './moduleContracts.js'
+import {emptyBriefAnswers} from '../../../shared/briefingContracts.js'
+
+test('visual-only briefing changes do not conflict with a Copy editor draft',()=>{
+  const input={brief:{locale:'en',briefing:{schemaVersion:2,sourceKey:'source',answers:{...emptyBriefAnswers(),summary:'Course',audience:'Adults',visualTags:['Oslo']}}},copies:[],selectedCopyId:null}
+  const changed=structuredClone(input);changed.brief.briefing.answers.visualTags=['Classroom']
+  expect(moduleInputKey('copy',changed)).toBe(moduleInputKey('copy',input))
+  changed.brief.briefing.answers.audience='Teenagers'
+  expect(moduleInputKey('copy',changed)).not.toBe(moduleInputKey('copy',input))
+})
 
 describe('narrow campaign module inputs', () => {
+  test('deleting the last approved copy does not restore unapproved banner options after visuals', () => {
+    const scenario = makeScenario('visuals-ready')
+    scenario.workspace.campaign.selectedCopyId = null
+    scenario.workspace.copies[0].selectedCandidateId = null
+    scenario.workspace.copies[0].approvedCandidateIds = []
+    scenario.workspace.copies[0].hasApprovalHistory = true
+    expect(projectModuleInput('banners', scenario.workspace).copies).toEqual([])
+  })
+  test('copy layout previews receive the published template manifest', () => {
+    const scenario = makeScenario('copy-ready')
+    const manifest = { id: 'editorial-split', brand: { name: 'MSD', versionNumber: 1 } }
+    const input = projectModuleInput('copy', scenario.workspace, { templates: [{ id: 'editorial-split', manifest }] })
+    expect(input.previewManifest).toBe(manifest)
+    expect(moduleInputKey('copy', { ...input, previewManifest: null })).toBe(moduleInputKey('copy', input))
+  })
   test('Banners exposes approved copy and the legacy selected candidate, not unapproved drafts', () => {
     const scenario = makeScenario('visuals-ready')
     expect(projectModuleInput('banners', scenario.workspace, scenario).copies.map(copy => copy.id)).toEqual(['copy-1'])
@@ -12,7 +36,7 @@ describe('narrow campaign module inputs', () => {
   test('Banners gets selected artifacts, not the surrounding workspace', () => {
     const scenario = makeScenario('composed')
     const input = projectModuleInput('banners', scenario.workspace, scenario)
-    expect(Object.keys(input)).toEqual(['selectedCopy', 'selectedDirection', 'copies', 'directions', 'templates', 'composition'])
+    expect(Object.keys(input)).toEqual(['hasVideos', 'selectedCopy', 'selectedDirection', 'copies', 'directions', 'templates', 'composition'])
     expect(input.copies[0]).toMatchObject({ id: 'copy-1', copySetId: 'copy-set-1' })
     expect(input.selectedCopy.id).toBe('copy-1')
     expect(input.selectedDirection.previewAssetId).toBe('image-1')
@@ -86,4 +110,17 @@ describe('narrow campaign module inputs', () => {
     const after = projectModuleInput('review', changed.workspace, changed)
     expect(moduleInputKey('review', before)).not.toBe(moduleInputKey('review', after))
   })
+})
+
+test('banners can preview available copy with an unselected ready image before any approval',()=>{
+ const scenario=makeScenario('visuals-ready')
+ scenario.workspace.campaign.selectedCopyId=null
+ scenario.workspace.campaign.selectedDirectionId=null
+ scenario.workspace.copies[0].selectedCandidateId=null
+ scenario.workspace.copies[0].approvedCandidateIds=[]
+ const input=projectModuleInput('banners',scenario.workspace,scenario)
+ expect(input.copies.map(copy=>copy.id)).toEqual(['copy-1','copy-2'])
+ expect(input.selectedCopy).toBeNull()
+ expect(input.selectedDirection).toBeNull()
+ expect(input.directions[0].previewAssetId).toBeTruthy()
 })

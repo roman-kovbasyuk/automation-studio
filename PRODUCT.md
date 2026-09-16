@@ -1,5 +1,7 @@
 # Product
 
+> **Historical product context — 15 September 2026.** Read [FRONTEND.md §2](FRONTEND.md#2-product-purpose-and-behavior) for general product-behavior rules; the latest accepted product and feature specifications define the current application baseline. The frontend-only, Russian-copy, simulated-provider and fixed-output prototype claims below do not govern the present application. Keep this text as prototype history; current feature behavior must be checked against accepted specifications and reachable source.
+
 <!-- impeccable:product-schema 1 -->
 
 ## Platform

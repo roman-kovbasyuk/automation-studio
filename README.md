@@ -9,8 +9,14 @@ npm install
 npm run dev
 ```
 
-The V1 has no runtime dependency on Claude Code, Apify, HyperFrames, Figma APIs, or any cloud
-provider. Generation and review are deterministic local simulations with explicit labels. See
+This command runs the browser-only prototype. The deployable API is started separately with
+`npm start`; its PostgreSQL, Firebase, Gemini, and GCS settings come from environment variables in
+[`.env.example`](.env.example). Set `PERSONAL_CREDENTIAL_ENCRYPTION_KEY` (generate one with
+`openssl rand -hex 32`) and connect a personal Gemini key from **Settings → Text & analysis**.
+Use `npm run dev:api` for the local API demo.
+
+The browser-only V1 has no runtime dependency on Claude Code, Apify, HyperFrames, Figma APIs, or any
+cloud provider. Generation and review are deterministic local simulations with explicit labels. See
 [README-MVP.md](README-MVP.md) for scope and architecture, and
 [the V1 specification](docs/superpowers/specs/2026-09-01-lingu-studio-v1-design.md) for the full PRD.
 

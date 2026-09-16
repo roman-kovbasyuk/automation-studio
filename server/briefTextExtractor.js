@@ -1,22 +1,16 @@
 import { fork } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { MAX_BRIEF_UPLOAD_BYTES, MAX_BRIEF_UPLOAD_BASE64 } from '../shared/briefUploadLimits.js'
+import { detectSourceType, nativeProcessingUnavailable } from './briefSources/sourceType.js'
 
-export const MAX_BRIEF_FILE_BYTES = 5 * 1024 * 1024
+export const MAX_BRIEF_FILE_BYTES = MAX_BRIEF_UPLOAD_BYTES
 export const MAX_BRIEF_TEXT_CHARACTERS = 20_000
-const MAX_BASE64_LENGTH = Math.ceil(MAX_BRIEF_FILE_BYTES / 3) * 4
+const MAX_BASE64_LENGTH = MAX_BRIEF_UPLOAD_BASE64
 const MAX_DOCX_ENTRIES = 1_000
 const MAX_DOCX_UNCOMPRESSED_BYTES = 25 * 1024 * 1024
 const DEFAULT_PARSE_TIMEOUT_MS = 5_000
 const parserRelativePath = './briefDocumentParser.js'
 const parserPath = fileURLToPath(new URL(parserRelativePath, import.meta.url))
-
-const supportedTypes = new Map([
-  ['.txt', new Set(['text/plain'])],
-  ['.md', new Set(['text/markdown', 'text/x-markdown'])],
-  ['.markdown', new Set(['text/markdown', 'text/x-markdown'])],
-  ['.pdf', new Set(['application/pdf'])],
-  ['.docx', new Set(['application/vnd.openxmlformats-officedocument.wordprocessingml.document'])],
-])
 
 export class BriefFileError extends Error {
   constructor(statusCode, code, publicMessage) {
@@ -45,21 +39,16 @@ function decodeBase64(data) {
   if (!validLength || !validCharacters) {
     rejectFile(data?.length > MAX_BASE64_LENGTH ? 413 : 400,
       data?.length > MAX_BASE64_LENGTH ? 'brief_file_too_large' : 'invalid_brief_file',
-      data?.length > MAX_BASE64_LENGTH ? 'The attachment exceeds the 5 MB limit.' : 'The attachment data is malformed.')
+      data?.length > MAX_BASE64_LENGTH ? 'The attachment exceeds the 25 MB limit.' : 'The attachment data is malformed.')
   }
   const bytes = Buffer.from(data, 'base64')
   if (bytes.byteLength > MAX_BRIEF_FILE_BYTES) {
-    rejectFile(413, 'brief_file_too_large', 'The attachment exceeds the 5 MB limit.')
+    rejectFile(413, 'brief_file_too_large', 'The attachment exceeds the 25 MB limit.')
   }
   return bytes
 }
 
-function fileExtension(name) {
-  const match = /(?:^|\/)([^/]+)(\.[^.\/]+)$/.exec(name.toLowerCase())
-  return match?.[2]
-}
-
-function preflightDocx(bytes) {
+export function preflightDocx(bytes) {
   const minimumEocdOffset = Math.max(0, bytes.length - 65_557)
   let eocdOffset = -1
   for (let offset = bytes.length - 22; offset >= minimumEocdOffset; offset -= 1) {
@@ -76,6 +65,7 @@ function preflightDocx(bytes) {
     rejectFile(422, 'brief_file_too_complex', 'The DOCX is too complex to process safely. Paste the campaign text instead.')
   }
   let totalUncompressed = 0
+  const entries = new Set()
   for (let index = 0; index < entryCount; index += 1) {
     if (offset + 46 > eocdOffset || bytes.readUInt32LE(offset) !== 0x02014b50) {
       rejectFile(422, 'unreadable_brief_file', 'No readable text could be extracted. Paste the campaign text instead.')
@@ -88,11 +78,16 @@ function preflightDocx(bytes) {
     if (totalUncompressed > MAX_DOCX_UNCOMPRESSED_BYTES) {
       rejectFile(422, 'brief_file_too_complex', 'The DOCX expands beyond the safe processing limit. Paste the campaign text instead.')
     }
-    offset += 46 + bytes.readUInt16LE(offset + 28) + bytes.readUInt16LE(offset + 30) + bytes.readUInt16LE(offset + 32)
+    const nameLength = bytes.readUInt16LE(offset + 28)
+    const nextOffset = offset + 46 + nameLength + bytes.readUInt16LE(offset + 30) + bytes.readUInt16LE(offset + 32)
+    if (nextOffset > eocdOffset) rejectFile(422, 'unreadable_brief_file', 'The document archive is malformed.')
+    entries.add(bytes.subarray(offset + 46, offset + 46 + nameLength).toString('utf8'))
+    offset = nextOffset
   }
+  return entries
 }
 
-export function parseDocumentInChild({ extension, bytes }, {
+export function parseDocumentInChild({ extension, bytes, evidence = false }, {
   childPath = parserPath, timeoutMs = DEFAULT_PARSE_TIMEOUT_MS,
 } = {}) {
   return new Promise((resolve, reject) => {
@@ -121,26 +116,29 @@ export function parseDocumentInChild({ extension, bytes }, {
     child.once('message', (message) => {
       if (message?.error === 'text_too_large') {
         finish(new BriefFileError(413, 'brief_text_too_large', 'The extracted text exceeds the 20,000 character brief limit.'))
+      } else if (message?.error === 'too_many_pages') {
+        finish(new BriefFileError(413, 'brief_file_too_complex', 'Use a PDF of at most 30 pages.'))
+      } else if (evidence && Array.isArray(message?.blocks)) {
+        finish(null, {blocks:message.blocks})
       } else if (typeof message?.text === 'string') {
         finish(null, message.text)
       } else {
         finish(new BriefFileError(422, 'unreadable_brief_file', 'No readable text could be extracted. Paste the campaign text instead.'))
       }
     })
-    child.send({ extension, bytes })
+    child.send({ extension, bytes, evidence })
   })
 }
 
-export async function extractBriefText({ name, mimeType, data }) {
-  const extension = fileExtension(name)
-  if (!extension || !supportedTypes.get(extension)?.has(mimeType.toLowerCase())) {
-    rejectFile(415, 'unsupported_brief_file', 'Use a TXT, Markdown, text PDF, or DOCX attachment.')
-  }
+export async function extractBriefText({ mimeType, data }) {
   const bytes = decodeBase64(data)
-  if (extension === '.docx') preflightDocx(bytes)
+  const source = detectSourceType(bytes, mimeType)
+  if (source.kind === 'native_required' || source.kind === 'image') throw nativeProcessingUnavailable()
+  if (source.kind === 'zip' && !preflightDocx(bytes).has('word/document.xml')) throw nativeProcessingUnavailable()
+  const extension = source.kind === 'pdf' ? '.pdf' : source.kind === 'zip' ? '.docx' : null
   let text
   try {
-    if (extension === '.txt' || extension === '.md' || extension === '.markdown') text = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+    if (source.kind === 'text') text = source.text
     if (extension === '.pdf' || extension === '.docx') text = await parseDocumentInChild({ extension, bytes })
   } catch (error) {
     if (error instanceof BriefFileError) throw error

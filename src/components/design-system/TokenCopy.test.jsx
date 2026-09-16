@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, expect, test, vi } from 'vitest'
-import { DesignSystemScreen } from '../../screens/DesignSystemScreen.jsx'
 import { TokenCopyTarget } from './atoms/TokenCopyTarget.jsx'
 import { TokenChip } from './atoms/TokenChip.jsx'
 

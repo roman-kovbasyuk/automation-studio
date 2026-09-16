@@ -9,7 +9,7 @@ import { stableInputKey } from './moduleContracts.js'
 import { rawBrief } from '../../../shared/briefAnalysis.js'
 
 /** Cross-module sequencing lives here, never inside a view or the page shell. */
-export function createWorkflowCoordinator({ runtime }) {
+export function createWorkflowCoordinator({ runtime, onNavigate = () => {} }) {
   const brief = createBriefCommands(runtime), copy = createCopyCommands(runtime)
   const visuals = createVisualsCommands(runtime)
   let sequencing = false, incomplete = null
@@ -28,9 +28,18 @@ export function createWorkflowCoordinator({ runtime }) {
           if (!saved.ok) return saved
           runtime.setDirty('brief', false)
         }
-        incomplete = { identity, sourceKey: runtime.getSnapshot('brief').inputKey, stage: 'analysis',
+        incomplete = { identity, sourceKey: runtime.getSnapshot('brief').inputKey, stage: patch?.sources?.length?'upload':'analysis',
+          uploadBaseline:await runtime.read(({workspace})=>workspace),removedIds:[],
           rawSource: stableInputKey(rawBrief(runtime.getSnapshot('brief').input.brief)),
           knownJobs: await runtime.read(({ workspace }) => workspace.jobs.map(job => job.id)) }
+      }
+      if(incomplete.stage==='upload') {
+        const uploaded=await brief.uploadSources(patch.sources.filter(source=>!incomplete.removedIds.includes(source.id)),{expectedInputKey:incomplete.sourceKey,baseline:incomplete.uploadBaseline,removedIds:incomplete.removedIds})
+        if(!uploaded.ok && uploaded.code==='brief_sources_not_ready') await runtime.refresh().catch(()=>{})
+        if(!uploaded.ok && uploaded.code==='source_changed') return uploaded
+        incomplete.sourceKey=runtime.getSnapshot('brief').inputKey
+        if(!uploaded.ok) return uploaded
+        incomplete.stage='analysis'
       }
       if (incomplete.stage === 'analysis' && runtime.getSnapshot('brief').operation.kind !== 'uncertain') {
         const recovered = await runtime.read(({ workspace }) => stableInputKey(rawBrief(workspace.campaign.brief)) === incomplete.rawSource
@@ -52,40 +61,30 @@ export function createWorkflowCoordinator({ runtime }) {
       if (runtime.getSnapshot('brief').inputKey !== incomplete.sourceKey) {
         return { ok: false, code: 'source_changed', message: 'The brief changed during analysis. Analyze the current brief before generating copy.' }
       }
-      let failure = null
-      // Serialize shared writes, but do not make either output a prerequisite
-      // for its sibling. Historical outputs count even when stale or deleted.
-      for (const [id, step, action] of [['copy', 'copy', copy.generate], ['visuals', 'directions', visuals.preparePrompts]]) {
-        const exists = await runtime.read(({ workspace }) => (id === 'copy' ? workspace.copies : workspace.directions).length > 0
-          || workspace.jobs.some(job => job.step === step && job.status === 'succeeded'))
-        if (exists) continue
-        if (runtime.getSnapshot('brief').inputKey !== incomplete.sourceKey) return { ok: false, code: 'source_changed', message: 'The brief changed. Review it before continuing.' }
-        const result = await action({ initial: true })
-        if (!result.ok) {
-          failure ??= result
-          // An uncertain paid request owns the runtime until reconciliation.
-          if (runtime.getSnapshot(id).operation.kind === 'uncertain') return result
-        }
+      if (!runtime.getSnapshot('brief').input.brief.briefing) {
+        incomplete = null
+        return { ok: false, code: 'canonical_migration_required', message: 'This campaign needs the canonical briefing migration before it can continue.' }
       }
-      if (!failure) incomplete = null
-      return failure ? { ...failure, briefSaved: true } : { ok: true }
+      incomplete=null
+      return {ok:true}
     } finally { sequencing = false }
   }
-  const regenerateCopy = () => copy.generate()
-  const review = createReviewCommands(runtime)
-  async function resumeInitialDrafts() {
-    if (sequencing || runtime.isBusy() || runtime.hasDirty() || !runtime.getSnapshot('brief').input.analysis
-      || !runtime.getSnapshot('brief').access.canEdit) return
+  const regenerateCopy = async () => {
+    if (sequencing) return { ok: false, code: 'campaign_busy', message: 'The brief is already being processed.' }
     sequencing = true
     try {
-      for (const [id, step, action] of [['copy', 'copy', copy.generate], ['visuals', 'directions', visuals.preparePrompts]]) {
-        // A durable attempt (including failed/unknown) belongs to that module's
-        // retry UI. Reopening a page must not start another paid attempt for it.
-        const attempted = await runtime.read(({ workspace }) => workspace.jobs.some(job => job.step === step)
-          || (id === 'copy' ? workspace.copies : workspace.directions).length > 0)
-        if (!attempted) await action({ initial: true })
+      if (!runtime.getSnapshot('brief').input.analysis) {
+        const result = await brief.analyze()
+        if (!result.ok) return result
       }
+      return await copy.generate()
     } finally { sequencing = false }
+  }
+  const review = createReviewCommands(runtime)
+  const banners = createBannersCommands(runtime)
+  async function resumeInitialDrafts() {
+    if (!runtime.getSnapshot('brief').input.brief.briefing) return { ok: false, code: 'canonical_migration_required', message: 'This campaign needs the canonical briefing migration before it can continue.' }
+    return { ok: true }
   }
   function observeInitialDrafts() {
     const resume = () => { void resumeInitialDrafts().catch(() => {}) }
@@ -95,10 +94,44 @@ export function createWorkflowCoordinator({ runtime }) {
   }
   return Object.freeze({ actions: Object.freeze({
     brief: Object.freeze({ ...brief, submit: analyzeAndGenerate,
+      retrySource: async id=>{
+        const result=await brief.retrySource(id)
+        await runtime.refresh().catch(()=>{})
+        if(incomplete?.stage==='upload') incomplete.sourceKey=runtime.getSnapshot('brief').inputKey
+        return result
+      },
+      removeSource: async id=>{
+        const result=await brief.removeSource(id)
+        if(result.ok && incomplete?.stage==='upload') {
+          incomplete.removedIds.push(id)
+          incomplete.sourceKey=runtime.getSnapshot('brief').inputKey
+        }
+        return result
+      },
+      confirm: async(input,options)=>{
+        const result=await brief.confirm(input,options)
+        if(!result.ok) return result
+        runtime.setDirty('brief',false)
+        if(result.receipt?.initialCopy==='offer_generation') {
+          // The Copy operation owns its failure/retry. Confirmation is already
+          // durable and must not leave the Brief draft on its old revision.
+          await copy.generate({initial:true,confirmationId:result.receipt.confirmationId})
+        }
+        onNavigate('copy')
+        return {ok:true}
+      },
       refine: (instruction, options = {}) => brief.analyze({ ...options, instruction }) }),
-    copy: Object.freeze({ ...copy, regenerate: regenerateCopy }),
+    copy: Object.freeze({ ...copy, regenerate: regenerateCopy,
+      regenerateVisuals: copyIds => visuals.generate('selected_copy', { copyIds }) }),
     visuals,
-    banners: Object.freeze({ ...createBannersCommands(runtime), prepareReview: options => review.createVersion(options) }),
+    banners: Object.freeze({ ...banners, ...review, prepareReview: async options => {
+      const snapshot = runtime.getSnapshot('review')
+      if (snapshot.input.phase === 'prepare' && snapshot.input.availableVideos?.length) {
+        if (!snapshot.access.canEdit || options?.expectedInputKey !== snapshot.inputKey) return { ok: false, code: 'source_changed', message: 'The saved selection changed. Check the current banners before review.' }
+        return { ok: true }
+      }
+      return review.createVersion(options)
+    } }),
     review,
     distribute: createDistributeCommands(runtime),
   }), analyzeAndGenerate, regenerateCopy, resumeInitialDrafts, observeInitialDrafts })

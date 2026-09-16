@@ -52,8 +52,10 @@ function makeApp({ role = 'marketer', generation = {} } = {}) {
     generateImage: vi.fn(async () => ({ status: 201, body: { job: blockedImageJob } })),
     getJob: vi.fn(async () => pendingJob),
     selectCopy: vi.fn(async () => campaign),
+    deselectCopy: vi.fn(async () => campaign),
     approveCopy: vi.fn(async () => campaign),
     deleteCopy: vi.fn(async () => campaign),
+    editCopy: vi.fn(async () => campaign),
     selectDirection: vi.fn(async () => ({ ...campaign, status: 'direction_selected', revision: 2, selectedDirectionId: 'direction-1' })),
     ...generation,
   }
@@ -65,6 +67,21 @@ function makeApp({ role = 'marketer', generation = {} } = {}) {
 }
 
 describe('generation and selection routes', () => {
+  test('copy edits require editor, revision, and only editable text fields', async () => {
+    const { app } = makeApp()
+    const url = '/api/v1/campaigns/campaign-1/copies/copy-1'
+    const payload = { headline: 'Headline', body: 'Body', offer: '', cta: 'Learn more' }
+    expect((await app.inject({ method: 'PUT', url, payload })).statusCode).toBe(428)
+    // This route admits authored wording; persisted origin determines the
+    // stricter generated-card limits inside the locked mutation service.
+    for (const invalid of [{ ...payload, approved: true }, { headline:'',body:'',offer:'',cta:'' }, { ...payload, cta: 'x'.repeat(20001) }]) {
+      expect((await app.inject({ method: 'PUT', url, payload: invalid, headers: { 'if-match': '"1"' } })).statusCode).toBe(400)
+    }
+    expect((await app.inject({ method: 'PUT', url, payload, headers: { 'if-match': '"1"' } })).statusCode).toBe(200)
+    const designer = makeApp({ role: 'designer' })
+    expect((await designer.app.inject({ method: 'PUT', url, payload, headers: { 'if-match': '"1"' } })).statusCode).toBe(403)
+    await app.close(); await designer.app.close()
+  })
   test('approves an individual copy with role, revision and strict-body checks', async () => {
     const { app, generationService } = makeApp()
     const url = '/api/v1/campaigns/campaign-1/copies/copy-1/approval'
@@ -193,6 +210,14 @@ describe('generation and selection routes', () => {
     await Promise.all([marketer.app.close(), designer.app.close()])
   })
 
+  test('persists copy deselection through the protected selection endpoint', async () => {
+    const { app, generationService } = makeApp()
+    const response = await app.inject({ method: 'DELETE', url: '/api/v1/campaigns/campaign-1/copy-selection', headers: { 'if-match': '"1"' } })
+    expect(response.statusCode).toBe(200)
+    expect(generationService.deselectCopy).toHaveBeenCalledWith(expect.objectContaining({ expectedRevision: 1 }))
+    await app.close()
+  })
+
   test('forbids designers from dispatching every generation command', async () => {
     const { app, generationService } = makeApp({ role: 'designer' })
     for (const url of ['analyse-brief', 'copy-generations', 'direction-generations', 'image-generations']) {
@@ -221,4 +246,17 @@ describe('generation and selection routes', () => {
     expect(failure.body).not.toContain('secret-value')
     await app.close()
   })
+})
+
+test('copy retention requires an editor, an exact revision, and an empty body', async () => {
+  const { app, generationService } = makeApp({ generation: { retainCopy: vi.fn(async () => campaign) } })
+  const url = '/api/v1/campaigns/campaign-1/copy-retention'
+  const response = await app.inject({ method: 'PUT', url, headers: { 'if-match': '"1"' }, payload: {} })
+  expect(response.statusCode).toBe(200)
+  expect(generationService.retainCopy).toHaveBeenCalledWith({ actor: { id: 'marketer-1', role: 'marketer', disabled: false }, campaignId: 'campaign-1', expectedRevision: 1 })
+  expect((await app.inject({ method: 'PUT', url, payload: {} })).statusCode).toBe(428)
+  expect((await app.inject({ method: 'PUT', url, headers: { 'if-match': '"1"' }, payload: { copySetIds: ['foreign'] } })).statusCode).toBe(400)
+  const designer = makeApp({ role: 'designer' })
+  expect((await designer.app.inject({ method: 'PUT', url, headers: { 'if-match': '"1"' }, payload: {} })).statusCode).toBe(403)
+  await app.close(); await designer.app.close()
 })

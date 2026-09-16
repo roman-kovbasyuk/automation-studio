@@ -23,6 +23,7 @@ describe('prototype network guard', () => {
       await expect(fetch('/healthz')).rejects.toMatchObject({ code: 'prototype_network_blocked' })
       await expect(fetch('/readyz')).rejects.toMatchObject({ code: 'prototype_network_blocked' })
       await expect(fetch('https://example.test/image.png')).rejects.toMatchObject({ code: 'prototype_network_blocked' })
+      await expect(fetch('/internal/service')).rejects.toMatchObject({ code: 'prototype_network_blocked' })
       await expect(fetch('/assets/sample.png', { signal: new AbortController().signal })).resolves.toBe(response)
       expect(fetchImpl).toHaveBeenCalledWith('/assets/sample.png', expect.objectContaining({ signal: expect.any(AbortSignal) }))
     } finally {

@@ -32,7 +32,7 @@ export function TokenChip({ token }) {
   }
 
   return <span className="v2-token-copy">
-    <AppButton size="compact" className="v2-token-chip" aria-label={`Copy ${token}`}
+    <AppButton size="compact" aria-label={`Copy ${token}`}
       busy={state === 'copying'} onClick={copy}>
       <code>{token}</code>
       {state !== 'copying' && (state === 'copied'

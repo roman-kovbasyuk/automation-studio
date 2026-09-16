@@ -25,3 +25,37 @@
   line-height: 1.35;
   white-space: nowrap;
 }
+
+/* Keep detailed campaign diagrams readable without widening the document. */
+.vp-doc .campaign-flow-diagram {
+  overflow: auto;
+  max-height: 75vh;
+  margin: 24px 0;
+  padding: 16px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 4px;
+  background: var(--vp-c-bg);
+}
+
+.vp-doc .campaign-flow-diagram:focus-visible {
+  outline: 2px solid var(--vp-c-brand-1);
+  outline-offset: 3px;
+}
+
+.vp-doc .campaign-flow-diagram .mermaid {
+  width: max-content;
+  min-width: 100%;
+}
+
+.vp-doc .campaign-flow-diagram svg {
+  display: block;
+  max-width: none;
+  margin-inline: auto;
+}
+
+/* Fixed-layout exports preserve horizontal logic at a readable natural size. */
+.vp-doc .campaign-flow-diagram__image {
+  display: block;
+  max-width: none;
+  height: auto;
+}

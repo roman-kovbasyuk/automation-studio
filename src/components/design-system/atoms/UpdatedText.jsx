@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import './updated-text.css'
 
 /** Acknowledge a saved text change, never animate the initial value. */
 export function useTextUpdate(value, identity) {
@@ -19,5 +18,5 @@ export function useTextUpdate(value, identity) {
 
 export function UpdatedText({ value, identity }) {
   const updated = useTextUpdate(value, identity)
-  return <span className="v2-updated-text" data-updated={updated || undefined}>{value}</span>
+  return <span data-updated={updated || undefined}>{value}</span>
 }

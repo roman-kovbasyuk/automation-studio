@@ -1,3 +1,4 @@
+import { hashCanonical } from '../../shared/canonicalJson.js'
 import { randomUUID } from 'node:crypto'
 import {
   approveVersionRequestSchema,
@@ -94,7 +95,7 @@ function trustedVersionAssetHashes(records, version) {
   const source = canonicalHashes(records.source)
   const review = canonicalHashes(records.review)
   const snapshotSourceReferences = version.snapshot.assets
-    .filter((asset) => ['direction', 'final_image'].includes(asset.kind))
+    .filter((asset) => ['direction', 'final_image', 'video'].includes(asset.kind))
   const snapshotReviewReferences = version.snapshot.assets
     .filter((asset) => ['review_png', 'manifest'].includes(asset.kind))
   const snapshotSource = canonicalHashes(snapshotSourceReferences.map((asset) => asset.sha256))
@@ -182,24 +183,25 @@ export function createReviewService({
   idempotencyService,
   idGenerator = randomUUID,
   clock = () => new Date(),
+  notificationService,
 } = {}) {
   if (!pool || typeof pool.query !== 'function') throw new TypeError('A PostgreSQL pool is required')
   if (typeof repositoryFactory !== 'function') throw new TypeError('A review repository factory is required')
   const idempotency = idempotencyService ?? createIdempotencyService({ pool })
 
-  async function executeVersionCommand({ action, actor, versionId, expectedRevision, idempotencyKey, input }) {
+  async function executeVersionCommand({ action, actor, versionId, expectedRevision, idempotencyKey, input, figmaSubmission }) {
     const command = commands[action]
     if (!command) throw new TypeError(`Unknown review command ${action}`)
     requireActor(actor, command.roles)
     validRevision(expectedRevision)
     const parsedInput = validate(command.schema, input)
 
-    return idempotency.executeDatabaseCommand({
+    const outcome = await idempotency.executeDatabaseCommand({
       actorId: actor.id,
       method: 'POST',
       resourceId: versionId,
       key: idempotencyKey,
-      payload: { action, expectedRevision, input: parsedInput },
+      payload: { action, expectedRevision, input: parsedInput, ...(figmaSubmission ? { figmaSubmission } : {}) },
       operation: async (client) => {
         const repository = repositoryFactory(client)
         const version = strictVersion(await repository.findVersionById(versionId) ?? fail(404, 'not_found', 'Version was not found'))
@@ -214,6 +216,21 @@ export function createReviewService({
         const assetHashes = trustedVersionAssetHashes(await repository.listVersionAssetHashes(version.id), version)
         const status = verifiedStatus(events, version, assetHashes)
         if (status !== campaign.status) fail(409, 'invalid_review_history', 'Campaign status does not match review history')
+
+        const figmaContext=await repository.findFigmaContext?.(version.id)
+        let figmaBinding=null
+        if(figmaContext && ['mark_ready','approve'].includes(action)) {
+          const submission=figmaContext.submission
+          const requested=action==='mark_ready' ? figmaSubmission : {id:parsedInput.submissionId,hash:parsedInput.submissionHash}
+          if(!requested?.id || !submission) fail(409,'figma_submission_required','Return the reviewed artwork from the Figma plugin before approval')
+          if(submission.id!==requested.id || submission.submission_hash!==requested.hash || hashCanonical(submission.manifest)!==requested.hash
+            || submission.manifest.sourceHash!==version.contentHash) fail(409,'figma_submission_changed','The reviewed Figma submission changed')
+          if(action==='mark_ready' && submission.actor_id!==actor.id) fail(403,'forbidden','Only the submitting designer can mark this artwork ready')
+          if(action==='approve' && (figmaContext.readyBinding?.submission_id!==submission.id || figmaContext.readyBinding?.submission_hash!==requested.hash)) {
+            fail(409,'figma_submission_changed','Approval must match the returned artwork shown in review')
+          }
+          figmaBinding={submissionId:submission.id,submissionHash:submission.submission_hash}
+        } else if(parsedInput.submissionId) fail(409,'figma_submission_changed','This version does not have a Figma submission')
 
         const transition = transitionCampaign({
           campaign: { ...campaign, currentVersion: currentVersionForRules(version, events) },
@@ -234,6 +251,7 @@ export function createReviewService({
           payload: command.payload({ input: parsedInput, actor, version, assetHashes }),
           createdAt,
         }))
+        if(figmaBinding) await repository.bindFigmaReview({eventId:event.id,...figmaBinding})
         const updated = strictCampaign(await repository.updateCampaignReviewState({
           campaign,
           status: transition.campaign.status,
@@ -251,6 +269,29 @@ export function createReviewService({
         }
       },
     })
+    if (notificationService && outcome?.body?.event) {
+      try {
+        const previousStatus = {
+          changes_requested: 'in_review',
+          ready: 'in_review',
+          rejected: 'in_review',
+          approved: 'ready',
+        }[outcome.body.event.eventType] ?? null
+        await notificationService.enqueueEvent({
+          actor,
+          eventType: 'approval_status_changed',
+          dedupeKey: `review:${outcome.body.event.id}`,
+          payload: {
+            actorId: actor.id,
+            campaignId: outcome.body.campaign.id,
+            versionId,
+            previousStatus,
+            newStatus: outcome.body.campaign.status,
+          },
+        })
+      } catch { /* Notification failures must not fail a committed review transition. */ }
+    }
+    return outcome
   }
 
   return {
@@ -263,7 +304,7 @@ export function createReviewService({
       requireActor(actor, ['marketer', 'admin'])
       validRevision(expectedRevision)
       const parsedInput = validate(reopenCampaignRequestSchema, input)
-      return idempotency.executeDatabaseCommand({
+      const outcome = await idempotency.executeDatabaseCommand({
         actorId: actor.id, method: 'POST', resourceId: campaignId, key: idempotencyKey,
         payload: { action: 'reopen', expectedRevision, input: parsedInput },
         operation: async (client) => {
@@ -299,6 +340,17 @@ export function createReviewService({
           return { status: 200, body: { campaign: updated } }
         },
       })
+      if (notificationService && outcome?.body?.campaign) {
+        try {
+          await notificationService.enqueueEvent({
+            actor,
+            eventType: 'approval_status_changed',
+            dedupeKey: `review:reopen:${campaignId}:${outcome.body.campaign.revision}`,
+            payload: { actorId: actor.id, campaignId, previousStatus: 'changes_requested', newStatus: outcome.body.campaign.status },
+          })
+        } catch { /* Notification failures must not fail a committed review transition. */ }
+      }
+      return outcome
     },
 
     async getReview({ actor, versionId }) {

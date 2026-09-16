@@ -9,6 +9,8 @@ import {
   MAX_BRIEF_CHARACTERS,
   readBriefFile,
 } from '../../../briefInput.js'
+import { MAX_BRIEF_UPLOAD_BYTES } from '../../../../../shared/briefUploadLimits.js'
+import { MAX_BRIEF_SOURCES } from '../../../../../shared/briefingContracts.js'
 
 export function BriefView({
   campaign,
@@ -22,6 +24,12 @@ export function BriefView({
   heading = true,
   inputKey = JSON.stringify(campaign?.brief ?? null),
   operationError,
+  Composer = PromptComposer,
+  composerProps = {},
+  collectSources = false,
+  submitBlockedReason = '',
+  showSubmitBlockedReason = true,
+  showMaterialsHint = true,
 }) {
   const [message, setMessage] = useState(() => briefToText(campaign?.brief))
   const [files, setFiles] = useState([])
@@ -45,8 +53,11 @@ export function BriefView({
     setFiles([])
     sourceKey.current = inputKey
   }, [inputKey, dirty])
-  const notes = combineBrief(message, files)
+  const notes = collectSources ? message : combineBrief(message, files)
   const tooLong = notes.length > MAX_BRIEF_CHARACTERS
+  const failedFiles = files.filter((file) => file.error)
+  const readyFiles = files.filter((file) => !file.error)
+  const hasSubmissionContent = Boolean(notes.trim() || (collectSources && readyFiles.length))
   function markDirty() {
     setDirty(true)
     onDirty(true)
@@ -57,26 +68,51 @@ export function BriefView({
     setExtracting(true)
     setError('')
     const ticket = generation.current
-    try {
-      const added = []
-      for (const file of Array.from(incoming)) {
-        const result = await api.extractBriefFile(await readBriefFile(file))
-        if (!result.text?.trim())
-          throw new Error(
-            'This file has no readable text. Paste the brief instead.',
-          )
-        added.push({
+    const selected = collectSources
+      ? Array.from(incoming).slice(0, Math.max(0, MAX_BRIEF_SOURCES - files.length))
+      : Array.from(incoming)
+    if (collectSources && selected.length < incoming.length) setError(`You can add up to ${MAX_BRIEF_SOURCES} campaign materials.`)
+    const selectedBytes = selected.reduce((total, file) => total + file.size, 0)
+    const attachedBytes = files.reduce((total, file) => total + file.byteSize, 0)
+    if (attachedBytes + selectedBytes > MAX_BRIEF_UPLOAD_BYTES) {
+      if (ticket === generation.current) {
+        setFiles((previous) => [...previous, ...selected.map((file) => ({
           id: crypto.randomUUID(),
           name: file.name,
-          text: result.text,
-        })
-        if (
-          combineBrief(message, [...files, ...added]).length >
-          MAX_BRIEF_CHARACTERS
-        )
-          throw new Error(
-            'The combined brief exceeds 20,000 characters. Shorten the text or attach a shorter document.',
-          )
+          byteSize: file.size,
+          text: '',
+          error: 'Campaign materials can total up to 25 MB. Remove a file and try again.',
+        }))])
+        markDirty()
+      }
+      extractingRef.current = false
+      if (ticket === generation.current) setExtracting(false)
+      return
+    }
+    try {
+      const added = []
+      for (const file of selected) {
+        try {
+          const source = await readBriefFile(file)
+          let resolvedFile
+          if (collectSources) resolvedFile = { id: crypto.randomUUID(), name: source.name, byteSize: file.size, mimeType: source.mimeType, data: source.data }
+          else {
+            const result = await api.extractBriefFile(source)
+            if (!result.text?.trim()) throw new Error('This file has no readable text. Paste the brief instead.')
+            resolvedFile = { id: crypto.randomUUID(), name: file.name, byteSize: file.size, text: result.text }
+          }
+          if (!collectSources && combineBrief(message, [...files, ...added, resolvedFile]).length > MAX_BRIEF_CHARACTERS)
+            throw new Error('The combined brief exceeds 20,000 characters. Shorten the text or attach a shorter document.')
+          added.push(resolvedFile)
+        } catch (failure) {
+          added.push({
+            id: crypto.randomUUID(),
+            name: file.name,
+            byteSize: file.size,
+            text: '',
+            error: failure.message,
+          })
+        }
       }
       if (ticket === generation.current) {
         setFiles((previous) => [...previous, ...added])
@@ -90,19 +126,20 @@ export function BriefView({
     }
   }
   async function submit() {
-    if (!notes.trim() || tooLong || pending || extracting || readOnly || submittingRef.current) return
+    if (!hasSubmissionContent || tooLong || failedFiles.length || pending || extracting || readOnly || submittingRef.current) return
     submittingRef.current = true
     setSubmitting(true)
     setError('')
     const input = {
       title: campaign?.title ?? briefTitle(message || files[0]?.text || notes),
       brief: { notes },
+      ...(collectSources ? { sources: readyFiles.map(({ id, name, mimeType, data }) => ({ id, kind: 'file', name, mimeType, data })) } : {}),
     }
     try {
       const result = campaign && onGenerate
         ? await onGenerate(dirty ? input : undefined, { expectedInputKey: sourceKey.current })
         : await onSave(input)
-      if (result?.ok === false) setError(result.message)
+      if (result?.ok === false && !result.silent) setError(result.message)
       if (result?.ok || result?.briefSaved) {
         setDirty(false)
         onDirty(false)
@@ -118,9 +155,10 @@ export function BriefView({
   }
   return (
     <section className="bs-brief" data-analyzed={analyzed ? 'true' : 'false'}>
-      {heading && <SectionHeading as={campaign ? 'h2' : 'h1'} title={campaign ? 'Brief' : 'What are we creating?'} />}
-      {(pending || submitting) && <AsyncStatus>{pending === 'save' ? 'Saving your brief…' : 'Analyzing your brief and preparing the first drafts…'}</AsyncStatus>}
-      <PromptComposer
+      {heading && <SectionHeading as={campaign ? 'h2' : 'h1'} title={campaign ? 'Brief' : 'Describe your task...'} />}
+      {(pending || submitting) && <AsyncStatus>{pending === 'save' ? 'Saving your brief…' : collectSources ? 'Analyzing campaign materials…' : 'Analyzing your brief and preparing the first drafts…'}</AsyncStatus>}
+      {showSubmitBlockedReason && submitBlockedReason && <p className="bs-info" role="alert">{submitBlockedReason}</p>}
+      <Composer
         value={message}
         onChange={(value) => {
           setMessage(value)
@@ -138,11 +176,26 @@ export function BriefView({
         readOnly={readOnly}
         disabled={Boolean(pending) || submitting}
         busy={extracting || submitting || Boolean(pending)}
-        canSubmit={Boolean(notes.trim()) && !tooLong}
+        canSubmit={hasSubmissionContent && !tooLong && !failedFiles.length && !submitBlockedReason}
         submitLabel="Analyze brief"
         placeholder={analyzed ? 'Add more context…' : 'Paste your idea or attach a brief. AI will use the context to write five banner options.'}
-        hint={campaign ? '' : readOnly ? 'This brief is read-only.' : 'Up to 5 MB per file · 20,000 characters total · Ctrl / ⌘ + Enter to send'}
+        hint={campaign ? '' : readOnly ? 'This brief is read-only.' : ''}
+        {...composerProps}
+        accept=""
+        formatLabel=""
       />
+      {showMaterialsHint && <p className="bs-note">Add your campaign materials. Up to 25 MB in total.</p>}
+      {failedFiles.length > 0 && (
+        <div role="alert" aria-label="Files that need attention">
+          <ul>
+            {failedFiles.map((file) => (
+              <li key={file.id}>
+                {file.name}: {file.error}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {dirty && sourceKey.current !== inputKey && <div className="bs-info"><p>The saved brief changed. Your draft is kept here; reload the saved brief before submitting again.</p>
         <Button onClick={() => { setDirty(false); onDirty(false); setError('') }}>Reload saved brief</Button></div>}
       {extracting && (

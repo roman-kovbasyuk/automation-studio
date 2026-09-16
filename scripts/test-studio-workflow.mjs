@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { pathToFileURL } from 'node:url'
 import { inflateRawSync } from 'node:zlib'
 import { createStudioApi } from '../src/studio/api.js'
+import { verifyDemoDelivery } from './verify-demo-delivery.mjs'
 import { startIsolatedStudio } from './testing/start-isolated-studio.mjs'
 
 function unzip(bytes) {
@@ -95,6 +96,13 @@ export async function verifyStudioWorkflow(baseUrl, { templateId = 'product-spot
   assert.equal(manifest.versionId, versionId)
   assert.equal(manifest.contentHash, created.version.contentHash)
   assert.equal(manifest.files.filter((file) => file.mimeType === 'image/png').length, 1)
+  const verified = await verifyDemoDelivery({
+    zipBytes: bytes,
+    expectedVersionId: versionId,
+    expectedPngCount: manifest.files.filter((file) => file.mimeType === 'image/png').length,
+    expectedDimensions: manifest.files.filter((file) => file.mimeType === 'image/png').map((file) => ({ width: file.width, height: file.height })),
+  })
+  assert.deepEqual(verified, { versionId, pngCount: 1, zipSha256: delivered.delivery.asset.sha256 })
   await assert.rejects(() => designer.getAssetBlob(delivered.delivery.asset.id), { status: 404 })
   const reloaded = await marketer.getWorkspace(id)
   assert.equal(reloaded.delivery.id, delivered.delivery.id)
@@ -106,7 +114,7 @@ export async function verifyStudioWorkflow(baseUrl, { templateId = 'product-spot
   assert.equal(response.status, 401)
   const hostile = await fetch(`${baseUrl}/api/v1/dev/session-info`, { headers: { Origin: 'https://example.com' } })
   assert.equal(hostile.status, 403)
-  return { campaignId: id, versionId, templateId, finalStatus: reloaded.campaign.status, zipBytes: bytes.length, zipSha256: delivered.delivery.asset.sha256, generationJobs: reloaded.jobs.length }
+  return { campaignId: id, versionId, templateId, finalStatus: reloaded.campaign.status, zipBytes: bytes.length, zipSha256: delivered.delivery.asset.sha256, verifiedPngCount: verified.pngCount, generationJobs: reloaded.jobs.length }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

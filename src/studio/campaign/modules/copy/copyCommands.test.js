@@ -6,12 +6,26 @@ import { makeScenario } from '../../testing/workspaceFixtures.js'
 function setup() {
   const scenario = makeScenario('copy-ready')
   const api = { getWorkspace: vi.fn(async () => structuredClone(scenario.workspace)),
-    selectCopy: vi.fn(async () => {}), approveCopy: vi.fn(async () => {}), deleteCopy: vi.fn(async () => {}),
+    selectCopy: vi.fn(async () => {}), deselectCopy: vi.fn(async () => {}), approveCopy: vi.fn(async () => {}), deleteCopy: vi.fn(async () => {}),
     generate: vi.fn(async () => ({ job: { id: 'copy-job', status: 'succeeded' } })) }
   const runtime = createCampaignRuntime({ ...scenario, api })
   return { ...scenario, api, runtime, actions: createCopyCommands(runtime) }
 }
 describe('Copy commands', () => {
+  test('editing refreshes copy and protects drafts captured before another change', async () => {
+    const { api, runtime, workspace, actions } = setup()
+    const fields = { headline: 'Updated headline', body: 'Updated body', offer: '', cta: 'Try now' }
+    const expectedInputKey = runtime.getSnapshot('copy').inputKey
+    api.editCopy = async (_campaignId, copyId, patch) => {
+      Object.assign(workspace.copies[0].candidates.find(copy => copy.id === copyId), patch)
+      workspace.campaign.revision += 1
+    }
+    expect(await actions.edit('copy-1', fields, { expectedInputKey })).toEqual({ ok: true })
+    expect(runtime.getSnapshot('copy').input.copies[0].candidates[0]).toMatchObject(fields)
+    expect(await actions.edit('copy-1', { ...fields, headline: 'Stale draft' }, { expectedInputKey })).toMatchObject({ ok: false, code: 'source_changed' })
+    expect(workspace.copies[0].candidates[0].headline).toBe(fields.headline)
+    runtime.dispose()
+  })
   test('approvals use authoritative revisions and reconcile exact persisted IDs', async () => {
     const { actions, api, runtime, workspace } = setup()
     api.approveCopy.mockRejectedValueOnce(Object.assign(new Error('Offline'), { status: 0 }))
@@ -34,6 +48,20 @@ describe('Copy commands', () => {
     await runtime.refresh()
     expect(await actions.remove('copy-2')).toEqual({ ok: true })
     expect(api.deleteCopy).toHaveBeenCalledWith('campaign-1', 'copy-2', workspace.campaign.revision)
+    runtime.dispose()
+  })
+  test('deselect uses its own durable mutation and clears the active selection on refresh', async () => {
+    const { actions, api, runtime, workspace } = setup()
+    workspace.campaign.selectedCopyId = workspace.copies[0].id
+    workspace.copies[0].selectedCandidateId = 'copy-1'
+    api.deselectCopy.mockImplementation(async () => {
+      workspace.campaign.selectedCopyId = null
+      workspace.copies[0].selectedCandidateId = null
+      workspace.campaign.revision += 1
+    })
+    expect(await actions.deselect('copy-1')).toEqual({ ok: true })
+    expect(api.deselectCopy).toHaveBeenCalledWith('campaign-1', 1)
+    expect(runtime.getSnapshot('copy').input.selectedCopyId).toBeNull()
     runtime.dispose()
   })
   test('legacy copy selection makes one mutation request and one workspace refresh', async () => {

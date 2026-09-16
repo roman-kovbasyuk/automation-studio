@@ -1,7 +1,10 @@
+import { registerFigmaRoutes } from './routes/figma.js'
+import { registerVideoRoutes } from './routes/video.js'
 import { randomUUID } from 'node:crypto'
 import Fastify from 'fastify'
 import { registerCampaignRoutes } from './routes/campaigns.js'
 import { registerTemplateRoutes } from './routes/templates.js'
+import { registerBannerTemplateEditorRoutes } from './routes/bannerTemplateEditor.js'
 import { registerUserRoutes } from './routes/users.js'
 import { registerSettingsRoutes } from './routes/settings.js'
 import { registerSessionRoute } from './routes/session.js'
@@ -12,10 +15,15 @@ import { registerReviewRoutes } from './routes/review.js'
 import { registerDeliveryRoutes } from './routes/delivery.js'
 import { registerWorkspaceRoutes } from './routes/workspace.js'
 import { registerBriefFileRoutes } from './routes/briefFiles.js'
+import { registerBriefingRoutes } from './routes/briefing.js'
 import { registerVisualRoutes } from './routes/visuals.js'
+import { registerBrandDesignSystemRoutes } from './routes/brandDesignSystems.js'
+import { registerAdminRoutes } from './routes/admin.js'
+import { registerAssetWorkflowRoutes } from './routes/assetWorkflows.js'
 import { apiErrorResponseSchema } from '../shared/contracts.js'
 import { createAuthorizer } from './auth/authorize.js'
 import { registerStaticFiles } from './staticFiles.js'
+import { registerLocalServiceRoutes } from './routes/localServices.js'
 
 const safeRequestId = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/
 
@@ -37,9 +45,9 @@ function errorEnvelope(code, message, requestId, details) {
   }
 }
 
-export function buildApp({ readiness = async () => true, resolveActor, workflowService, generationService, assetService, visualUploadService, versionService, reviewService, deliveryService, workspaceService, staticRoot, staticBuild } = {}) {
+export function buildApp({ readiness = async () => true, resolveActor, workflowService, personalAiService, personalSettingsService, generationReadinessService, generationService, videoGenerationService, assetService, visualUploadService, versionService, reviewService, figmaHandoffService, figmaPairingService, figmaSubmissionService, deliveryService, workspaceService, briefSourceService, briefingService, brandDesignSystemService, templateBrandService, adminRepository, assetWorkflowService, localServiceController, staticRoot, staticBuild, logger = false, runtimeConfig = { firebase: {} } } = {}) {
   const app = Fastify({
-    logger: false,
+    logger,
     requestIdHeader: false,
     genReqId: requestIdFrom,
   })
@@ -60,6 +68,8 @@ export function buildApp({ readiness = async () => true, resolveActor, workflowS
 
   app.get('/healthz', async () => ({ status: 'ok' }))
 
+  app.get('/api/v1/runtime-config', async () => runtimeConfig)
+
   app.get('/readyz', async (request, reply) => {
     if (await readiness()) return { status: 'ready' }
 
@@ -79,21 +89,30 @@ export function buildApp({ readiness = async () => true, resolveActor, workflowS
     registerSessionRoute(app, dependencies)
     registerCampaignRoutes(app, dependencies)
     registerBriefFileRoutes(app, { requireRole })
+    if (briefSourceService || briefingService) registerBriefingRoutes(app,{requireRole,briefSourceService,briefingService})
     if (workspaceService) registerWorkspaceRoutes(app, { requireRole, workspaceService })
     registerTemplateRoutes(app, dependencies)
-    registerUserRoutes(app, dependencies)
+    registerBannerTemplateEditorRoutes(app, dependencies)
+    registerUserRoutes(app, { ...dependencies, personalAiService, personalSettingsService, generationReadinessService })
     registerSettingsRoutes(app, dependencies)
+    if (videoGenerationService) registerVideoRoutes(app, { requireRole, videoGenerationService })
     if (generationService) registerGenerationRoutes(app, { requireRole, generationService })
     if (assetService) registerAssetRoutes(app, { requireRole, assetService })
     if (visualUploadService) registerVisualRoutes(app, { requireRole, visualUploadService })
     if (versionService) registerVersionRoutes(app, { requireRole, versionService })
+    if (figmaHandoffService && figmaPairingService) registerFigmaRoutes(app, { requireRole, figmaHandoffService, figmaPairingService, figmaSubmissionService })
     if (reviewService) registerReviewRoutes(app, { requireRole, reviewService })
     if (deliveryService) registerDeliveryRoutes(app, { requireRole, deliveryService })
+    if (brandDesignSystemService) registerBrandDesignSystemRoutes(app, { requireRole, brandDesignSystemService, templateBrandService })
+    if (adminRepository) registerAdminRoutes(app, { requireRole, adminRepository })
+    if (assetWorkflowService) registerAssetWorkflowRoutes(app, { requireRole, assetWorkflowService })
   }
 
   if (staticRoot !== undefined || staticBuild !== undefined) {
     registerStaticFiles(app, { staticRoot, staticBuild })
   }
+
+  if (localServiceController) registerLocalServiceRoutes(app, { controller: localServiceController })
 
   app.setNotFoundHandler((request, reply) => reply.code(404).send(apiErrorResponseSchema.parse(errorEnvelope(
     'NOT_FOUND',

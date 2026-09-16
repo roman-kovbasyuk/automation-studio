@@ -29,19 +29,19 @@ describe('brief file extraction route', () => {
   test('returns safe errors for malformed and unsupported requests', async () => {
     const app = makeApp()
     const malformed = await app.inject({ method: 'POST', url: '/api/v1/brief-files/extract', payload: { ...payload, data: '%%%' } })
-    const unsupported = await app.inject({ method: 'POST', url: '/api/v1/brief-files/extract', payload: { ...payload, name: 'brief.rtf', mimeType: 'application/rtf' } })
+    const unsupported = await app.inject({ method: 'POST', url: '/api/v1/brief-files/extract', payload: { ...payload, name: 'brief.mp3', mimeType: 'audio/mpeg' } })
     expect(malformed.json()).toMatchObject({ code: 'invalid_brief_file' })
     expect(unsupported).toMatchObject({ statusCode: 415 })
     expect(unsupported.body).not.toMatch(/stack|node_modules/i)
     await app.close()
   })
 
-  test('accepts a supported decoded file above the framework default body limit', async () => {
+  test('accepts custom-extension text above the old five-megabyte limit', async () => {
     const app = makeApp()
-    const text = `${' '.repeat(1024 * 1024)}Autumn launch`
+    const text = `${' '.repeat(6 * 1024 * 1024)}Autumn launch`
     const response = await app.inject({
       method: 'POST', url: '/api/v1/brief-files/extract',
-      payload: { ...payload, data: Buffer.from(text).toString('base64') },
+      payload: { ...payload, name:'context.custom', mimeType:'application/octet-stream', data: Buffer.from(text).toString('base64') },
     })
     expect(response.statusCode).toBe(200)
     expect(response.json().text).toBe('Autumn launch')

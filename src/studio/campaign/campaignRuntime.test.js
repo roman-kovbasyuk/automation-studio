@@ -291,3 +291,21 @@ describe('campaign runtime isolation', () => {
     } finally { runtime.dispose(); vi.useRealTimers() }
   })
 })
+
+test('clears returned Figma artwork immediately when the current version changes',async()=>{
+ const pending=deferred()
+ const {runtime,workspace,api}=setup('in-review',{
+  getFigmaHandoff:vi.fn(async()=>({handoff:{state:'imported'}})),
+  getFigmaSubmission:vi.fn(async()=>({submission:{id:'old-art',manifest:{frames:[]}}})),
+ })
+ await runtime.refresh({review:true})
+ expect(runtime.getSnapshot('review').input.figma.submission.id).toBe('old-art')
+ const next=structuredClone(workspace)
+ next.versions.push({...next.versions[0],id:'version-2',versionNumber:2})
+ next.campaign.openVersionId='version-2';next.campaign.currentVersionNumber=2;next.campaign.revision++
+ api.getWorkspace.mockResolvedValue(next);api.getReview.mockReturnValue(pending.promise)
+ const refreshing=runtime.refresh()
+ await vi.waitFor(()=>expect(runtime.getSnapshot('review').input.version.id).toBe('version-2'))
+ expect(runtime.getSnapshot('review').input.figma).toMatchObject({loaded:false,submission:null,handoff:null})
+ pending.resolve(null);await refreshing;runtime.dispose()
+})

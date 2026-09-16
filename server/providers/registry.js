@@ -32,7 +32,7 @@ export function resolveProviderConfiguration(registry, configured, step) {
   if (!generationSteps.has(step)) return null
   const tuples = registry?.[configured?.provider]
   if (!Array.isArray(tuples)) return null
-  const tuple = tuples.find((candidate) => candidate.model === configured.model && candidate.region === configured.region)
+  const tuple = tuples.find((candidate) => (candidate.model === configured.model || (step === 'image' && candidate.imageModel === configured.model)) && candidate.region === configured.region)
   if (!tuple) return null
   return Object.freeze({
     provider: configured.provider,

@@ -1,7 +1,11 @@
+import { projectTypes } from './projectTypes.js'
+import { videoAssetSchema, reviewVideoSchema } from './videoContracts.js'
 import { z } from 'zod'
 import { hashCanonical } from './canonicalJson.js'
 import { templateManifestSchema } from './templateManifest.js'
 import { briefAnalysisSchema } from './briefAnalysis.js'
+import { briefingStateSchema, briefingCreateSchema, analysisSourceSchema, authoredCopyVariantSchema } from './briefingContracts.js'
+import { MAX_BRIEF_UPLOAD_BASE64 } from './briefUploadLimits.js'
 export { briefAnalysisSchema } from './briefAnalysis.js'
 
 const nonEmptyString = z.string().trim().min(1)
@@ -37,7 +41,7 @@ export const reviewStatusSchema = z.enum([
 
 export const assetHashSchema = z.string().regex(/^[a-f0-9]{64}$/)
 
-export const briefSchema = z.strictObject({
+const briefFields = {
   product: z.string().trim().max(200).default(''),
   audience: z.string().trim().max(500).default(''),
   objective: z.string().trim().max(500).default(''),
@@ -45,20 +49,30 @@ export const briefSchema = z.strictObject({
   locale: z.string().trim().min(1).max(35).default('auto'),
   notes: z.string().trim().max(20_000).default(''),
   analysis: briefAnalysisSchema.nullable().optional(),
-}).refine(
-  (brief) => brief.notes.length > 0 || (brief.product.length > 0 && brief.audience.length > 0 && brief.objective.length > 0),
+}
+const hasBriefInput = brief => brief.briefing?.schemaVersion === 2 || brief.notes.length > 0
+  || (brief.product.length > 0 && brief.audience.length > 0 && brief.objective.length > 0)
+export const briefSchema = z.strictObject({...briefFields, briefing:briefingStateSchema.optional()}).refine(
+  hasBriefInput,
   { message: 'Provide campaign notes or the product, audience, and objective fields.' },
 )
+const briefCreateInputSchema = z.strictObject({...briefFields,briefing:briefingCreateSchema.optional()}).refine(hasBriefInput,'Provide campaign input.')
+// Whether an empty raw brief is valid depends on the persisted source-backed
+// state. The service validates the merged brief, never client-owned evidence.
+const briefPatchInputSchema = z.strictObject(briefFields)
+
+export const projectTypeSchema = z.enum(projectTypes)
 
 export const createCampaignRequestSchema = z.strictObject({
+  projectType: projectTypeSchema.default('banners'),
   title: nonEmptyString.max(200),
-  brief: briefSchema,
+  brief: briefCreateInputSchema,
 })
 
 export const extractBriefFileRequestSchema = z.strictObject({
   name: nonEmptyString.max(255),
   mimeType: nonEmptyString.max(200),
-  data: z.string().max(7_000_000),
+  data: z.string().max(MAX_BRIEF_UPLOAD_BASE64),
 })
 
 export const extractBriefFileResponseSchema = z.strictObject({
@@ -68,10 +82,11 @@ export const extractBriefFileResponseSchema = z.strictObject({
 
 export const campaignPatchRequestSchema = z.strictObject({
   title: nonEmptyString.max(200).optional(),
-  brief: briefSchema.optional(),
+  brief: briefPatchInputSchema.optional(),
 }).refine((value) => Object.keys(value).length > 0, 'At least one editable field is required')
 
 const persistedCampaignFields = {
+  projectType: projectTypeSchema.default('banners'),
   id: nonEmptyString,
   title: nonEmptyString.max(200),
   brief: briefSchema,
@@ -170,7 +185,7 @@ export const templateListResponseSchema = z.strictObject({
 })
 
 const settingsFields = {
-  provider: z.enum(['mock', 'gemini']),
+  provider: z.enum(['mock', 'gemini', 'anthropic', 'openai', 'openrouter']),
   model: nonEmptyString.max(200),
   region: nonEmptyString.max(100),
   dailyBudgetMicrounits: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
@@ -195,6 +210,40 @@ export const settingsResponseSchema = z.strictObject({
   requestId: requestIdSchema,
 })
 
+export const personalAiProviderSchema = z.enum(['anthropic', 'openai', 'google', 'openrouter'])
+export const personalAiConnectionRequestSchema = z.strictObject({
+  provider: personalAiProviderSchema,
+  apiKey: z.string().trim().min(10).max(500),
+})
+export const personalAiDefaultsRequestSchema = z.strictObject({
+  text: z.strictObject({ provider: personalAiProviderSchema, model: nonEmptyString.max(200) }).nullable().optional(),
+  textSecondary: z.strictObject({ provider: personalAiProviderSchema, model: nonEmptyString.max(200) }).nullable().optional(),
+  image: z.strictObject({ provider: z.enum(['google', 'openai']), model: nonEmptyString.max(200) }).nullable().optional(),
+  imageSecondary: z.strictObject({ provider: z.enum(['google', 'openai']), model: nonEmptyString.max(200) }).nullable().optional(),
+}).refine(value => Object.keys(value).length > 0, 'At least one default is required')
+
+export const personalIntegrationPlatformSchema = z.enum(['slack', 'discord'])
+export const personalIntegrationRequestSchema = z.strictObject({
+  destination: nonEmptyString.max(200),
+  webhookUrl: z.string().trim().url().max(2_000),
+  secret: z.string().trim().min(1).max(2_000),
+})
+export const notificationPreferencesRequestSchema = z.strictObject({
+  slack: z.strictObject({ enabled: z.boolean() }).optional(),
+  discord: z.strictObject({ enabled: z.boolean() }).optional(),
+  projectScope: z.enum(['all', 'selected']).optional(),
+  selectedProjectIds: z.array(nonEmptyString.max(200)).max(100).optional(),
+  events: z.strictObject({
+    anyProjectChange: z.boolean().optional(),
+    newImageGenerations: z.boolean().optional(),
+    newVideoGenerations: z.boolean().optional(),
+    approvalStatusChanged: z.boolean().optional(),
+  }).optional(),
+  includeOwnChanges: z.boolean().optional(),
+  digestInterval: z.enum(['immediate', 'hourly']).optional(),
+  quietHours: z.record(z.string(), z.unknown()).optional(),
+}).refine(value => Object.keys(value).length > 0, 'At least one notification setting is required')
+
 export const apiErrorResponseSchema = z.strictObject({
   code: nonEmptyString,
   message: nonEmptyString,
@@ -211,6 +260,10 @@ export const copyVariantSchema = z.strictObject({
   visualPrompt: nonEmptyString.max(2_000),
 })
 
+export const copyEditRequestSchema = copyVariantSchema.pick({ headline: true, body: true, offer: true, cta: true })
+// Persisted/user-authored content is not a generated-output contract.
+export const campaignCopyVariantSchema=z.union([copyVariantSchema,authoredCopyVariantSchema])
+
 export const generatedBannerCopySchema = z.strictObject({
   id: nonEmptyString,
   headline: nonEmptyString.max(80),
@@ -226,6 +279,11 @@ export const visualDirectionSchema = z.strictObject({
   prompt: z.string().max(2_000), // Uploaded-only directions have no generated prompt.
   status: z.enum(['pending', 'ready', 'blocked', 'failed']),
   previewAssetId: nullableAssetId,
+})
+
+export const visualContextSchema = z.strictObject({
+  tags: z.array(nonEmptyString.max(60)).max(12).refine(tags => new Set(tags).size === tags.length, 'Visual context tags must be unique'),
+  note: z.string().trim().max(1_000),
 })
 
 const compositionValidationSchema = z.strictObject({
@@ -275,12 +333,13 @@ export const saveCompositionRequestSchema = z.strictObject({
 
 export const assetReferenceSchema = z.strictObject({
   id: nonEmptyString,
-  kind: z.enum(['direction', 'final_image', 'review_png', 'manifest', 'delivery_zip']),
+  kind: z.enum(['direction', 'final_image', 'review_png', 'manifest', 'delivery_zip', 'video']),
   sha256: assetHashSchema,
 })
 
 export const campaignVersionSnapshotSchema = z.strictObject({
-  selectedCopy: copyVariantSchema,
+  videos: z.array(reviewVideoSchema).min(1).max(3).optional(),
+  selectedCopy: campaignCopyVariantSchema,
   selectedDirection: visualDirectionSchema,
   composition: compositionSchema,
   assets: z.array(assetReferenceSchema),
@@ -288,12 +347,19 @@ export const campaignVersionSnapshotSchema = z.strictObject({
   templateManifestHash: assetHashSchema,
   designs: z.array(z.strictObject({
     id: nonEmptyString,
-    selectedCopy: copyVariantSchema,
+    selectedCopy: campaignCopyVariantSchema,
     selectedDirection: visualDirectionSchema,
     templateManifest: templateManifestSchema,
     templateManifestHash: assetHashSchema,
   })).min(1).optional(),
 }).superRefine((snapshot, context) => {
+  const videoReferences = snapshot.assets.filter(asset => asset.kind === 'video')
+  const videos = snapshot.videos ?? []
+  if (videoReferences.length !== videos.length || new Set(videos.map(video => video.id)).size !== videos.length
+    || videos.some(video => videoReferences.filter(asset => asset.id === video.id && asset.sha256 === video.sha256).length !== 1)) {
+    context.addIssue({ code: 'custom', path: ['videos'], message: 'Every selected video requires one exact immutable asset reference.' })
+  }
+
   if (snapshot.composition.designs) {
     if (!snapshot.designs || snapshot.designs.length !== snapshot.composition.designs.length) {
       context.addIssue({ code: 'custom', path: ['designs'], message: 'Every batch design requires an immutable source snapshot.' })
@@ -345,7 +411,7 @@ export const campaignVersionRecordSchema = z.strictObject(campaignVersionFields)
   }
 })
 
-export const createCampaignVersionRequestSchema = z.strictObject({})
+export const createCampaignVersionRequestSchema = z.strictObject({ videoAssetIds: z.array(nonEmptyString).max(3).refine(ids => new Set(ids).size === ids.length, 'Video ids must be unique').optional() })
 
 export const compositionCommandResponseSchema = z.strictObject({
   composition: compositionSchema,
@@ -409,7 +475,7 @@ export const markVersionReadyRequestSchema = z.strictObject({
   figmaUrl: z.string().trim().max(2_000).refine(isFigmaHttpsUrl, 'A valid HTTPS Figma URL is required'),
   checklistAnswers: reviewChecklistSchema,
 })
-export const approveVersionRequestSchema = z.strictObject({})
+export const approveVersionRequestSchema = z.union([z.strictObject({}), z.strictObject({ submissionId: z.string().min(1).max(256), submissionHash: z.string().regex(/^[a-f0-9]{64}$/) })])
 export const reopenCampaignRequestSchema = z.strictObject({})
 
 const reviewEventBase = {
@@ -497,24 +563,32 @@ export const reviewHistoryResponseSchema = z.strictObject({
 })
 
 const safeArchiveFilenameSchema = z.string().regex(
-  /^(?:banners\/banner-[0-9]{3}\.png|render-manifest\.json)$/,
+  /^(?:banners\/banner-[0-9]{3}\.png|videos\/video-[0-9]{3}\.mp4|render-manifest\.json)$/,
   'Delivery filenames must be server-owned safe POSIX paths',
 )
 
 const deliveryFileSchema = z.strictObject({
   filename: safeArchiveFilenameSchema,
   assetId: nonEmptyString,
-  mimeType: z.enum(['image/png', 'application/json']),
+  mimeType: z.enum(['image/png', 'application/json', 'video/mp4']),
+  durationSeconds: z.number().positive().max(12).optional(),
+  frameRate: z.number().positive().max(60).optional(),
+  hasAudio: z.boolean().optional(),
   byteSize: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
   width: z.number().int().positive().max(4_096).nullable(),
   height: z.number().int().positive().max(4_096).nullable(),
   sha256: assetHashSchema,
 }).superRefine((file, context) => {
-  const image = file.mimeType === 'image/png'
-  if (image !== (file.width !== null && file.height !== null)) {
-    context.addIssue({ code: 'custom', path: ['width'], message: 'Only PNG files have dimensions.' })
+  if ((file.mimeType === 'video/mp4') !== (file.durationSeconds != null && file.frameRate != null && file.hasAudio != null)
+    || file.mimeType !== 'video/mp4' && [file.durationSeconds,file.frameRate,file.hasAudio].some(value => value != null)) {
+    context.addIssue({ code: 'custom', path: ['durationSeconds'], message: 'Only video files require duration, frame rate and audio metadata.' })
   }
-  if (image !== file.filename.startsWith('banners/')) {
+  const image = file.mimeType === 'image/png'
+  const video = file.mimeType === 'video/mp4'
+  if ((image || video) !== (file.width !== null && file.height !== null)) {
+    context.addIssue({ code: 'custom', path: ['width'], message: 'Media files require dimensions.' })
+  }
+  if (image !== file.filename.startsWith('banners/') || video !== file.filename.startsWith('videos/')) {
     context.addIssue({ code: 'custom', path: ['filename'], message: 'Filename does not match its MIME type.' })
   }
 })
@@ -570,6 +644,7 @@ export const deliveryResponseSchema = z.strictObject({
 })
 
 export const campaignSchema = z.strictObject({
+  projectType: projectTypeSchema.optional(),
   id: nonEmptyString,
   title: nonEmptyString.max(200),
   status: campaignStatusSchema,
@@ -583,8 +658,8 @@ export const campaignSchema = z.strictObject({
 export const generationJobSchema = z.strictObject({
   id: nonEmptyString,
   campaignId: nonEmptyString,
-  step: z.enum(['brief_analysis', 'copy', 'directions', 'image']),
-  provider: z.enum(['mock', 'gemini']),
+  step: z.enum(['brief_analysis', 'copy', 'directions', 'image', 'video']),
+  provider: z.enum(['mock', 'gemini', 'anthropic', 'openai', 'openrouter']),
   model: nonEmptyString,
   region: nonEmptyString,
   status: z.enum(['pending', 'succeeded', 'failed', 'blocked', 'unknown']),
@@ -597,7 +672,7 @@ export const generationJobSchema = z.strictObject({
 })
 
 const providerMetadataFields = {
-  provider: z.enum(['mock', 'gemini']),
+  provider: z.enum(['mock', 'gemini', 'anthropic', 'openai', 'openrouter']),
   model: nonEmptyString.max(200),
   region: nonEmptyString.max(100),
   usage: z.record(z.string(), z.number().int().nonnegative()),
@@ -608,13 +683,13 @@ const providerMetadataFields = {
   }),
 }
 
-export const analyseBriefInputSchema = z.strictObject({ brief: briefSchema, instruction: nonEmptyString.max(4000).optional() })
+export const analyseBriefInputSchema = z.strictObject({ brief: briefSchema, instruction: nonEmptyString.max(4000).optional(), sources:z.array(analysisSourceSchema).max(11).optional() })
 export const generateCopyInputSchema = z.strictObject({ brief: briefSchema, analysis: briefAnalysisSchema,
   previousHeadlines: z.array(nonEmptyString.max(500)).max(30).optional() })
 export const generateDirectionsInputSchema = z.union([
-  z.strictObject({ brief: briefSchema, copy: copyVariantSchema }),
-  z.strictObject({ brief: briefSchema, analysis: briefAnalysisSchema, mode: z.literal('campaign'), copies: z.array(copyVariantSchema).max(30) }),
-  z.strictObject({ brief: briefSchema, analysis: briefAnalysisSchema, mode: z.literal('selected_copy'), copies: z.array(copyVariantSchema).min(1).max(30) }),
+  z.strictObject({ brief: briefSchema, copy: campaignCopyVariantSchema, context: visualContextSchema.optional() }),
+  z.strictObject({ brief: briefSchema, analysis: briefAnalysisSchema, mode: z.literal('campaign'), copies: z.array(campaignCopyVariantSchema).max(30), context: visualContextSchema.optional() }),
+  z.strictObject({ brief: briefSchema, analysis: briefAnalysisSchema, mode: z.literal('selected_copy'), copies: z.array(campaignCopyVariantSchema).min(1).max(30), context: visualContextSchema.optional() }),
 ])
 export const generatedVisualDirectionSchema = visualDirectionSchema.extend({ prompt: nonEmptyString.max(2_000), copyId: nonEmptyString.optional() })
 export const generateImageInputSchema = z.strictObject({
@@ -624,7 +699,7 @@ export const generateImageInputSchema = z.strictObject({
 })
 
 const providerErrorSchema = z.strictObject({
-  code: z.enum(['content_rejected', 'provider_blocked', 'rate_limited', 'provider_unavailable', 'invalid_output']),
+  code: z.enum(['content_rejected', 'provider_blocked', 'rate_limited', 'quota_exhausted', 'billing_required', 'provider_unavailable', 'invalid_output', 'invalid_key']),
   message: nonEmptyString.max(500),
   retryable: z.boolean(),
 })
@@ -659,8 +734,8 @@ export const analyseBriefRequestSchema = z.strictObject({ instruction: nonEmptyS
 export const copyGenerationRequestSchema = z.strictObject({})
 export const directionGenerationRequestSchema = z.union([
   z.strictObject({}),
-  z.strictObject({ mode: z.literal('campaign') }),
-  z.strictObject({ mode: z.literal('selected_copy'), copyIds: z.array(nonEmptyString).min(1).max(30).refine(ids => new Set(ids).size === ids.length, 'Copy IDs must be unique') }),
+  z.strictObject({ mode: z.literal('campaign'), context: visualContextSchema.optional() }),
+  z.strictObject({ mode: z.literal('selected_copy'), copyIds: z.array(nonEmptyString).min(1).max(30).refine(ids => new Set(ids).size === ids.length, 'Copy IDs must be unique'), context: visualContextSchema.optional() }),
 ])
 export const imageGenerationRequestSchema = z.strictObject({
   directionId: nonEmptyString,
@@ -696,6 +771,7 @@ export const generationResultMetadataSchema = z.union([
   legacyImageResultMetadataSchema,
   interimImageResultMetadataSchema,
   durableImageResultMetadataSchema,
+  z.strictObject({ video: videoAssetSchema }),
 ])
 
 export const generationJobDetailsSchema = generationJobSchema.extend({
@@ -712,5 +788,231 @@ export const generationCommandResponseSchema = z.strictObject({
 
 export const generationJobResponseSchema = z.strictObject({
   ...generationJobDetailsSchema.shape,
+  requestId: requestIdSchema,
+})
+
+export const brandStateSchema = z.enum(['draft', 'published', 'archived'])
+export const brandWizardStepSchema = z.enum(['materials', 'review', 'publish'])
+export const brandSourceStatusSchema = z.enum(['added', 'inspecting', 'ready', 'failed'])
+export const brandEvidenceMethodSchema = z.enum(['structured_import', 'visual_inference', 'ai_suggestion', 'manual'])
+export const brandAssetKindSchema = z.enum(['logo', 'icon', 'illustration', 'pattern', 'reference', 'font'])
+
+const brandEvidenceSchema = z.strictObject({
+  method: brandEvidenceMethodSchema,
+  sourceId: nonEmptyString.optional(),
+})
+
+export const brandSourceSchema = z.strictObject({
+  id: nonEmptyString,
+  kind: z.enum(['file', 'figma']),
+  label: nonEmptyString.max(255),
+  url: z.string().url().max(2_000).optional(),
+  mimeType: nonEmptyString.max(200).optional(),
+  byteSize: z.number().int().positive().max(10 * 1024 * 1024).optional(),
+  status: brandSourceStatusSchema,
+  error: nonEmptyString.max(500).optional(),
+}).superRefine((source, context) => {
+  if (source.kind === 'figma' && !source.url) context.addIssue({ code: 'custom', message: 'Figma sources require a URL', path: ['url'] })
+  if (source.kind === 'file' && !source.mimeType) context.addIssue({ code: 'custom', message: 'File sources require a media type', path: ['mimeType'] })
+})
+
+export const brandAssetSchema = z.strictObject({
+  id: nonEmptyString,
+  name: nonEmptyString.max(255),
+  kind: brandAssetKindSchema,
+  mimeType: nonEmptyString.max(200),
+  sourceId: nonEmptyString.optional(),
+  approved: z.boolean(),
+  downloadPath: z.string().startsWith('/api/v1/').optional(),
+})
+
+export const brandPaletteTokenSchema = z.strictObject({
+  id: z.string().trim().regex(/^[a-z][a-z0-9-]{0,63}$/),
+  name: nonEmptyString.max(100),
+  value: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+  confirmed: z.boolean(),
+  evidence: brandEvidenceSchema,
+})
+
+const brandColorRolesSchema = z.strictObject({
+  primary: z.string().trim(),
+  accent: z.string().trim(),
+  canvas: z.string().trim(),
+  surface: z.string().trim(),
+  primaryText: z.string().trim(),
+  inverseText: z.string().trim(),
+})
+
+const fontChoiceSchema = z.strictObject({
+  family: z.string().trim().max(150),
+  weight: z.number().int().min(100).max(900).multipleOf(100),
+  fallbacks: z.array(nonEmptyString.max(100)).max(5),
+  confirmed: z.boolean(),
+  evidence: brandEvidenceSchema.optional(),
+})
+
+const typeScaleValueSchema = z.strictObject({
+  size: z.number().positive().max(240),
+  lineHeight: z.number().positive().max(4),
+})
+
+const campaignBlobSchema = z.strictObject({
+  seed: z.number().int(),
+  lobes: z.number().positive().max(20),
+  irregularity: z.number().min(0).max(0.8),
+  pointsPerLobe: z.number().int().min(2).max(40),
+})
+
+const brandCampaignKitSchema = z.strictObject({
+  hero: z.strictObject({
+    eyebrow: nonEmptyString.max(100),
+    headline: nonEmptyString.max(300),
+    body: nonEmptyString.max(1_000),
+    cta: nonEmptyString.max(100),
+  }),
+  blobs: z.strictObject({
+    hero: campaignBlobSchema,
+    feature: campaignBlobSchema,
+    accent: campaignBlobSchema,
+  }),
+  templates: z.array(z.strictObject({
+    id: nonEmptyString.max(100),
+    name: nonEmptyString.max(200),
+    type: projectTypeSchema,
+    formats: z.array(nonEmptyString.max(50)).min(1).max(10),
+  })).max(20),
+})
+
+export const brandDraftSchema = z.strictObject({
+  name: nonEmptyString.max(200),
+  context: z.string().trim().max(2_000),
+  currentStep: brandWizardStepSchema,
+  sources: z.array(brandSourceSchema).max(30),
+  assets: z.array(brandAssetSchema).max(100),
+  logoRoles: z.strictObject({
+    primary: nonEmptyString.nullable(),
+    secondary: nonEmptyString.nullable(),
+    symbol: nonEmptyString.nullable(),
+    light: nonEmptyString.nullable(),
+    dark: nonEmptyString.nullable(),
+  }),
+  colors: z.strictObject({
+    palette: z.array(brandPaletteTokenSchema).max(100),
+    roles: brandColorRolesSchema,
+  }),
+  typography: z.strictObject({
+    heading: fontChoiceSchema,
+    body: fontChoiceSchema,
+    licenseConfirmed: z.boolean(),
+    scale: z.strictObject({
+      h1: typeScaleValueSchema,
+      h2: typeScaleValueSchema,
+      h3: typeScaleValueSchema,
+      body: typeScaleValueSchema,
+      caption: typeScaleValueSchema,
+    }),
+  }),
+  campaignKit: brandCampaignKitSchema.optional(),
+  conflicts: z.array(z.strictObject({
+    id: nonEmptyString,
+    field: nonEmptyString,
+    message: nonEmptyString.max(500),
+    resolved: z.boolean(),
+  })).max(100),
+})
+
+export const brandVersionSchema = z.strictObject({
+  id: nonEmptyString,
+  brandId: nonEmptyString,
+  versionNumber: z.number().int().positive(),
+  snapshot: brandDraftSchema,
+  publishedBy: nonEmptyString,
+  publishedAt: timestampSchema,
+  schemaVersion: z.literal(1),
+})
+
+export const brandChangeOperationSchema = z.discriminatedUnion('operation', [
+  z.strictObject({ operation: z.literal('set_color'), tokenId: nonEmptyString, value: z.string().regex(/^#[0-9A-Fa-f]{6}$/) }),
+  z.strictObject({ operation: z.literal('scale_typography'), factor: z.number().min(0.5).max(2) }),
+])
+
+export const brandProposalSchema = z.strictObject({
+  id: nonEmptyString,
+  brandId: nonEmptyString,
+  baseRevision: z.number().int().nonnegative(),
+  prompt: nonEmptyString.max(2_000),
+  operations: z.array(brandChangeOperationSchema).min(1).max(20),
+  unchanged: z.array(nonEmptyString).max(20),
+  state: z.enum(['proposed', 'applied', 'discarded']),
+  createdAt: timestampSchema,
+})
+
+const brandRecordFields = {
+  id: nonEmptyString,
+  workspaceId: nonEmptyString,
+  ownerId: nonEmptyString,
+  state: brandStateSchema,
+  revision: z.number().int().nonnegative(),
+  activeVersionId: nonEmptyString.nullable(),
+  draft: brandDraftSchema,
+  activeVersion: brandVersionSchema.nullable(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+}
+
+export const brandDesignSystemRecordSchema = z.strictObject(brandRecordFields)
+export const brandDesignSystemResponseSchema = z.strictObject({ ...brandRecordFields, requestId: requestIdSchema })
+export const brandDesignSystemListResponseSchema = z.strictObject({ brands: z.array(brandDesignSystemRecordSchema), requestId: requestIdSchema })
+export const createBrandDesignSystemRequestSchema = z.strictObject({ name: nonEmptyString.max(200) })
+export const patchBrandDraftRequestSchema = z.strictObject({ draft: brandDraftSchema })
+export const createBrandProposalRequestSchema = z.strictObject({
+  prompt: nonEmptyString.max(2_000),
+  approvalFingerprint: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+})
+export const brandProposalResponseSchema = z.strictObject({ proposal: brandProposalSchema, requestId: requestIdSchema })
+export const brandVersionListResponseSchema = z.strictObject({ versions: z.array(brandVersionSchema), requestId: requestIdSchema })
+export const publishBrandDesignSystemRequestSchema = z.strictObject({})
+export const restoreBrandVersionRequestSchema = z.strictObject({})
+export const grantBrandViewerRequestSchema = z.strictObject({ userId: nonEmptyString })
+export const brandDesignSystemConfigResponseSchema = z.strictObject({
+  limits: z.strictObject({
+    maxFileBytes: z.number().int().positive(), maxSources: z.number().int().positive(), maxAssets: z.number().int().positive(),
+    maxPdfPages: z.number().int().positive(), maxImagePixels: z.number().int().positive(), maxImageDimension: z.number().int().positive(),
+  }),
+  provider: nonEmptyString,
+  model: nonEmptyString,
+  requestId: requestIdSchema,
+})
+
+const brandUploadMimeTypeSchema = z.enum([
+  'application/pdf', 'application/json',
+  'image/png', 'image/jpeg', 'image/webp', 'image/svg+xml',
+  'font/woff2', 'font/woff', 'font/ttf', 'font/otf',
+  'application/font-woff', 'application/x-font-ttf', 'application/x-font-opentype',
+])
+
+export const addBrandSourceRequestSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('figma'), label: nonEmptyString.max(255), url: z.string().url().max(2_000) }),
+  z.strictObject({ kind: z.literal('file'), name: nonEmptyString.max(255), mimeType: brandUploadMimeTypeSchema, data: z.string().max(7_000_000) }),
+])
+export const addBrandAssetRequestSchema = z.strictObject({
+  name: nonEmptyString.max(255),
+  kind: brandAssetKindSchema,
+  mimeType: brandUploadMimeTypeSchema.exclude(['application/pdf', 'application/json']),
+  data: z.string().max(7_000_000),
+})
+export const analyseBrandSourcesRequestSchema = z.strictObject({ approvalFingerprint: nonEmptyString.max(128).optional() })
+
+export const brandSourceInspectionResponseSchema = z.strictObject({
+  brandId: nonEmptyString,
+  revision: z.number().int().nonnegative(),
+  sources: z.array(brandSourceSchema).max(30),
+  provider: nonEmptyString,
+  model: nonEmptyString,
+  estimatedUsd: z.number().nonnegative().nullable(),
+  thresholdUsd: z.number().nonnegative().nullable(),
+  requiresApproval: z.boolean(),
+  approvalFingerprint: z.string().regex(/^[a-f0-9]{64}$/).nullable(),
+  pricingAvailable: z.boolean(),
   requestId: requestIdSchema,
 })

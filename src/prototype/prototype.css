@@ -1,0 +1,15 @@
+.bs-prototype-badge { position: fixed; z-index: 40; top: 12px; right: 200px; }
+.bs-prototype-controls { position: fixed; z-index: 40; top: 12px; right: 16px; font-size: var(--a-type-small-size); }
+.bs-prototype-controls summary { cursor: pointer; }
+.bs-prototype-controls__panel { display: grid; gap: var(--a-space-3); min-width: 180px; margin-top: var(--a-space-2); padding: var(--a-space-4); border: 1px solid var(--a-color-ink); border-radius: var(--a-radius-small); background: var(--a-color-surface); color: var(--a-color-ink); box-shadow: var(--a-shadow-interactive); }
+.bs-prototype-controls__panel [role='group'] { display: flex; gap: var(--a-space-2); }
+@media (max-width: 640px) { .bs-prototype-controls { top: 56px; right: 12px; margin-right: 0; } }
+@media (max-width: 640px) { .bs-prototype-badge { top: 12px; right: 12px; margin-right: 0; } }
+
+.bs-prototype-toolbar { display: contents; }
+@media (max-width: 640px) {
+  .bs-prototype-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--a-space-2); padding: var(--a-space-2) var(--a-space-4); }
+  .bs-prototype-toolbar > .bs-prototype-badge { position: static; }
+  .bs-prototype-toolbar > .bs-prototype-controls { position: relative; top: auto; right: auto; }
+  .bs-prototype-controls__panel { position: absolute; right: 0; }
+}

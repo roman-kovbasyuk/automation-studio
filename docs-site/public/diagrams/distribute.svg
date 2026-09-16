@@ -1,0 +1,117 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2800" height="650" viewBox="0 0 2800 650" role="img" aria-labelledby="title description">
+<title id="title">distribute logic</title>
+<desc id="description">Read left to right. Recovery paths appear below their owning step. Return IDs identify where to resume.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="#555" stroke-width="1.5"/></marker></defs>
+<rect width="100%" height="100%" fill="#fff"/>
+<path d="M 360 130 L 500 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<path d="M 820 130 L 960 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="870.45" y="118" width="39.1" height="24" fill="#fff"/>
+<text x="890" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Yes</text>
+<path d="M 1280 130 L 1420 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1330.45" y="118" width="39.1" height="24" fill="#fff"/>
+<text x="1350" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Yes</text>
+<path d="M 1740 130 L 1880 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1778.9" y="118" width="62.2" height="24" fill="#fff"/>
+<text x="1810" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Result</text>
+<path d="M 2200 130 L 2340 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="2250.45" y="118" width="39.1" height="24" fill="#fff"/>
+<text x="2270" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Yes</text>
+<path d="M 660 230 L 660 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="644.3" y="273" width="31.4" height="24" fill="#fff"/>
+<text x="660" y="290" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">No</text>
+<path d="M 1120 230 L 1120 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1104.3" y="273" width="31.4" height="24" fill="#fff"/>
+<text x="1120" y="290" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">No</text>
+<path d="M 1580 185 L 1580 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1498.85" y="250.5" width="162.3" height="24" fill="#fff"/>
+<text x="1580" y="267.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Action requirements</text>
+<path d="M 2040 230 L 2040 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1947.3" y="273" width="185.4" height="24" fill="#fff"/>
+<text x="2040" y="290" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">No / partial / unknown</text>
+<path d="M 2500 185 L 2500 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="2407.3" y="250.5" width="185.4" height="24" fill="#fff"/>
+<text x="2500" y="267.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Expired / revoked link</text>
+<rect x="40" y="75" width="320" height="110" rx="10" fill="#C2E5FF" stroke="#3DADFF"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="200" y="125">D1 Choose delivery</tspan>
+<tspan x="200" y="147">Archive / share / platform</tspan>
+</text>
+<polygon points="660,30 820,130 660,230 500,130" fill="#FFECBD" stroke="#FFC943"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="660" y="125">D2 Channel enabled</tspan>
+<tspan x="660" y="147">and authorized?</tspan>
+</text>
+<polygon points="1120,30 1280,130 1120,230 960,130" fill="#FFECBD" stroke="#FFC943"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="1120" y="125">D3 Package meets</tspan>
+<tspan x="1120" y="147">channel rules?</tspan>
+</text>
+<rect x="1420" y="75" width="320" height="110" rx="10" fill="#C2E5FF" stroke="#3DADFF"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="1580" y="125">D4 Execute chosen action</tspan>
+<tspan x="1580" y="147">One version-bound delivery</tspan>
+</text>
+<polygon points="2040,30 2200,130 2040,230 1880,130" fill="#FFECBD" stroke="#FFC943"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="2040" y="125">D5 Delivery result</tspan>
+<tspan x="2040" y="147">verified?</tspan>
+</text>
+<rect x="2340" y="75" width="320" height="110" rx="10" fill="#CDF4D3" stroke="#66D575"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="2500" y="125">D6 Show outcome</tspan>
+<tspan x="2500" y="147">Download / link / receipts</tspan>
+</text>
+<rect x="500" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="524" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Channel dependency</text>
+<text x="522" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="542" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Archive first. Share links</text>
+<text x="542" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">planned.</text>
+<text x="522" y="452" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="542" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Google Ads / Meta / TikTok</text>
+<text x="542" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">future.</text>
+<text x="522" y="502" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="542" y="502" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Disabled or unauthorized:</text>
+<text x="542" y="524" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">connect if supported, or</text>
+<text x="542" y="546" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">choose archive at D1.</text>
+<rect x="960" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="984" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Compatibility dependency</text>
+<text x="982" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1002" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Check selected formats, sizes,</text>
+<text x="1002" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">duration and destination</text>
+<text x="1002" y="446" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">rules.</text>
+<text x="982" y="474" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1002" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Change selection at D1;</text>
+<text x="1002" y="496" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">creative changes require a new</text>
+<text x="1002" y="518" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">revision at BG1.</text>
+<rect x="1420" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="1444" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Explicit delivery controls</text>
+<text x="1442" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1462" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Archive: build or reuse ZIP.</text>
+<text x="1442" y="430" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1462" y="430" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Share: access, expiry,</text>
+<text x="1462" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">revocation.</text>
+<text x="1442" y="480" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1462" y="480" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Platform: confirm destination</text>
+<text x="1462" y="502" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">and upload; no publication or</text>
+<text x="1462" y="524" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">spend.</text>
+<rect x="1880" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="1904" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Delivery recovery</text>
+<text x="1902" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1922" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Retain confirmed receipts.</text>
+<text x="1902" y="430" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1922" y="430" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Reconcile unknown uploads,</text>
+<text x="1922" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">then retry failed files /</text>
+<text x="1922" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">archive only at D4.</text>
+<text x="1902" y="502" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1922" y="502" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Keep creative approval.</text>
+<rect x="2340" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="2364" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Share access</text>
+<text x="2362" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="2382" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Deny invalid link access.</text>
+<text x="2362" y="430" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="2382" y="430" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Authorized owner may renew a</text>
+<text x="2382" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">link to the same immutable</text>
+<text x="2382" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">archive.</text>
+<text x="2362" y="502" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="2382" y="502" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">No automatic public sharing.</text>
+</svg>

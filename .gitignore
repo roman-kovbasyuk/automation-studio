@@ -23,3 +23,7 @@ dist/
 .studio-demo-assets/
 .impeccable/review/
 docs-site/.vitepress/cache/
+
+dist-prototype/
+
+.impeccable/live/

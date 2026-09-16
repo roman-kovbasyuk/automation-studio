@@ -1,4 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
+import { resolveTemplateBrand } from '../../shared/resolveTemplateBrand.js'
+import { createMsdBrandDraft } from '../../shared/msdBrand.js'
+import { studioTemplates } from '../../shared/studioTemplates.js'
 import { createAnimatedBannerHtml } from './exportAnimation.js'
 
 // Vitest's default CSS stub also covers ?raw imports; use the actual authored stylesheet here.
@@ -6,17 +9,36 @@ vi.mock('./banner-templates.css?raw', async () => ({
   default: (await import('node:fs')).readFileSync('src/studio/banner-templates.css', 'utf8'),
 }))
 
+vi.mock('../../shared/fonts/arimo.css?raw', async () => ({
+  default: (await import('node:fs')).readFileSync('shared/fonts/arimo.css', 'utf8'),
+}))
+
+const ttf = new Uint8Array([0, 1, 0, 0, 0, 1, 2, 3])
 const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10])
 const font = new Uint8Array([0x77, 0x4f, 0x46, 0x32, 0, 1, 2, 3])
 const readBlob = (blob) => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = reject; reader.readAsText(blob) })
 function mockAssets() {
-  const fetcher = vi.fn(async (url) => ({ ok: true, headers: new Headers(), arrayBuffer: async () => (url.includes('.woff2') ? font : png).buffer }))
+  const fetcher = vi.fn(async (url) => ({ ok: true, headers: new Headers(), arrayBuffer: async () => (url.includes('.woff2') ? font : url.includes('.ttf') ? ttf : png).buffer }))
   vi.stubGlobal('fetch', fetcher)
   return fetcher
 }
 afterEach(() => vi.unstubAllGlobals())
 
 describe('standalone animation draft export', () => {
+  test('embeds the resolved brand logo and Arimo font without external assets', async () => {
+    mockAssets()
+    const logoData = 'data:image/png;base64,iVBORw0KGgo='
+    const snapshot = createMsdBrandDraft({ assets: [{ id: 'logo', name: 'MSD', kind: 'logo', mimeType: 'image/png', approved: true }] })
+    const manifest = resolveTemplateBrand(studioTemplates[0], { id: 'v1', brandId: 'msd', versionNumber: 1, snapshot }, logoData)
+    const html = await readBlob(await createAnimatedBannerHtml({ manifest }))
+    const document = new DOMParser().parseFromString(html, 'text/html')
+    expect(document.querySelectorAll('image')).toHaveLength(2)
+    expect([...document.querySelectorAll('image')].every(image => image.getAttribute('href').startsWith('data:image/png;base64,'))).toBe(true)
+    expect(html).toContain('data:font/ttf;base64,')
+    expect(html).toContain('font-family:Arimo')
+    expect(html).toContain('#008876')
+    expect(html).not.toContain("url('./Arimo.ttf')")
+  })
   test('embeds the optional tag safely in the exported banner', async () => {
     mockAssets()
     const html = await readBlob(await createAnimatedBannerHtml({ tag: '20% off <today>' }))

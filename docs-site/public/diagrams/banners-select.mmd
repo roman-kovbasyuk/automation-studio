@@ -1,0 +1,35 @@
+---
+config:
+  flowchart:
+    useMaxWidth: false
+    nodeSpacing: 70
+    rankSpacing: 100
+---
+flowchart LR
+  a1["A1  Review selection<br/>Previews + output count"]
+  a2{"A2  Figma access<br/>and sender allowed?"}
+  a3["A3  Send to Figma<br/>Save immutable handoff"]
+  a4{"A4  Importer ready<br/>in this file?"}
+  a5["A5  Create mapped frames<br/>Report import receipt"]
+  a1x["New version<br/>Change copy, visual, template or output requirements → BG1.<br/>Keep prior versions and selections."]
+  a2x["Figma access dependency<br/>Restore sender permission and correct file / page access.<br/>Keep previews; recheck A2."]
+  a3x["Handoff persistence<br/>Repeated clicks reuse the same identity.<br/>Reconcile unknown send; retry only confirmed failures.<br/>No duplicate handoff."]
+  a4x["Importer dependency<br/>Show Waiting for Figma.<br/>Open the connected importer in the destination file; recheck A4.<br/>An iframe is not an importer."]
+  a5x["Import recovery<br/>Reconcile expected output IDs with existing frames.<br/>Repair missing frames in the same handoff; return to A5."]
+  a1 -->|"Send"| a2
+  a2 -->|"Yes"| a3
+  a3 -->|"Queued"| a4
+  a4 -->|"Yes"| a5
+  a1 -->|"Change selection"| a1x
+  a2 -->|"No"| a2x
+  a3 -->|"Failed / repeated"| a3x
+  a4 -->|"No"| a4x
+  a5 -->|"Partial / restart"| a5x
+  classDef action fill:#C2E5FF,stroke:#3DADFF,color:#1E1E1E
+  classDef decision fill:#FFECBD,stroke:#FFC943,color:#1E1E1E
+  classDef success fill:#CDF4D3,stroke:#66D575,color:#1E1E1E
+  classDef recovery fill:#FFCDC2,stroke:#FF7556,color:#1E1E1E
+  class a1,a3 action
+  class a2,a4 decision
+  class a5 success
+  class a1x,a2x,a3x,a4x,a5x recovery

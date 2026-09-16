@@ -16,10 +16,10 @@ describe('Copy stage compatibility adapter', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument()
   })
-  test('forwards approval, removal and append actions', async () => {
+  test('forwards selection, removal and append actions', async () => {
     const onApprove = vi.fn(), onDelete = vi.fn(), onGenerate = vi.fn()
     render(<CopyStage workspace={workspace} onApprove={onApprove} onDelete={onDelete} onGenerate={onGenerate} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Approve option 2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Select option 2' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Delete option 2' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Delete option 2' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Generate More Options' })).toBeEnabled())
@@ -28,12 +28,14 @@ describe('Copy stage compatibility adapter', () => {
     expect(onDelete).toHaveBeenCalledWith('copy-1')
     expect(onGenerate).toHaveBeenCalledTimes(1)
   })
-  test('locked campaigns retain previews but disable changes', () => {
+  test('locked campaigns retain selected copy without mutation controls', () => {
     render(<CopyStage workspace={workspace} onApprove={vi.fn()} onDelete={vi.fn()} readOnly />)
+    expect(screen.getAllByRole('article')).toHaveLength(1)
+    expect(screen.getByRole('heading', { name: 'Listen your way 1' })).toBeVisible()
     for (let index = 1; index <= 5; index++) {
-      expect(screen.getByRole('button', { name: `Approve option ${index}` })).toBeDisabled()
-      expect(screen.getByRole('button', { name: `Delete option ${index}` })).toBeDisabled()
-      expect(screen.getByRole('button', { name: `Preview option ${index}` })).toBeEnabled()
+      expect(screen.queryByRole('button', { name: `${index === 1 ? 'Deselect' : 'Select'} option ${index}` })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: `Delete option ${index}` })).not.toBeInTheDocument()
+
     }
   })
 })

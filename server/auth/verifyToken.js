@@ -64,6 +64,16 @@ export function createAuthenticator({
     if (actor.disabledAt != null || actor.disabled === true) {
       throw new AuthorizationError(403, 'user_disabled', 'This user is disabled')
     }
+    // Firebase includes the provider used for the current, freshly verified
+    // sign-in. Keeping this short-lived hint on the actor lets sensitive
+    // account-method mutations require a password-authenticated session.
+    actor.authProvider = typeof claims.firebase?.sign_in_provider === 'string'
+      ? claims.firebase.sign_in_provider
+      : null
+    actor.emailVerified = identity.data.email_verified === true
+    actor.googleEmail = actor.authProvider === 'google.com' || actor.authProvider === 'google'
+      ? identity.data.email
+      : null
     return actor
   }
 }

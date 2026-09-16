@@ -1,33 +1,36 @@
-# Workflow
+# Product recipes {#product-recipes}
 
-## Approved workflow
+**Asset creation workflows are product recipes.** Each recipe defines how a request becomes a particular product: the required inputs, AI instructions, clarification points, conditions and finished output.
 
-The application now uses six modules. Each block can keep its own draft, loading state and errors while the page connects the workflow. Older eight-step links still resolve to the matching module.
+All asset creation recipes belong to this category. Each document type has its own recipe, configured in the shared **product logic designer**.
 
-```mermaid
-flowchart LR
-  A[1. Brief] --> B[2. Copy]
-  B --> C[3. Visuals]
-  C --> D[4. Banners]
-  D --> E[5. Review]
-  E --> F[6. Distribute]
-```
+## Recipes
 
-## Steps
+| Recipe | Outcome | Current status |
+| --- | --- | --- |
+| [1. Banner creation](/recipes/banner-creation) | A reviewed banner set in the requested sizes | Persisted recipe authoring and simulation; existing campaign generation remains separate |
+| [2. Slide deck creation](/recipes/slide-deck-creation) | A presentation with agreed content, structure and output format | Persisted recipe authoring and simulation; live renderer is planned |
+| [3. Website creation](/recipes/website-creation) | A responsive website preview and agreed handoff | Persisted recipe authoring and simulation; live renderer is planned |
+| [4. Template creation](/recipes/template-creation) | A reusable, versioned layout and input contract | Persisted recipe authoring and simulation; live renderer is planned |
 
-| Step | Current functionality grouped here |
-| --- | --- |
-| Brief | Paste a description or attach a file; analyze it and refine the summary and facts |
-| Copy | Review the first five options, approve options, remove options, or generate more |
-| Visuals | Prepare prompts; explicitly generate images or upload them, then select a visual |
-| Banners | Select designs and output sizes; validate their content before preparing review files |
-| Review | Prepare an immutable version, add the Figma review link and designer checks, request changes or approve |
-| Distribute | Build and download the approved version's PNG package and manifest |
+New document types join this list as additional recipes. They share the designer and backend capabilities while keeping their own steps and output contracts.
 
-Each module owns its functionality and state, receives defined inputs, and provides defined outputs. Modules must support independent development and debugging. The page connects them in this order using shared workflow coordination.
+## Product logic designer {#product-logic-designer}
 
-Brief analysis prepares the first Copy options and text-only visual prompts. Images are generated only after an explicit action. Figma import/linking remains manual; distribution does not yet publish to advertising platforms. See [Campaign modules](/campaign-modules) for development boundaries and test commands.
+[Open Product recipes →](http://127.0.0.1:5181/mvp/admin/recipes?demoRole=admin#admin-product-recipes)
 
-## Do not skip a step
+This opens the isolated local admin preview. Start it from the application checkout with `node scripts/testing/start-admin-preview.mjs`. Select a persisted recipe to open its own node-editor URL. The preview uses synthetic data and removes its database schema when stopped.
 
-Grouping review and approval into one module does not remove the existing review gates. Distribution requires an approved version. Revised creative needs another review round; approved versions retain their original content.
+Drag and connect nodes, then click a node to edit settings, AI instructions and clarification rules in its inspector. Save a revision, validate its graph, simulate its saved hash, and publish an immutable version. Simulation uses explicit fixtures for AI and rendering. A publication does not start a live asset run.
+
+Read [Product logic designer](/decisions/asset-workflows) for the shared node contracts and publishing model.
+
+## What belongs in a recipe
+
+- **Inputs:** source material, selected template, application-managed design system and user constraints.
+- **Steps:** supported AI or backend operations with defined inputs and outputs.
+- **Interactions:** when to ask a question, request a decision or inform the user.
+- **Conditions:** explicit rules for choosing the next step.
+- **Outcome:** what will be produced and which checks it must pass.
+
+A **recipe** is the reusable process. A **run** is one execution for one request. A **template** supplies reusable design/layout rules; it is an input to a recipe, or the output of the template-creation recipe. Backend specifications may continue to use “workflow” for the same recipe concept.

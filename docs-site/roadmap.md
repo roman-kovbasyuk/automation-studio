@@ -1,5 +1,9 @@
 # MVP launch roadmap
 
+::: info Historical planning
+This is the original demo roadmap. Its scope and personal checkboxes are not a current implementation or deployment status. Read the [latest delivery stages](/decisions/delivery) and [decision register](/decisions/) for the backend/admin direction consolidated on 9 September 2026.
+:::
+
 This roadmap is the step-by-step path from the current demo to a launchable MVP. Complete each phase in order. A phase is complete only when its exit check passes.
 
 The checkboxes are personal. Click them as you work; your progress is saved in this browser and is not shared with the team.

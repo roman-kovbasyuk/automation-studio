@@ -69,7 +69,7 @@ describe('MVP contracts', () => {
 
   test('defines strict create and response payloads for the HTTP interface', () => {
     const brief = pilotCampaignFixture.brief
-    expect(createCampaignRequestSchema.parse({ title: 'Launch', brief })).toEqual({ title: 'Launch', brief })
+    expect(createCampaignRequestSchema.parse({ title: 'Launch', brief })).toEqual({ title: 'Launch', brief, projectType: 'banners' })
     expect(createCampaignRequestSchema.safeParse({ title: 'Launch', brief, status: 'approved' }).success).toBe(false)
     expect(campaignResponseSchema.safeParse({
       id: 'campaign-1', title: 'Launch', brief, status: 'draft', revision: 0,

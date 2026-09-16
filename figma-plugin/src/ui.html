@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="UTF-8"><style>
+body{font:13px/1.5 Inter,system-ui,sans-serif;margin:24px;color:var(--figma-color-text,#111);background:var(--figma-color-bg,#fff)}
+h1{font-size:22px;line-height:1.2;margin:0 0 12px}p{color:var(--figma-color-text-secondary,#555)}
+label{display:block;margin:16px 0 6px}input,select,button{box-sizing:border-box;width:100%;font:inherit;padding:10px;border:1px solid #aaa;border-radius:3px}
+button{background:#75d5f3;color:#111;border-color:#333;cursor:pointer;margin:12px 0}button:disabled{opacity:.5;cursor:default}
+input[type=checkbox]{width:auto;margin-right:8px}fieldset{border:0;padding:0;margin:12px 0}fieldset label{margin:8px 0}
+code{display:block;font:20px monospace;letter-spacing:2px;margin:12px 0}#status{min-height:42px;margin:16px 0}a{color:inherit}
+</style></head><body>
+<h1>Banner Studio review</h1><p>Bring editable banners into Figma. Return your finished artwork to the app for approval.</p>
+<section id="connect"><button id="pair">Connect to Studio</button><div id="pair-info" hidden><p>In Studio’s Review block, confirm this plugin session using:</p><code id="pair-code"></code><p id="pair-id"></p><a id="open-app" target="_blank">Open Studio</a><button id="check-pair">I confirmed in Studio</button></div></section>
+<section id="workspace" hidden><label for="handoff">Project to review</label><select id="handoff"></select><button id="refresh">Refresh projects</button>
+<label for="file-link">Current Figma file link</label><input id="file-link" placeholder="Paste this file’s share link"><p>The link must match the project’s destination.</p>
+<button id="import">Import or resume banners</button>
+<fieldset id="checks"><legend>Before returning your design</legend>
+<label><input type="checkbox" data-check="copyAccuracy">Copy is accurate and readable</label>
+<label><input type="checkbox" data-check="layoutQuality">Layouts and images are correct</label>
+<label><input type="checkbox" data-check="exportReadiness">Every format is ready to export</label>
+</fieldset><div id="videos"></div><button id="submit">Return artwork to Studio</button></section>
+<div id="status" role="status" aria-live="polite"></div><script>/* STUDIO_SCRIPT */</script></body></html>

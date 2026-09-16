@@ -1,8 +1,13 @@
+import { createFigmaHandoffService } from '../services/figmaHandoffService.js'
+import { createFigmaPairingService } from '../services/figmaPairingService.js'
+import { createFigmaSubmissionService } from '../services/figmaSubmissionService.js'
 import { randomUUID } from 'node:crypto'
 import { Pool } from 'pg'
 import { buildApp } from '../app.js'
 import { runMigrations } from '../db/migrate.js'
 import { createWorkflowService } from '../services/workflowService.js'
+import {createBriefingService} from '../services/briefingService.js'
+import {createBriefSourceService} from '../services/briefSourceService.js'
 import { createWorkspaceService } from '../services/workspaceService.js'
 import { createGenerationService } from '../services/generationService.js'
 import { createAssetService } from '../services/assetService.js'
@@ -15,10 +20,13 @@ import { createMockProvider } from '../providers/mockProvider.js'
 import { createMemoryAssetStore } from '../storage/memoryAssetStore.js'
 import { createStudioApi } from '../../src/studio/api.js'
 import { studioTemplates } from '../../shared/studioTemplates.js'
+import { createAdminRepository } from '../repositories/adminRepository.js'
+import { createAssetWorkflowService, seedAssetWorkflows } from '../assetWorkflows/definitionService.js'
+import { assertIsolatedSchema, isolatedDatabaseUrl } from './postgresIsolation.js'
 
 const roles = ['marketer', 'designer', 'admin']
 
-export async function createIsolatedStudio() {
+export async function createIsolatedStudio({briefingEnabled=false,sourceExtractor}={}) {
   const schema = `runtime_flow_${randomUUID().replaceAll('-', '')}`
   if (!/^runtime_flow_[0-9a-f]{32}$/.test(schema)) throw new Error('Unsafe isolated schema name')
   const connectionString = process.env.TEST_DATABASE_URL ?? 'postgresql:///banner_studio_test'
@@ -26,7 +34,10 @@ export async function createIsolatedStudio() {
   let pool, app, assetStore, closed = false
   try {
     await maintenance.query(`CREATE SCHEMA ${schema}`)
-    pool = new Pool({ connectionString, options: `-c search_path=${schema}` })
+    pool = new Pool({
+      connectionString: isolatedDatabaseUrl(connectionString, schema),
+    })
+    await assertIsolatedSchema(pool, schema)
     await runMigrations({ pool })
     await pool.query('UPDATE settings SET daily_budget_microunits=10000000, per_step_regeneration_limit=100')
     const actors = Object.fromEntries(roles.map(role => [role, {
@@ -36,7 +47,8 @@ export async function createIsolatedStudio() {
       await pool.query('INSERT INTO users (id,email,role,display_name) VALUES ($1,$2,$3,$4)',
         [value.id, value.email, value.role, value.displayName])
     }
-    const workflowService = createWorkflowService({ pool })
+    await seedAssetWorkflows({ pool, actor: actors.admin })
+    const workflowService = createWorkflowService({ pool,briefingEnabled })
     for (const manifest of studioTemplates) await workflowService.createTemplateVersion({
       actor: actors.admin, input: { id: manifest.id, name: manifest.name, version: manifest.version, manifest },
     })
@@ -48,11 +60,17 @@ export async function createIsolatedStudio() {
       readiness: async () => { await pool.query('SELECT 1'); return true },
       resolveActor: async request => actors[request.headers['x-test-studio-role']] ?? null,
       workflowService, workspaceService, generationService,
+      ...(briefingEnabled?{briefSourceService:createBriefSourceService({pool,assetStore,...(sourceExtractor?{extractor:sourceExtractor}:{})}),briefingService:createBriefingService({pool})}:{}),
       assetService: createAssetService({ pool, assetStore }),
       visualUploadService: createVisualUploadService({ pool, assetStore }),
       versionService: createVersionService({ pool, assetStore }),
       reviewService: createReviewService({ pool }),
+      figmaHandoffService: createFigmaHandoffService({ pool, assetStore }),
+      figmaPairingService: createFigmaPairingService({ pool }),
+      figmaSubmissionService: createFigmaSubmissionService({ pool, assetStore, reviewService: createReviewService({ pool }) }),
       deliveryService: createDeliveryService({ pool, assetStore }),
+      adminRepository: createAdminRepository(pool),
+      assetWorkflowService: createAssetWorkflowService({ pool }),
     })
     await app.listen({ host: '127.0.0.1', port: 0 })
     const url = `http://127.0.0.1:${app.server.address().port}`

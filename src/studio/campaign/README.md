@@ -25,7 +25,7 @@ Review preparation, Figma checks, feedback, approval, and reopening share one Re
 
 ## Module boundary
 
-`Module({port})` receives `input`, `inputKey`, `access`, `operation`, `actions`, `assets`, `setDirty`, and `navigate`. Visuals additionally receives a host-scoped `reconcile` callback for its module-owned transient and persisted error recovery. `useCampaignModule` subscribes only to that module's stable snapshot. A view must not import the API client or receive the entire workspace.
+`Module({port})` receives `input`, `inputKey`, `access`, `operation`, `actions`, `assets`, `setDirty`, and `navigate`. Copy and Visuals additionally receive a host-scoped `reconcile` callback for module-owned transient and persisted error recovery. When generation blocks editing, access includes `generationBlock` with its step and status. Copy uses the shared DecisionNotice and AppButton to explain the block and check the workspace without submitting generation. A successful check clears local selection errors; approval stays disabled until the authoritative job is terminal. `useCampaignModule` subscribes only to that module's stable snapshot. A view must not import the API client or receive the entire workspace.
 
 Keep editor drafts inside the owning module. Capture the input key when initializing a draft and pass it when saving; do not substitute the latest key at submit time. A source conflict retains the draft. Clear only the owning module's dirty flag after a confirmed save. Title/revision-only updates are excluded from editor input keys.
 

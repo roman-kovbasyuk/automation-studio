@@ -7,10 +7,14 @@ import {
   directionSelectionRequestSchema,
   imageGenerationRequestSchema,
 } from '../../shared/contracts.js'
+import {authoredCopyFieldsSchema as copyEditRequestSchema} from '../../shared/briefingContracts.js'
 import { invokeProvider, validateGenerationProvider } from '../providers/provider.js'
-import { decodeGeneratedImage } from '../images/imageDecoder.js'
+import { prepareGeneratedImage } from '../images/imageDecoder.js'
 import { assertAssetBytes, validateAssetStore } from '../storage/assetStore.js'
 import { validVisualResult } from './visualContext.js'
+import { approvedSourceProvider } from '../briefSources/providerBoundary.js'
+import { resolveAnalysisSources } from '../briefSources/analysisSnapshot.js'
+import { verifyBriefingProposal } from '../briefSources/analysisEvidence.js'
 
 const editorRoles = ['marketer', 'admin']
 const readerRoles = ['marketer', 'designer', 'admin']
@@ -56,10 +60,10 @@ function safeInstant(value, name) {
 }
 
 function providerInput(step, context, input) {
-  if (step === 'brief_analysis') return { brief: context.brief, ...(context.instruction ? { instruction: context.instruction } : {}) }
+  if (step === 'brief_analysis') return { brief: context.brief, ...(context.instruction ? { instruction: context.instruction } : {}), ...(context.sources?{sources:context.sources}:{}) }
   if (step === 'copy') return { brief: context.brief, analysis: context.analysis,
     ...(context.previousHeadlines ? { previousHeadlines: context.previousHeadlines } : {}) }
-  if (step === 'directions') return context.mode ? { brief: context.brief, analysis: context.analysis, mode: context.mode, copies: context.copies } : { brief: context.brief, copy: context.copy }
+  if (step === 'directions') return context.mode ? { brief: context.brief, analysis: context.analysis, mode: context.mode, copies: context.copies, ...(context.context ? { context: context.context } : {}) } : { brief: context.brief, copy: context.copy, ...(context.context ? { context: context.context } : {}) }
   if (step === 'image') return { direction: context.direction, width: input.width, height: input.height }
   throw new TypeError(`Unknown generation step ${step}`)
 }
@@ -136,6 +140,8 @@ export function createGenerationService({
   timeoutMs = 30_000,
   maximumCosts = defaultMaximumCosts,
   assetStore,
+  personalProviderFactory,
+  notificationService,
 } = {}) {
   if (!pool || typeof pool.query !== 'function') throw new TypeError('A PostgreSQL pool is required')
   if (!controlPlane || typeof controlPlane.prepareGeneration !== 'function') throw new TypeError('A generation control plane is required')
@@ -165,6 +171,19 @@ export function createGenerationService({
         'Generation result recovery is temporarily unavailable',
       )
     }
+  }
+  const withGenerationNotification = async ({ outcome, actor, campaignId, step, jobId }) => {
+    if (notificationService && outcome?.body?.job?.status === 'succeeded' && (step === 'image' || step === 'video')) {
+      try {
+        await notificationService.enqueueEvent({
+          actor,
+          eventType: step === 'video' ? 'video_generation' : 'image_generation',
+          dedupeKey: `generation:${jobId}`,
+          payload: { actorId: actor.id, campaignId, jobId, step },
+        })
+      } catch { /* Notification delivery must never fail a committed generation. */ }
+    }
+    return outcome
   }
   const execute = async ({ actor, campaignId, idempotencyKey, input, step, schema }) => {
     requireRole(actor, editorRoles)
@@ -206,6 +225,15 @@ export function createGenerationService({
     }
     if (prepared.kind !== 'owner') throw new TypeError(`Unknown generation preparation result ${prepared.kind}`)
 
+    // Enforced before bytes are resolved or any provider factory is invoked.
+    // This route cannot use personal API keys, another provider, or another region.
+    let sourceProvider=null
+    try {
+      sourceProvider=prepared.context.brief?.briefing ? approvedSourceProvider(prepared.job,providers) : null
+      if(step==='brief_analysis' && sourceProvider && prepared.context.sources) prepared.context={...prepared.context,sources:await resolveAnalysisSources(prepared.context.sources,assetStore,{pool,campaignId})}
+    } catch(error) {
+      return controlPlane.failBeforeDispatch({jobId:prepared.job.id,ownerToken:prepared.ownerToken,errorCode:error.expose?error.code:'brief_preparation_failed'})
+    }
     const dispatched = await controlPlane.markDispatched({
       jobId: prepared.job.id,
       ownerToken: prepared.ownerToken,
@@ -215,10 +243,15 @@ export function createGenerationService({
       return { ...(await controlPlane.waitForResult({ jobId: prepared.job.id })), replayed: true }
     }
 
-    const provider = providers[prepared.job.provider]
+    const personal = !sourceProvider && personalProviderFactory
+      ? await personalProviderFactory({ actor, provider: prepared.job.provider, model: prepared.job.model, region: prepared.job.region, step, credentialVersion: prepared.job.credentialVersion })
+      : null
+    const provider = sourceProvider ?? (personalProviderFactory ? personal : (personal ?? providers[prepared.job.provider]))
     if (!provider) {
       return recoverGeneration({
-        jobId: prepared.job.id, ownerToken: prepared.ownerToken, reason: 'provider_configuration_missing',
+        jobId: prepared.job.id,
+        ownerToken: prepared.ownerToken,
+        reason: prepared.job.credentialVersion != null ? 'credential_version_changed' : 'provider_configuration_missing',
       })
     }
 
@@ -258,8 +291,14 @@ export function createGenerationService({
       })
     }
 
+    if(step==='brief_analysis' && sourceProvider && !result.error && result.safety.verdict!=='blocked') {
+      try { result={...result,analysis:{...result.analysis,briefingProposal:verifyBriefingProposal(result.analysis.briefingProposal,
+        {sourceKey:prepared.context.brief.briefing.sourceKey,sources:prepared.context.sources})}} }
+      catch { return controlPlane.completeProviderResult({jobId:prepared.job.id,ownerToken:prepared.ownerToken,status:'failed',
+        safety:result.safety,usage:result.usage,actualCostMicrounits:result.actualCostMicrounits,errorCode:'invalid_copy_evidence',resultMetadata:null}) }
+    }
     if (step === 'image' && !result.error && result.safety.verdict !== 'blocked') {
-      const decoded = await decodeGeneratedImage(result.image.bytes, result.image.mimeType)
+      const decoded = await prepareGeneratedImage(result.image.bytes, result.image.mimeType, command)
       if (!decoded) {
         return controlPlane.completeProviderResult({
           jobId: prepared.job.id,
@@ -345,7 +384,7 @@ export function createGenerationService({
           actualCostMicrounits: result.actualCostMicrounits,
           completedAt: safeInstant(clock(), 'Generation clock'),
         })
-        if (completion.status === 201) return completion
+        if (completion.status === 201) return withGenerationNotification({ outcome: completion, actor, campaignId, step, jobId: prepared.job.id })
         return recoverGeneration({
           jobId: prepared.job.id,
           ownerToken: prepared.ownerToken,
@@ -384,7 +423,7 @@ export function createGenerationService({
       errorCode: normalized.errorCode ?? null,
       completedAt: safeInstant(clock(), 'Generation clock'),
     })
-    return committed
+    return withGenerationNotification({ outcome: committed, actor, campaignId, step, jobId: prepared.job.id })
   }
 
   return {
@@ -404,9 +443,25 @@ export function createGenerationService({
       return controlPlane.selectCopy({ actor, campaignId, expectedRevision, input: validate(copySelectionRequestSchema, input) })
     },
 
+    async deselectCopy({ actor, campaignId, expectedRevision }) {
+      requireRole(actor, editorRoles)
+      return controlPlane.deselectCopy({ actor, campaignId, expectedRevision })
+    },
+
+    async retainCopy({ actor, campaignId, expectedRevision }) {
+      requireRole(actor, editorRoles)
+      return controlPlane.retainCopy({ actor, campaignId, expectedRevision })
+    },
+
     async approveCopy({ actor, campaignId, expectedRevision, input }) {
       requireRole(actor, editorRoles)
       return controlPlane.approveCopy({ actor, campaignId, expectedRevision, input: validate(copySelectionRequestSchema, input) })
+    },
+
+    async editCopy({ actor, campaignId, expectedRevision, input }) {
+      requireRole(actor, editorRoles)
+      return controlPlane.editCopy({ actor, campaignId, expectedRevision,
+        input: validate(copyEditRequestSchema.safeExtend({ copyId: copySelectionRequestSchema.shape.copyId }), input) })
     },
 
     async deleteCopy({ actor, campaignId, expectedRevision, input }) {

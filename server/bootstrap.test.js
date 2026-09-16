@@ -17,6 +17,8 @@ describe('production server composition', () => {
     const assetService = { kind: 'asset-service' }
     const versionService = { kind: 'version-service' }
     const deliveryService = { kind: 'delivery-service' }
+    const brandProvider = { kind: 'brand-provider' }
+    const brandDesignSystemService = { kind: 'brand-design-system-service' }
     const assetStore = { close: vi.fn(async () => { calls.push('assetStore.close') }) }
     const staticBuild = { root: '/release/dist', close: vi.fn(async () => { calls.push('staticBuild.close') }) }
     const providerRegistry = { gemini: [{ model: 'gemini-3.5-flash', imageModel: 'gemini-3.1-flash-image', region: 'eu' }] }
@@ -36,6 +38,8 @@ describe('production server composition', () => {
       createVisualUploadService: vi.fn(() => ({ kind: 'visual-upload-service' })),
       createVersionService: vi.fn(() => versionService),
       createDeliveryService: vi.fn(() => deliveryService),
+      createBrandDesignSystemProvider: vi.fn(() => brandProvider),
+      createBrandDesignSystemService: vi.fn(() => brandDesignSystemService),
       createGenerationProviderRegistry: vi.fn(() => providerRegistry),
       reconcileGenerationSettings: vi.fn(async () => { calls.push('reconcile') }),
       createFirebaseTokenVerifier: vi.fn(() => verifier),
@@ -47,6 +51,7 @@ describe('production server composition', () => {
       environment: {
         NODE_ENV: 'production', DATABASE_URL: 'postgresql:///banner_studio', FIREBASE_PROJECT_ID: 'banner-project',
         GENERATION_PROVIDER: 'gemini', VERTEX_AI_PROJECT_ID: 'banner-project', VERTEX_AI_LOCATION: 'eu',
+        BRIEFING_ENABLED:'true',
         GEMINI_TEXT_MODEL: 'gemini-3.5-flash', GEMINI_IMAGE_MODEL: 'gemini-3.1-flash-image',
         ASSET_STORE: 'gcs', GCS_ASSET_BUCKET: 'banner-private-assets', GCS_PROJECT_ID: 'banner-project',
       },
@@ -55,7 +60,8 @@ describe('production server composition', () => {
 
     expect(calls.slice(0, 3)).toEqual(['open-static', 'reconcile', 'buildApp'])
     expect(dependencies.runMigrations).not.toHaveBeenCalled()
-    expect(dependencies.createWorkflowService).toHaveBeenCalledWith({ pool, providerRegistry })
+    expect(dependencies.createWorkflowService).toHaveBeenCalledWith({ pool, providerRegistry,briefingEnabled:true })
+    expect(dependencies.buildApp).toHaveBeenCalledWith(expect.objectContaining({briefingService:expect.any(Object),briefSourceService:expect.any(Object),runtimeConfig:expect.objectContaining({capabilities:{sourceBriefing:true}})}))
     expect(dependencies.createGenerationProviderRegistry).toHaveBeenCalledWith({
       provider: 'gemini', textModel: 'gemini-3.5-flash', imageModel: 'gemini-3.1-flash-image', region: 'eu',
     })
@@ -75,11 +81,13 @@ describe('production server composition', () => {
     expect(dependencies.createAssetService).toHaveBeenCalledWith({ pool, assetStore })
     expect(dependencies.createVersionService).toHaveBeenCalledWith({ pool, assetStore })
     expect(dependencies.createDeliveryService).toHaveBeenCalledWith({ pool, assetStore })
+    expect(dependencies.createBrandDesignSystemProvider).toHaveBeenCalledWith({ provider: 'gemini', model: 'gemini-3.5-flash', region: 'eu', delegate: generationProvider })
+    expect(dependencies.createBrandDesignSystemService).toHaveBeenCalledWith({ pool, provider: brandProvider, assetStore, onPublish: expect.any(Function) })
     expect(dependencies.createFirebaseTokenVerifier).toHaveBeenCalledWith({ projectId: 'banner-project' })
     expect(dependencies.createAuthenticator).toHaveBeenCalledWith(expect.objectContaining({ pool, tokenVerifier: verifier }))
     expect(dependencies.openStaticBuild).toHaveBeenCalledOnce()
     expect(dependencies.openStaticBuild).toHaveBeenCalledWith(expect.any(String))
-    expect(dependencies.buildApp).toHaveBeenCalledWith(expect.objectContaining({ resolveActor, workflowService, generationService, assetService, versionService, deliveryService, staticBuild }))
+    expect(dependencies.buildApp).toHaveBeenCalledWith(expect.objectContaining({ resolveActor, workflowService, generationService, assetService, versionService, deliveryService, brandDesignSystemService, staticBuild }))
     await runtime.close()
     await runtime.close()
     expect(app.close).toHaveBeenCalledOnce()

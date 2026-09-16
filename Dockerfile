@@ -20,6 +20,8 @@ ENV NODE_ENV=production \
     STATIC_ROOT=/app/dist \
     RUN_MIGRATIONS=false
 
+RUN apk add --no-cache ffmpeg
+
 WORKDIR /app
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules

@@ -5,6 +5,7 @@ import {
   roleSchema,
   visualDirectionSchema,
 } from './contracts.js'
+import {authoredCopyVariantSchema} from './briefingContracts.js'
 
 const lockedStatuses = new Set(['in_review', 'changes_requested', 'ready', 'approved', 'delivered'])
 const marketerRoles = ['marketer', 'admin']
@@ -73,7 +74,7 @@ const transitions = [
     from: 'draft',
     to: 'copy_ready',
     roles: marketerRoles,
-    guard: ({ input }) => copyVariantSchema.safeParse(input.copy).success,
+    guard: ({ input }) => (['supplied','manual'].includes(input.copyOrigin)?authoredCopyVariantSchema:copyVariantSchema).safeParse(input.copy).success,
     apply: ({ campaign, input }) => ({
       ...campaign,
       selectedCopy: input.copy,

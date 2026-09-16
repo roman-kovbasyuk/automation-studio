@@ -11,7 +11,7 @@ export function CopyStage({ workspace, api, pending, readOnly, onGenerate, onSel
     access={{ canVisit: true, canEdit: !readOnly }}
     operation={{ kind: pending ? 'running' : 'idle',
       actionId: pending === 'Generate copy' ? 'generate' : pending, error: null }}
-    actions={{ generate: onGenerate, approve: onApprove ?? onSelect, remove: onDelete }}
+    actions={{ generate: onGenerate, select: onSelect ?? onApprove, remove: onDelete }}
     assets={api} onNext={onNext} nextLabel="Continue to AI assets"
   />
 }

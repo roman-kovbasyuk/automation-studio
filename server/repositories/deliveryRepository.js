@@ -90,6 +90,17 @@ export function createDeliveryRepository(client) {
   return {
     lockCampaign: (campaignId) => campaigns.findByIdForUpdate(campaignId),
 
+    async findFigmaDelivery(versionId) {
+      const handoff=(await client.query('SELECT id FROM figma_handoffs WHERE version_id=$1',[versionId])).rows[0]
+      if(!handoff)return null
+      const submission=(await client.query(`SELECT s.* FROM figma_submissions s
+        JOIN figma_review_bindings approved ON approved.submission_id=s.id AND approved.submission_hash=s.submission_hash
+        JOIN review_events e ON e.id=approved.event_id AND e.event_type='approved' AND e.version_id=s.version_id
+        JOIN figma_review_bindings ready ON ready.submission_id=s.id AND ready.submission_hash=s.submission_hash
+        JOIN review_events r ON r.id=ready.event_id AND r.event_type='ready' AND r.version_id=s.version_id
+        WHERE s.version_id=$1 AND s.state='sealed'`,[versionId])).rows[0]??null
+      return { submission }
+    },
     async findVersionById(versionId) {
       const result = await client.query(
         `SELECT version.* FROM campaign_versions version
@@ -123,6 +134,13 @@ export function createDeliveryRepository(client) {
         source: result.rows.filter((row) => row.asset_class === 'source').map((row) => row.sha256),
         review: result.rows.filter((row) => row.asset_class === 'review').map((row) => row.sha256),
       }
+    },
+
+    async listVersionVideoAssets(versionId) {
+      const result = await client.query(`SELECT asset.* FROM assets asset
+        JOIN campaign_version_source_assets source ON source.asset_id=asset.id AND source.campaign_id=asset.campaign_id
+        WHERE source.version_id=$1 AND asset.kind='video' AND source.asset_sha256=asset.sha256 ORDER BY asset.id`, [versionId])
+      return result.rows.map(mapAsset)
     },
 
     async listReviewAssets(versionId, { forUpdate = false } = {}) {

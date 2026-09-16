@@ -44,7 +44,7 @@ test('structured brief persists, supports overrides and refinement, and prepares
     expect((await read()).campaign.brief.analysis).toBeNull()
     await pool.query("UPDATE campaigns SET brief = $1 WHERE id = 'campaign'", [campaign.brief])
     await service.generateDirections({ ...request, idempotencyKey: 'prompts', input: { mode: 'campaign' } })
-    expect((await pool.query('SELECT status, preview_asset_id FROM visual_directions')).rows).toEqual(Array.from({ length: 3 }, () => ({ status: 'pending', preview_asset_id: null })))
+    expect((await pool.query('SELECT status, preview_asset_id FROM visual_directions')).rows).toEqual(Array.from({ length: 5 }, () => ({ status: 'pending', preview_asset_id: null })))
     const workflow = createWorkflowService({ pool })
     await workflow.patchCampaign({ ...request, expectedRevision: campaign.revision,
       patch: { title: 'My campaign', brief: { ...campaign.brief, analysis: { ...campaign.brief.analysis, audience: 'Designers', summary: 'A launch for designers.' } } } })

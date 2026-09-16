@@ -19,6 +19,15 @@ function campaign(overrides = {}) {
 
 function services(overrides = {}) {
   return {
+    getPersonalSettings: vi.fn(async () => ({
+      profile: { firstName: 'Mark', lastName: 'Eter', email: 'mark@example.com', emailVerified: true },
+      signIn: { googleEmail: 'mark@example.com', passwordConfigured: false },
+      ai: { connections: [], defaults: { text: null, image: null, video: null } },
+      integrations: [],
+    })),
+    updatePersonalProfile: vi.fn(async ({ input }) => ({
+      firstName: input.firstName, lastName: input.lastName, email: 'mark@example.com', emailVerified: true,
+    })),
     listCampaigns: vi.fn(async () => [campaign()]),
     createCampaign: vi.fn(async () => campaign()),
     getCampaign: vi.fn(async () => campaign()),
@@ -64,6 +73,84 @@ function makeApp({ role = 'marketer', actor, workflowService = services() } = {}
 }
 
 describe('versioned workflow routes', () => {
+  test('exposes actor-scoped generation readiness without billing or secret fields', async () => {
+    const workflowService = services()
+    const generationReadinessService = {
+      getReadiness: vi.fn(async () => ({
+        state: 'paused', reasonCode: 'kill_switch_active', message: 'AI generation is paused.',
+        destination: 'vertex-eu', textModel: 'gemini-3.5-flash', imageModel: null,
+        maskedCredential: null, spendingControl: 'external',
+      })),
+    }
+    const app = buildApp({
+      resolveActor: vi.fn(async () => ({ id: 'marketer-1', role: 'marketer', disabled: false })),
+      workflowService, generationReadinessService,
+    })
+    const response = await app.inject({ method: 'GET', url: '/api/v1/me/ai/readiness' })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toMatchObject({ state: 'paused', spendingControl: 'external' })
+    expect(response.body).not.toContain('apiKey')
+    expect(response.body).not.toContain('remainingUsd')
+    expect(generationReadinessService.getReadiness).toHaveBeenCalledWith({ actor: expect.objectContaining({ id: 'marketer-1' }) })
+    await app.close()
+  })
+
+  test('exposes owner-scoped personal AI connection and defaults endpoints', async () => {
+    const workflowService = services()
+    const personalAiService = {
+      getSettings: vi.fn(async () => ({ connections: [{ provider: 'google', status: 'connected', maskedSuffix: '••••••••1234' }], defaults: { text: null, image: null } })),
+      saveConnection: vi.fn(async input => ({ provider: input.provider, status: 'connected', maskedSuffix: '••••••••1234' })),
+      checkConnection: vi.fn(async () => ({ ok: true })),
+      removeConnection: vi.fn(async () => ({ connections: [], defaults: { text: null, image: null } })),
+      updateDefaults: vi.fn(async input => ({ connections: [], defaults: input })),
+    }
+    const app = buildApp({ resolveActor: vi.fn(async () => ({ id: 'marketer-1', role: 'marketer', disabled: false })), workflowService, personalAiService })
+    const saved = await app.inject({ method: 'PUT', url: '/api/v1/me/ai/connections', payload: { provider: 'google', apiKey: 'synthetic-key-1234' } })
+    const defaults = await app.inject({ method: 'PATCH', url: '/api/v1/me/ai/defaults', payload: { text: { provider: 'google', model: 'gemini-3.5-flash' } } })
+    const checked = await app.inject({ method: 'POST', url: '/api/v1/me/ai/connections/google/check', payload: {} })
+    expect(saved.statusCode).toBe(200)
+    expect(saved.body).not.toContain('synthetic-key-1234')
+    expect(defaults.statusCode).toBe(200)
+    expect(checked.statusCode).toBe(200)
+    expect(personalAiService.saveConnection).toHaveBeenCalledWith({ actor: expect.objectContaining({ id: 'marketer-1' }), provider: 'google', apiKey: 'synthetic-key-1234' })
+    await app.close()
+  })
+  test('exposes personal integration and notification endpoints', async () => {
+    const workflowService = services()
+    const personalSettingsService = {
+      getSettings: vi.fn(async () => ({ integrations: [{ platform: 'slack', status: 'not_connected' }], notifications: {} })),
+      connectIntegration: vi.fn(async input => ({ platform: input.platform, status: 'connected', destination: input.destination })),
+      testIntegration: vi.fn(async () => ({ ok: true })),
+      disconnectIntegration: vi.fn(async () => ({ integrations: [], notifications: {} })),
+      updateNotifications: vi.fn(async ({ input }) => input),
+    }
+    const app = buildApp({ resolveActor: vi.fn(async () => ({ id: 'marketer-1', role: 'marketer', disabled: false })), workflowService, personalSettingsService })
+    const connected = await app.inject({ method: 'PUT', url: '/api/v1/me/integrations/slack', payload: { destination: 'Updates', webhookUrl: 'https://hooks.slack.com/services/example', secret: 'synthetic-secret' } })
+    const preferences = await app.inject({ method: 'PATCH', url: '/api/v1/me/notifications', payload: { slack: { enabled: true } } })
+    expect(connected.statusCode).toBe(200)
+    expect(preferences.statusCode).toBe(200)
+    expect(personalSettingsService.connectIntegration).toHaveBeenCalledWith(expect.objectContaining({ platform: 'slack', destination: 'Updates' }))
+    await app.close()
+  })
+  test('reads and updates only the authenticated personal profile', async () => {
+    const { app, workflowService } = makeApp()
+
+    const settings = await app.inject({ method: 'GET', url: '/api/v1/me/settings' })
+    const profile = await app.inject({
+      method: 'PATCH', url: '/api/v1/me/profile', payload: { firstName: 'Maya', lastName: 'Stone' },
+    })
+
+    expect(settings.statusCode).toBe(200)
+    expect(settings.json().profile.email).toBe('mark@example.com')
+    expect(profile.statusCode).toBe(200)
+    expect(profile.json()).toMatchObject({ firstName: 'Maya', lastName: 'Stone' })
+    expect(workflowService.getPersonalSettings).toHaveBeenCalledWith({ actor: expect.objectContaining({ id: 'marketer-1' }) })
+    expect(workflowService.updatePersonalProfile).toHaveBeenCalledWith({
+      actor: expect.objectContaining({ id: 'marketer-1' }), input: { firstName: 'Maya', lastName: 'Stone' },
+    })
+    await app.close()
+  })
+
   test('returns the authenticated database session through a strict response contract', async () => {
     const actor = {
       id: 'designer-1', email: 'designer@example.com', firebaseUid: 'firebase-designer',
@@ -98,7 +185,7 @@ describe('versioned workflow routes', () => {
     expect(loaded.headers.etag).toBe('"0"')
     expect(workflowService.createCampaign).toHaveBeenCalledWith({
       actor: expect.objectContaining({ id: 'marketer-1' }),
-      input: { title: 'Autumn launch', brief },
+      input: { title: 'Autumn launch', brief, projectType: 'banners' },
     })
     await app.close()
   })

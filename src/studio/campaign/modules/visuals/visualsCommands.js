@@ -28,7 +28,7 @@ export function createVisualsCommands(runtime) {
     const failures = []
     for (const [index, directionId] of ids.entries()) {
       if (sourceKey() !== initialSource) return rejected('source_changed', 'Copy or brief changed. Review the remaining prompts before generating images.')
-      onProgress?.({ stage: 'images', total: ids.length, current: index + 1, directionId })
+      onProgress?.({ stage: 'images', total: ids.length, current: index + 1, directionId, directionIds: ids })
       const result = await image(directionId)
       if (!result.ok) {
         failures.push({ directionId, ...result })
@@ -38,20 +38,29 @@ export function createVisualsCommands(runtime) {
     return failures.length ? { ok: false, code: 'partial_generation', message: `${failures.length} visual${failures.length === 1 ? '' : 's'} could not be generated. Your other images are saved.`, failures } : { ok: true }
   }
   return Object.freeze({
+    videoPlan: input => runtime.read(({api,workspace})=>api.planVideo(workspace.campaign.id,input)),
+    videoSubmit: async(plan,key)=>{
+      const job=await runtime.read(({api,workspace})=>api.generateVideo(workspace.campaign.id,{planId:plan.id,acceptedCostMicrounits:plan.estimatedCostMicrounits},key))
+      await runtime.refresh();return job
+    },
+    videoList: ()=>runtime.read(({api,workspace,signal})=>api.listVideoJobs(workspace.campaign.id,{signal})),
+    videoCancel: async id=>{const job=await runtime.read(({api})=>api.cancelVideoJob(id));await runtime.refresh();return job},
     // Safe automatic handoff: text prompts only. Never call image/generateAll here.
     preparePrompts: ({ retry = false } = {}) => runtime.execute('visuals', 'prepare-prompts', async ({ api, workspace, idempotencyKey, waitForJob }) => {
       await waitForJob(await api.generate(workspace.campaign.id, 'directions', { mode: 'campaign' }, idempotencyKey))
     }, { ...options(), idempotent: true, idempotencyKey: retry ? undefined : 'initial-directions-v1' }),
-    async generate(mode = 'campaign', { onProgress } = {}) {
+    async generate(mode = 'campaign', { onProgress, context, copyIds } = {}) {
       if (batching) return rejected('visuals_busy', 'Visuals are already being generated.')
       if (!['campaign', 'selected_copy'].includes(mode)) return rejected('invalid_method', 'Choose a visual generation method.')
-      const copies = selectedCopies(snapshot().input)
+      const approved = selectedCopies(snapshot().input)
+      if (copyIds && copyIds.some(id => !approved.some(copy => copy.id === id))) return rejected('copy_not_approved', 'The changed copy is no longer approved.')
+      const copies = copyIds ? approved.filter(copy => copyIds.includes(copy.id)) : approved
       if (mode === 'selected_copy' && !copies.length) return rejected('copy_not_approved', 'Select at least one copy option first.')
-      const input = mode === 'campaign' ? { mode } : { mode, copyIds: copies.map(copy => copy.id) }
+      const input = mode === 'campaign' ? { mode, ...(context ? { context } : {}) } : { mode, copyIds: copies.map(copy => copy.id), ...(context ? { context } : {}) }
       const initialSource = sourceKey()
       batching = true
       try {
-        onProgress?.({ stage: 'prompts', total: mode === 'campaign' ? 3 : copies.length, current: 0 })
+        onProgress?.({ stage: 'prompts', total: mode === 'campaign' ? 5 : copies.length, current: 0 })
         let ids = []
         const prepared = await runtime.execute('visuals', `generate:${mode}`, async ({ api, workspace, idempotencyKey, waitForJob }) => {
           const job = await waitForJob(await api.generate(workspace.campaign.id, 'directions', input, idempotencyKey))

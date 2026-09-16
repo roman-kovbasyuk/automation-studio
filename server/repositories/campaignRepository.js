@@ -3,6 +3,7 @@ function mapCampaign(row) {
   return {
     id: row.id,
     title: row.title,
+    projectType: row.project_type,
     brief: row.brief,
     status: row.status,
     revision: row.revision,
@@ -43,12 +44,12 @@ export function createCampaignRepository(client) {
   if (!client || typeof client.query !== 'function') throw new TypeError('A PostgreSQL pool or client is required')
 
   return {
-    async create({ id, title, brief, createdBy }) {
+    async create({ id, title, brief, createdBy, projectType = 'banners' }) {
       const result = await client.query(
-        `INSERT INTO campaigns (id, title, brief, created_by)
-         VALUES ($1, $2, $3, $4)
+        `INSERT INTO campaigns (id, title, brief, created_by, project_type)
+         VALUES ($1, $2, $3, $4, $5)
          RETURNING *`,
-        [id, title, brief, createdBy],
+        [id, title, brief, createdBy, projectType],
       )
       return mapCampaign(result.rows[0])
     },

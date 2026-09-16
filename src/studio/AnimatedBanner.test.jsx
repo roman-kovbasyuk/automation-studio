@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, test } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, test, vi } from 'vitest'
 import { AnimatedBanner } from './AnimatedBanner.jsx'
 
 describe('AnimatedBanner', () => {
@@ -27,5 +27,13 @@ describe('AnimatedBanner', () => {
     expect(canvas).toHaveAttribute('viewBox', '0 0 1080 1920')
     expect(canvas.querySelector('script')).toBeNull()
     expect(canvas.querySelector('.studio-banner__text')).toHaveTextContent('<script>alert(1)</script>')
+  })
+  test('uses public fields outside the canvas and preserves over-limit validation', () => {
+    const onTextChange = vi.fn()
+    render(<AnimatedBanner playing={false} onTextChange={onTextChange} slotValues={{ headline: 'x'.repeat(81) }} />)
+    const headline = screen.getByRole('textbox', { name: 'Headline' })
+    expect(headline).toHaveAttribute('aria-invalid', 'true')
+    fireEvent.change(headline, { target: { value: 'A new headline' } })
+    expect(onTextChange).toHaveBeenCalledWith('headline', 'A new headline')
   })
 })

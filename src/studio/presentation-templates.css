@@ -1,0 +1,13 @@
+/* Interface components come from Brutalist; slide artwork owns its brand fonts/colors. */
+.msd-presentations { scroll-margin-top: 90px; }
+.msd-presentations__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--a-space-6); margin-block: var(--a-space-6); }
+.msd-presentation-chat { max-width: 760px; margin: var(--a-space-8) auto; }
+.msd-slide-editor { padding-top: var(--a-space-6); }
+.msd-slide-editor__heading { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--a-space-6); margin-block: var(--a-space-6); }
+.msd-slide-actions { display: flex; flex-wrap: wrap; gap: var(--a-space-3); }
+.msd-slide-editor__columns { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr); gap: var(--a-space-8); margin-top: var(--a-space-8); }
+.msd-slide-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--a-space-6); }
+.msd-slide-ai { display: grid; align-content: start; gap: var(--a-space-4); }
+@media (max-width: 760px) {
+  .msd-presentations__grid, .msd-slide-editor__columns, .msd-slide-fields { grid-template-columns: 1fr; }
+}

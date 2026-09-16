@@ -1,0 +1,37 @@
+---
+config:
+  flowchart:
+    useMaxWidth: false
+    nodeSpacing: 70
+    rankSpacing: 100
+---
+flowchart LR
+  v1["V1  Generate or upload<br/>Using captured scope"]
+  v2{"V2  Result valid<br/>and usable?"}
+  v3["V3  Store media<br/>With source provenance"]
+  v4["V4  Select and pair<br/>Copies + visuals"]
+  v5{"V5  Required media<br/>ready + current?"}
+  v6["V6  Visuals ready<br/>Continue to Banners gate"]
+  v1x["Provider dependency<br/>Keep successful media.<br/>Reconcile ambiguous jobs first;<br/>retry confirmed failed scope via VG1."]
+  v2x["Media validation<br/>Blocked, corrupt or wrong format.<br/>Video: verify full playback, duration and audio.<br/>Keep valid items; replace failures via VG1."]
+  v3x["Storage dependency<br/>Persist actual bytes and provenance.<br/>Retry storing the same result at V3.<br/>Temporary provider URLs are not assets."]
+  v4x["Iteration path<br/>Explicit video request or upload → VG1.<br/>Changed copy → C4 and revalidation.<br/>Do not relabel old results as new."]
+  v5x["Pairing dependency<br/>Missing media, no selected copy or stale pairings block banners.<br/>Fix at V4, replace via VG1, or explicitly accept a valid subset."]
+  v1 -->|"Result"| v2
+  v2 -->|"Yes"| v3
+  v3 -->|"Saved"| v4
+  v4 -->|"Continue"| v5
+  v5 -->|"Yes"| v6
+  v1 -->|"Failed / unknown"| v1x
+  v2 -->|"No / partial"| v2x
+  v3 -->|"Save fails"| v3x
+  v4 -->|"Add video / change scope"| v4x
+  v5 -->|"No"| v5x
+  classDef action fill:#C2E5FF,stroke:#3DADFF,color:#1E1E1E
+  classDef decision fill:#FFECBD,stroke:#FFC943,color:#1E1E1E
+  classDef success fill:#CDF4D3,stroke:#66D575,color:#1E1E1E
+  classDef recovery fill:#FFCDC2,stroke:#FF7556,color:#1E1E1E
+  class v1,v3,v4 action
+  class v2,v5 decision
+  class v6 success
+  class v1x,v2x,v3x,v4x,v5x recovery

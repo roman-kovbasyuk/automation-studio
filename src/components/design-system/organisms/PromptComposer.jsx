@@ -1,9 +1,10 @@
 import { useId, useRef, useState } from 'react'
 import { ArrowUp, Paperclip, X } from 'lucide-react'
-import { AppButton } from '../atoms/AppButton.jsx'
-import '../../../styles/ui-blocks.css'
+import { Surface, TextArea } from 'brutalist-design-system'
+import { AppButton } from "../compatibility.jsx"
+import './prompt-composer.css'
 
-/** Operational version of the design-system AI composer; the caller owns requests. */
+/** App-owned prompt behavior composed from public design-system primitives. */
 export function PromptComposer({
   value,
   onChange,
@@ -30,6 +31,9 @@ export function PromptComposer({
   attachmentsLabel = 'Brief attachments',
   fileInputLabel = 'Brief files',
   attachLabel = 'Attach brief files',
+  attachIcon: AttachIcon = Paperclip,
+  toolbarStart,
+  className = '',
 }) {
   const id = useId()
   const picker = useRef(null)
@@ -41,14 +45,14 @@ export function PromptComposer({
   }
   return (
     <form
-      className="v2-prompt-block bs-prompt"
+      className={`bs-ds-prompt ${className}`.trim()}
       data-compact={compact || undefined}
       aria-label={formLabel}
       aria-busy={busy || undefined}
       onSubmit={submit}
     >
-      <div
-        className="v2-block-composer"
+      <Surface><div
+        className="bs-ds-prompt__surface"
         data-dragging={dragging}
         onDragOver={(event) => {
           event.preventDefault()
@@ -65,35 +69,33 @@ export function PromptComposer({
         }}
       >
         {files.length > 0 && (
-          <ul className="v2-block-attachments" aria-label={attachmentsLabel}>
+          <ul className="bs-ds-prompt__attachments" aria-label={attachmentsLabel}>
             {files.map((file) => (
               <li key={file.id}>
                 <Paperclip size={16} aria-hidden="true" />
                 <span>{file.name ?? file.label}</span>
-                <button
+                <AppButton
                   type="button"
-                  className="v2-block-icon"
+                  variant="quiet" size="compact" iconOnly
                   aria-label={`Remove ${file.name ?? file.label}`}
                   disabled={locked}
                   onClick={() => onRemove(file.id)}
                 >
                   <X size={16} aria-hidden="true" />
-                </button>
+                </AppButton>
               </li>
             ))}
           </ul>
         )}
-        <label className="sr-only" htmlFor={id}>
-          {label}
-        </label>
-        <textarea
+        <TextArea
+          label={label}
+          instructions={hint}
           id={id}
           value={value}
           rows={rows}
           maxLength={maxLength}
           disabled={disabled || busy}
           readOnly={readOnly}
-          aria-describedby={hint ? `${id}-hint` : undefined}
           placeholder={placeholder}
           onChange={(event) => onChange(event.target.value)}
           onKeyDown={(event) => {
@@ -106,10 +108,10 @@ export function PromptComposer({
           }}
         />
         {!readOnly && (
-          <div className="v2-block-toolbar">
+          <div className="bs-ds-prompt__toolbar">
             {onAttach && <><input
               ref={picker}
-              className="v2-block-sr"
+              className="sr-only"
               tabIndex={-1}
               aria-label={fileInputLabel}
               type="file"
@@ -121,20 +123,21 @@ export function PromptComposer({
                 event.target.value = ''
               }}
             />
-            <button
+            <AppButton
               type="button"
-              className="v2-block-icon"
+              variant="quiet" size="compact" iconOnly
               aria-label={attachLabel}
               disabled={locked}
               onClick={() => picker.current?.click()}
             >
-              <Paperclip size={20} aria-hidden="true" />
-            </button>
-            <span className="bs-prompt-formats">{formatLabel}</span></>}
-            {showSubmit && <AppButton
+              <AttachIcon size={20} aria-hidden="true" />
+            </AppButton>
+            </>}
+            {toolbarStart}
+            {onAttach && formatLabel && <span className="bs-prompt-formats">{formatLabel}</span>}
+            {showSubmit && <span className="bs-ds-prompt__send"><AppButton
               type="submit"
               variant="primary"
-              className="bs-button bs-button--primary bs-prompt-send"
               disabled={locked || !canSubmit}
               busy={busy}
               iconOnly={iconOnlySubmit}
@@ -142,11 +145,10 @@ export function PromptComposer({
             >
               {!iconOnlySubmit && (busy ? 'Working…' : submitLabel)}
               <ArrowUp size={17} aria-hidden="true" />
-            </AppButton>}
+            </AppButton></span>}
           </div>
         )}
-      </div>
-      {hint && <p id={`${id}-hint`} className="v2-block-hint">{hint}</p>}
+      </div></Surface>
     </form>
   )
 }

@@ -31,12 +31,12 @@ describe('campaign layout', () => {
   })
   test('keeps the image-generation action inside each direction placeholder', () => {
     const onImage = vi.fn()
-    render(<VisualStage workspace={{ campaign: {}, directions: [{ id: 'd1', title: 'Nordic focus', prompt: 'Soft daylight', previewAssetId: null }] }} onImage={onImage} />)
-    fireEvent.click(within(screen.getByRole('group', { name: 'Nordic focus image' })).getByRole('button', { name: 'Generate image' }))
+    render(<VisualStage workspace={{ campaign: {}, directions: [{ id: 'd1', title: 'Nordic focus', prompt: 'Soft daylight', generation: { status: 'failed' }, previewAssetId: null }] }} onImage={onImage} />)
+    fireEvent.click(within(screen.getByRole('article', { name: 'Nordic focus' })).getByRole('button', { name: 'Retry image' }))
     expect(onImage).toHaveBeenCalledWith('d1')
   })
   test.each([{ readOnly: true }, { pending: 'Generate image 1' }])('blocks placeholder generation when editing is unavailable: %j', props => {
-    render(<VisualStage workspace={{ campaign: {}, directions: [{ id: 'd1', title: 'Nordic focus', prompt: 'Soft daylight' }] }} {...props} />)
-    expect(screen.getByRole('button', { name: 'Generate image' })).toBeDisabled()
+    render(<VisualStage workspace={{ campaign: {}, directions: [{ id: 'd1', title: 'Nordic focus', prompt: 'Soft daylight', generation: { status: 'failed' } }] }} {...props} />)
+    expect(screen.getByRole('button', { name: 'Retry image' })).toBeDisabled()
   })
 })

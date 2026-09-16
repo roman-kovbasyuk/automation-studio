@@ -87,3 +87,10 @@ describe('Review commands', () => {
     runtime.dispose()
   })
 })
+
+test('carries the explicit video selection into the version request', async () => {
+  const {actions,api,runtime,workspace}=setup('composed')
+  expect(await actions.createVersion({videoAssetIds:['video-1']})).toEqual({ok:true})
+  expect(api.createVersion).toHaveBeenCalledWith('campaign-1',{videoAssetIds:['video-1']},workspace.campaign.revision,expect.any(String))
+  runtime.dispose()
+})

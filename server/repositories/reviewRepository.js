@@ -52,6 +52,17 @@ export function createReviewRepository(client) {
   const campaigns = createCampaignRepository(client)
 
   return {
+    async findFigmaContext(versionId) {
+      const handoff=(await client.query('SELECT id, source_hash FROM figma_handoffs WHERE version_id=$1',[versionId])).rows[0]
+      if(!handoff)return null
+      const submission=(await client.query("SELECT * FROM figma_submissions WHERE version_id=$1 AND state='sealed'",[versionId])).rows[0]??null
+      const readyBinding=(await client.query(`SELECT b.* FROM figma_review_bindings b JOIN review_events e ON e.id=b.event_id
+        WHERE e.version_id=$1 AND e.event_type='ready'`,[versionId])).rows[0]??null
+      return { handoff, submission, readyBinding }
+    },
+    async bindFigmaReview({eventId,submissionId,submissionHash}) {
+      await client.query('INSERT INTO figma_review_bindings (event_id,submission_id,submission_hash) VALUES ($1,$2,$3)',[eventId,submissionId,submissionHash])
+    },
     lockCampaign: (campaignId) => campaigns.findByIdForUpdate(campaignId),
 
     async findVersionById(versionId) {

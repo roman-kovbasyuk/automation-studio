@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { AppButton } from '../../../components/design-system/atoms/AppButton.jsx'
+import { AtomsRoot as DesignSystemRoot } from 'brutalist-design-system'
+import { AppButton } from "../../../components/design-system/compatibility.jsx"
 import { SelectMenu } from '../../../components/design-system/molecules/SelectMenu.jsx'
 import { MODULE_IDS, moduleInputKey, projectModuleInput } from '../moduleContracts.js'
 import { deriveWorkflowState } from '../workflowState.js'
@@ -50,7 +51,7 @@ export function ModulePlayground() {
     history.replaceState({}, '', `/mvp/dev/modules/${moduleId}?scenario=${value}`)
   }
 
-  return <main className="system-screen--v2 module-playground">
+  return <DesignSystemRoot><main className="module-playground">
     <header className="module-playground__header">
       <div><p className="module-playground__eyebrow">Development-only module playground</p>
         <h1>Fixture records — never production data</h1></div>
@@ -76,7 +77,7 @@ export function ModulePlayground() {
     <section className="module-playground__events"><h2>Fixture event log</h2>
       <ol role="log" aria-label="Fixture event log">{events.map((event, index) => <li key={index}><code>{JSON.stringify(event)}</code></li>)}</ol>
     </section>
-  </main>
+  </main></DesignSystemRoot>
 }
 
 export default ModulePlayground

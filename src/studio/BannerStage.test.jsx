@@ -5,7 +5,7 @@ import { studioTemplates } from '../../shared/studioTemplates.js'
 
 test('carries the selected copy tag into every template preview and saves source identities', async () => {
   const copy = { id: 'c1', headline: 'Sound for your day', body: 'A little less noise.', cta: 'Shop now', offer: '20% off until Sunday' }
-  const workspace = { campaign: { selectedCopyId: 's1', selectedDirectionId: 'd1' }, copies: [{ id: 's1', candidates: [copy], selectedCandidateId: 'c1' }], directions: [{ id: 'd1', status: 'ready', title: 'Visual one', previewAssetId: 'image-1' }], composition: null }
+  const workspace = { jobs: [], campaign: { selectedCopyId: 's1', selectedDirectionId: 'd1' }, copies: [{ id: 's1', candidates: [copy], selectedCandidateId: 'c1' }], directions: [{ id: 'd1', status: 'ready', title: 'Visual one', previewAssetId: 'image-1' }], composition: null }
   const api = { getAssetBlob: vi.fn(async () => new Blob()) }
   const onSave = vi.fn(async () => ({ ok: true }))
   render(<BannerStage workspace={workspace} templates={studioTemplates.map(manifest => ({ id: manifest.id, name: manifest.name, version: manifest.version, manifest }))} api={api} onSave={onSave} onPrepareReview={async () => ({ ok: true })} onNext={() => {}} />)

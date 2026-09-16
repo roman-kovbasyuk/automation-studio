@@ -3,19 +3,20 @@ import { createCampaignRuntime } from '../../campaignRuntime.js'
 import { createVisualsCommands } from './visualsCommands.js'
 import { makeScenario } from '../../testing/workspaceFixtures.js'
 
-function setup({ failure, holdDirections } = {}) {
+function setup({ failure, errorCode = null, holdDirections, selectedCount = 1 } = {}) {
   const { workspace, actor, templates } = makeScenario('copy-ready')
   const copies = workspace.copies[0].candidates
-  workspace.copies[0].approvedCandidateIds = [copies[0].id]
+  copies.push({...copies[0],id:'copy-3',headline:'Third option'})
+  workspace.copies[0].approvedCandidateIds = copies.slice(0, selectedCount).map(copy => copy.id)
   const api = { getWorkspace: vi.fn(async () => structuredClone(workspace)), generate: vi.fn(async (_id, step, input) => {
     if (step === 'directions') {
       await holdDirections
-      const count = input.mode === 'campaign' ? 3 : input.copyIds.length
+      const count = input.mode === 'campaign' ? 5 : input.copyIds.length
       workspace.directions.push(...Array.from({ length: count }, (_, index) => ({ id: `d-${index}`, title: `Idea ${index + 1}`, prompt: 'Quiet source image', status: 'pending', previewAssetId: null, stale: false, batchId: 'batch', scope: input.mode })))
       return { job: { id: 'batch', step, status: 'succeeded', result: { directions: workspace.directions } } }
     }
     const direction = workspace.directions.find(item => item.id === input.directionId)
-    if (failure && direction.id === 'd-1') return { job: { id: 'failed-image', step, status: failure } }
+    if (failure && direction.id === 'd-1') return { job: { id: 'failed-image', step, status: failure, errorCode } }
     direction.status = 'ready'; direction.previewAssetId = `asset-${direction.id}`
     return { job: { id: `j-${direction.id}`, step, status: 'succeeded' } }
   }) }
@@ -24,14 +25,20 @@ function setup({ failure, holdDirections } = {}) {
 }
 
 describe('Visuals isolated commands', () => {
-  it('generates three campaign images immediately without copy approval or a second action', async () => {
+  it('regenerates only the requested approved copy blocks', async () => {
+    const { commands, runtime, api } = setup({ selectedCount: 3 })
+    expect(await commands.generate('selected_copy', { copyIds: ['copy-2'] })).toEqual({ ok: true })
+    expect(api.generate.mock.calls.find(call => call[1] === 'directions')[2].copyIds).toEqual(['copy-2'])
+    runtime.dispose()
+  })
+  it('generates five campaign images immediately without copy approval or a second action', async () => {
     const { commands, runtime, api } = setup()
     const progress = []
     const result = await commands.generate('campaign', { onProgress: value => progress.push(value) })
     expect(result.ok).toBe(true)
-    expect(api.generate.mock.calls.map(call => call[1])).toEqual(['directions', 'image', 'image', 'image'])
+    expect(api.generate.mock.calls.map(call => call[1])).toEqual(['directions', 'image', 'image', 'image', 'image', 'image'])
     expect(api.generate.mock.calls[0][2]).toEqual({ mode: 'campaign' })
-    expect(progress.some(item => item.total === 3)).toBe(true)
+    expect(progress.some(item => item?.stage === 'prompts' && item.total === 5)).toBe(true)
     runtime.dispose()
   })
   it('uses approved current copy IDs only', async () => {
@@ -44,10 +51,18 @@ describe('Visuals isolated commands', () => {
   it('preserves successes, continues after a known failure, and bulk fills only missing images', async () => {
     const { commands, runtime, api, workspace } = setup({ failure: 'failed' })
     await commands.generate('campaign')
-    expect(workspace.directions.filter(item => item.previewAssetId).map(item => item.id)).toEqual(['d-0', 'd-2'])
+    expect(workspace.directions.filter(item => item.previewAssetId).map(item => item.id)).toEqual(['d-0', 'd-2', 'd-3', 'd-4'])
     api.generate.mockClear()
     await commands.generateAll()
     expect(api.generate.mock.calls.map(call => call[2].directionId)).toEqual(['d-1'])
+    runtime.dispose()
+  })
+  it.each(['quota_exhausted', 'billing_required', 'rate_limited'])('stops the batch after provider %s instead of spending on remaining images', async errorCode => {
+    const { commands, runtime, api, workspace } = setup({ failure: 'failed', errorCode })
+    const result = await commands.generate('campaign')
+    expect(result).toMatchObject({ ok: false, code: errorCode })
+    expect(api.generate.mock.calls.map(call => call[1])).toEqual(['directions', 'image', 'image'])
+    expect(workspace.directions.filter(item => item.previewAssetId).map(item => item.id)).toEqual(['d-0'])
     runtime.dispose()
   })
   it('stops after unknown generation and never sends a new image request automatically', async () => {
@@ -68,4 +83,12 @@ describe('Visuals isolated commands', () => {
     expect(api.generate.mock.calls.filter(call => call[1] === 'directions')).toHaveLength(1)
     runtime.dispose()
   })
+})
+
+it.each([2,3])('generates exactly one image for each of %i selected copies',async selectedCount=>{
+ const {commands,runtime,api}=setup({selectedCount})
+ await commands.generate('selected_copy')
+ expect(api.generate.mock.calls[0][2]).toEqual({mode:'selected_copy',copyIds:selectedCount===2?['copy-1','copy-2']:['copy-1','copy-2','copy-3']})
+ expect(api.generate.mock.calls.filter(call=>call[1]==='image')).toHaveLength(selectedCount)
+ runtime.dispose()
 })

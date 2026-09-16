@@ -1,3 +1,4 @@
+import { Surface } from 'brutalist-design-system'
 import { useId } from 'react'
 import './settings-panel.css'
 
@@ -14,10 +15,10 @@ export function SettingsPanel({ title, description, titleId, as: Element = 'sect
 }
 
 export function SettingsRow({ label, description, children, compact = false, className = '' }) {
-  return <div className={['v2-settings-row', className].filter(Boolean).join(' ')} data-compact={compact || undefined}>
-    <div className="v2-settings-row__description"><strong>{label}</strong></div>
-    <div className="v2-settings-row__control">{children}</div>
-  </div>
+  return <Surface><div className={['bs-ds-settings-row', className].filter(Boolean).join(' ')} data-compact={compact || undefined}>
+    <div className="bs-ds-settings-row__description"><strong>{label}</strong></div>
+    <div className="bs-ds-settings-row__control">{children}</div>
+  </div></Surface>
 }
 
 export function SettingsFooter({ children, message, error = false }) {

@@ -164,3 +164,15 @@ describe('Review module phases', () => {
     expect(screen.queryByRole('button', { name: /Build delivery|Download package/ })).toBeNull()
   })
 })
+
+test('requires an explicit video selection when preparing a review version', () => {
+  const scenario=makeScenario('composed')
+  scenario.workspace.jobs.push({id:'video-job',step:'video',status:'succeeded',result:{video:{id:'video-1',width:1280,height:720,durationSeconds:4,hasAudio:false}}})
+  const createVersion=vi.fn()
+  renderScenario('composed',{scenario,actions:{createVersion}})
+  const include=screen.getByRole('checkbox',{name:'Include video 1 in review'})
+  expect(include).not.toBeChecked()
+  fireEvent.click(include)
+  fireEvent.click(screen.getByRole('button',{name:'Create version and send to review'}))
+  expect(createVersion).toHaveBeenCalledWith(expect.objectContaining({videoAssetIds:['video-1']}))
+})

@@ -1,0 +1,29 @@
+---
+config:
+  flowchart:
+    useMaxWidth: false
+    nodeSpacing: 70
+    rankSpacing: 100
+---
+flowchart LR
+  dg1["DG1  Request delivery<br/>For a final file set"]
+  dg2{"DG2  Approval and<br/>manifest match?"}
+  dg3{"DG3  File set complete<br/>and verified?"}
+  dg4["DG4  Unlock Distribute<br/>Bind immutable package"]
+  dg2x["Version dependency<br/>Missing approval, stale package or replacement under review.<br/>Use the correct final version; do not relabel an old package."]
+  dg3x["Completeness dependency<br/>Approved alone is insufficient.<br/>Stay in state C, preserve valid files and recover missing outputs at F3."]
+  dg4x["Delivery binding<br/>Recheck package identity when an action is submitted.<br/>A later Figma edit cannot replace sealed files."]
+  dg1 --> dg2
+  dg2 -->|"Yes"| dg3
+  dg3 -->|"Yes"| dg4
+  dg2 -->|"No"| dg2x
+  dg3 -->|"No"| dg3x
+  dg4 -->|"State changes"| dg4x
+  classDef action fill:#C2E5FF,stroke:#3DADFF,color:#1E1E1E
+  classDef decision fill:#FFECBD,stroke:#FFC943,color:#1E1E1E
+  classDef success fill:#CDF4D3,stroke:#66D575,color:#1E1E1E
+  classDef recovery fill:#FFCDC2,stroke:#FF7556,color:#1E1E1E
+  class dg1 action
+  class dg2,dg3 decision
+  class dg4 success
+  class dg2x,dg3x,dg4x recovery

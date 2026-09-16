@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto'
-import { campaignPatchRequestSchema, campaignRecordSchema, createCampaignRequestSchema, createInvitationRequestSchema, createTemplateVersionRequestSchema, settingsPatchRequestSchema } from '../../shared/contracts.js'
+import { briefSchema, campaignPatchRequestSchema, campaignRecordSchema, createCampaignRequestSchema, createInvitationRequestSchema, createTemplateVersionRequestSchema, settingsPatchRequestSchema } from '../../shared/contracts.js'
 import { hashCanonical } from '../../shared/canonicalJson.js'
 import { rawBrief } from '../../shared/briefAnalysis.js'
+import { initialBriefingState, createBriefingRepository } from '../repositories/briefingRepository.js'
+import { sourceProjection } from '../../shared/briefingDependencies.js'
 import { withTransaction } from '../db/pool.js'
 import { createCampaignRepository } from '../repositories/campaignRepository.js'
 import { createSettingsRepository } from '../repositories/settingsRepository.js'
@@ -56,6 +58,16 @@ function missing(name) {
   return new WorkflowServiceError(404, 'not_found', `${name} was not found`)
 }
 
+function personalSettings(user) {
+  const names = (user.displayName ?? '').trim().split(/\s+/).filter(Boolean)
+  return {
+    profile: { firstName: user.firstName ?? names[0] ?? user.email.split('@')[0], lastName: user.lastName ?? names.slice(1).join(' '), email: user.email, emailVerified: user.emailVerified ?? null },
+    signIn: { googleEmail: user.googleEmail ?? null, passwordConfigured: user.passwordConfigured === true, googleConnected: user.googleConnected !== false },
+    ai: { connections: ['anthropic', 'openai', 'google', 'openrouter'].map(provider => ({ provider, status: 'not_connected' })), defaults: { text: null, image: null, video: null } },
+    integrations: ['slack', 'discord'].map(platform => ({ platform, status: 'not_connected' })),
+  }
+}
+
 function campaignUpdateInput(id, campaign, expectedRevision) {
   return {
     id,
@@ -91,6 +103,9 @@ export function createWorkflowService({
   idGenerator = randomUUID,
   clock = () => new Date(),
   providerRegistry = generationProviderRegistry,
+  personalAiService,
+  personalSettingsService,
+  briefingEnabled = false,
 } = {}) {
   if (!pool || typeof pool.query !== 'function') throw new TypeError('A PostgreSQL pool is required')
   if (typeof transaction !== 'function') throw new TypeError('A transaction function is required')
@@ -101,6 +116,18 @@ export function createWorkflowService({
     createdAt: clock(),
     ...event,
   })
+
+  const notifyProjectChange = async ({ actor, campaign, action }) => {
+    if (!personalSettingsService || !campaign?.id) return
+    try {
+      await personalSettingsService.enqueueEvent({
+        actor,
+        eventType: 'project_change',
+        dedupeKey: `campaign:${campaign.id}:revision:${campaign.revision}`,
+        payload: { actorId: actor.id, campaignId: campaign.id, action, revision: campaign.revision, status: campaign.status },
+      })
+    } catch { /* Notification failures must not fail committed project changes. */ }
+  }
 
   const executeCampaignCommand = async ({
     actor,
@@ -134,7 +161,7 @@ export function createWorkflowService({
         throw new WorkflowServiceError(409, 'command_rejected', 'The command is not valid for the current campaign')
       }
 
-      const desired = commandCampaignResult(await apply(structuredClone(snapshot)), lockedId)
+      const desired = commandCampaignResult(await apply(structuredClone(snapshot), {client}), lockedId)
       let persisted
       try {
         persisted = commandCampaignResult(
@@ -166,6 +193,69 @@ export function createWorkflowService({
   return {
     executeCampaignCommand,
 
+    async getPersonalSettings({ actor }) {
+      requireRole(actor, ['marketer', 'designer', 'admin'])
+      const user = await repositories.user(pool).findById(actor.id)
+      if (!user) throw missing('User')
+      const base = personalSettings(user)
+      base.profile.emailVerified = actor.emailVerified ?? base.profile.emailVerified
+      base.signIn.googleEmail = actor.googleEmail ?? base.signIn.googleEmail
+      const [ai, personal] = await Promise.all([
+        personalAiService ? personalAiService.getSettings({ actor }) : null,
+        personalSettingsService ? personalSettingsService.getSettings({ actor }) : null,
+      ])
+      if (!ai && !personal) return base
+      return {
+        ...base,
+        ...(ai ? { ai: { ...ai, defaults: { ...ai.defaults, video: null } } } : {}),
+        ...(personal ? personal : {}),
+      }
+    },
+
+    async updatePersonalProfile({ actor, input }) {
+      requireRole(actor, ['marketer', 'designer', 'admin'])
+      const firstName = input.firstName.trim()
+      const lastName = input.lastName.trim()
+      const displayName = [firstName, lastName].filter(Boolean).join(' ')
+      return transaction(pool, async (client) => {
+        const user = await repositories.user(client).updateDisplayName({ id: actor.id, displayName, firstName, lastName: lastName || null })
+        if (!user) throw missing('User')
+        await audit(client, { actorId: actor.id, actorRole: actor.role, action: 'profile.updated', entityType: 'user', entityId: actor.id, payload: { changedFields: ['displayName'] } })
+        return personalSettings(user).profile
+      })
+    },
+
+    async syncPasswordAuth({ actor }) {
+      requireRole(actor, ['marketer', 'designer', 'admin'])
+      if (actor.authProvider !== 'password') {
+        throw new WorkflowServiceError(401, 'recent_password_auth_required', 'Sign in with your new password before continuing')
+      }
+      return transaction(pool, async (client) => {
+        const updated = await repositories.user(client).setAuthMethodState({ id: actor.id, passwordConfigured: true })
+        if (!updated) throw missing('User')
+        await audit(client, { actorId: actor.id, actorRole: actor.role, action: 'auth.password_configured', entityType: 'user', entityId: actor.id, payload: {} })
+        return personalSettings(updated).signIn
+      })
+    },
+
+    async disconnectGoogle({ actor }) {
+      requireRole(actor, ['marketer', 'designer', 'admin'])
+      const user = await repositories.user(pool).findById(actor.id)
+      if (!user) throw missing('User')
+      if (!user.passwordConfigured) {
+        throw new WorkflowServiceError(409, 'password_required', 'Create and verify a password before disconnecting Google')
+      }
+      if (actor.authProvider !== 'password') {
+        throw new WorkflowServiceError(401, 'recent_password_auth_required', 'Sign in with your password again before disconnecting Google')
+      }
+      return transaction(pool, async (client) => {
+        const updated = await repositories.user(client).setAuthMethodState({ id: actor.id, googleConnected: false })
+        if (!updated) throw missing('User')
+        await audit(client, { actorId: actor.id, actorRole: actor.role, action: 'auth.google_disconnected', entityType: 'user', entityId: actor.id, payload: {} })
+        return personalSettings(updated).signIn
+      })
+    },
+
     async listCampaigns({ actor }) {
       requireRole(actor, ['marketer', 'designer', 'admin'])
       return repositories.campaign(pool).list()
@@ -179,7 +269,17 @@ export function createWorkflowService({
     async createCampaign({ actor, input }) {
       requireRole(actor, campaignEditors)
       const command = validate(createCampaignRequestSchema, input)
-      return transaction(pool, async (client) => {
+      // Banner campaigns always enter the canonical briefing workflow. The
+      // client marker is a compatibility hint for older callers, not a
+      // permission switch that can select the retired flow.
+      if (command.projectType === 'banners') {
+        if (!briefingEnabled) throw new WorkflowServiceError(503,'briefing_unavailable','The new briefing flow is not enabled yet.')
+        command.brief.briefing=initialBriefingState(command.brief)
+      } else if (command.brief.briefing?.schemaVersion === 2) {
+        if (!briefingEnabled) throw new WorkflowServiceError(503,'briefing_unavailable','The new briefing flow is not enabled yet.')
+        command.brief.briefing=initialBriefingState(command.brief)
+      }
+      const created = await transaction(pool, async (client) => {
         const created = await repositories.campaign(client).create({
           id: idGenerator(), ...command, createdBy: actor.id,
         })
@@ -190,33 +290,45 @@ export function createWorkflowService({
         })
         return created
       })
+      await notifyProjectChange({ actor, campaign: created, action: 'campaign.created' })
+      return created
     },
 
     async patchCampaign({ actor, campaignId, expectedRevision, patch }) {
       const command = validate(campaignPatchRequestSchema, patch)
       const changedFields = Object.keys(command).sort()
       const briefChanged = Object.hasOwn(command, 'brief')
-      return executeCampaignCommand({
+      const updated = await executeCampaignCommand({
         actor,
         campaignId,
         expectedRevision,
         action: 'campaign.updated',
         validate: ({ campaign }) => {
           if (!briefChanged) return true
+          validate(briefSchema,{...command.brief,...(campaign.brief.briefing?{briefing:campaign.brief.briefing}:{})})
           const edit = applyArtifactEdit(campaign, 'brief')
           if (edit.ok) return true
           return new WorkflowServiceError(edit.status, edit.code, edit.message)
         },
-        apply: (campaign) => {
+        apply: async (campaign, {client}) => {
           if (!briefChanged) return { ...campaign, ...command }
           const edit = applyArtifactEdit(campaign, 'brief')
           if (!edit.ok) throw new WorkflowServiceError(edit.status, edit.code, edit.message)
           const { stale: _stale, ...editedCampaign } = edit.campaign
+          let brief=hashCanonical(rawBrief(campaign.brief)) === hashCanonical(rawBrief(command.brief))
+            ? command.brief : {...command.brief,analysis:null}
+          if (campaign.brief.briefing?.schemaVersion===2) {
+            const sources=await createBriefingRepository(client).listSources(campaign.id)
+            const sourceKey=hashCanonical(sourceProjection(command.brief,sources.map(row=>({id:row.id,contentHash:row.content_hash,parserVersion:row.parser_version}))))
+            const current=campaign.brief.briefing,changed=current.sourceKey!==sourceKey
+            // Raw edits may invalidate server evidence, never author or remove it.
+            brief={...command.brief,analysis:changed?null:campaign.brief.analysis,
+              briefing:{...current,sourceKey,analysisJobId:changed?null:current.analysisJobId,confirmation:changed?null:current.confirmation}}
+          }
           return {
             ...editedCampaign,
             ...command,
-            brief: hashCanonical(rawBrief(campaign.brief)) === hashCanonical(rawBrief(command.brief))
-              ? command.brief : { ...command.brief, analysis: null },
+            brief,
             selectedCopyId: edit.campaign.selectedCopyId ?? null,
             selectedDirectionId: edit.campaign.selectedDirectionId ?? null,
             compositionId: edit.campaign.compositionId ?? null,
@@ -231,6 +343,8 @@ export function createWorkflowService({
           : undefined,
         auditPayload: { changedFields },
       })
+      await notifyProjectChange({ actor, campaign: updated, action: 'campaign.updated' })
+      return updated
     },
 
     async archiveCampaign({ actor, campaignId, expectedRevision }) {
@@ -238,7 +352,7 @@ export function createWorkflowService({
       if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
         throw new WorkflowServiceError(400, 'invalid_revision', 'Expected revision must be a non-negative integer')
       }
-      return transaction(pool, async (client) => {
+      const archived = await transaction(pool, async (client) => {
         const campaigns = repositories.campaign(client)
         const current = await campaigns.findByIdForUpdate(campaignId)
         if (!current) throw missing('Campaign')
@@ -263,18 +377,23 @@ export function createWorkflowService({
         })
         return archived
       })
+      await notifyProjectChange({ actor, campaign: archived, action: 'campaign.archived' })
+      return archived
     },
 
     async duplicateCampaign({ actor, campaignId }) {
       requireRole(actor, campaignEditors)
-      return transaction(pool, async (client) => {
+      const duplicated = await transaction(pool, async (client) => {
         const campaigns = repositories.campaign(client)
         const source = await campaigns.findByIdForUpdate(campaignId)
         if (!source) throw missing('Campaign')
+        const raw=rawBrief(source.brief)
+        const canonicalBanner=briefingEnabled && (source.projectType ?? 'banners') === 'banners'
         const created = await campaigns.create({
           id: idGenerator(),
           title: `${source.title} copy`,
-          brief: rawBrief(source.brief),
+          projectType: source.projectType ?? 'banners',
+          brief: canonicalBanner ? { ...raw, briefing: initialBriefingState(raw) } : raw,
           createdBy: actor.id,
         })
         await audit(client, {
@@ -284,6 +403,8 @@ export function createWorkflowService({
         })
         return created
       })
+      await notifyProjectChange({ actor, campaign: duplicated, action: 'campaign.duplicated' })
+      return duplicated
     },
 
     async listTemplates({ actor }) {

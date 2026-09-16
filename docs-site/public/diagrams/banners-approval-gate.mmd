@@ -1,0 +1,33 @@
+---
+config:
+  flowchart:
+    useMaxWidth: false
+    nodeSpacing: 70
+    rankSpacing: 100
+---
+flowchart LR
+  ap1["AP1  User chooses<br/>Approve ready version"]
+  ap2{"AP2  Approver<br/>allowed?"}
+  ap3{"AP3  Ready version<br/>still current?"}
+  ap4["AP4  Commit approval<br/>+ durable export intent"]
+  ap5["AP5  Show state C<br/>Approved · Preparing files"]
+  ap2x["Authorization dependency<br/>Server enforces reviewer permission and designer / approver separation.<br/>Remain at B11; use an authorized approver."]
+  ap3x["Version dependency<br/>Approval binds saved Figma version, frame mappings, source and output requirements.<br/>Refresh proof at B9; never approve latest blindly."]
+  ap4x["Atomic transition<br/>Approval and export intent commit together.<br/>Failure: remain in B.<br/>Duplicate approval reuses the existing job."]
+  ap5x["Durable job dependency<br/>Browser may close; worker still resumes the saved job.<br/>Show honest progress.<br/>Do not ask for another generate click."]
+  ap1 --> ap2
+  ap2 -->|"Yes"| ap3
+  ap3 -->|"Yes"| ap4
+  ap4 -->|"Committed"| ap5
+  ap2 -->|"No"| ap2x
+  ap3 -->|"No / conflict"| ap3x
+  ap4 -->|"Save fails / repeated"| ap4x
+  ap5 -->|"Worker delayed / offline"| ap5x
+  classDef action fill:#C2E5FF,stroke:#3DADFF,color:#1E1E1E
+  classDef decision fill:#FFECBD,stroke:#FFC943,color:#1E1E1E
+  classDef success fill:#CDF4D3,stroke:#66D575,color:#1E1E1E
+  classDef recovery fill:#FFCDC2,stroke:#FF7556,color:#1E1E1E
+  class ap1,ap4 action
+  class ap2,ap3 decision
+  class ap5 success
+  class ap2x,ap3x,ap4x,ap5x recovery

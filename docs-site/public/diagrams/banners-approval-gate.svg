@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2340" height="650" viewBox="0 0 2340 650" role="img" aria-labelledby="title description">
+<title id="title">banners approval gate logic</title>
+<desc id="description">Read left to right. Recovery paths appear below their owning step. Return IDs identify where to resume.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="#555" stroke-width="1.5"/></marker></defs>
+<rect width="100%" height="100%" fill="#fff"/>
+<path d="M 360 130 L 500 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<path d="M 820 130 L 960 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="870.45" y="118" width="39.1" height="24" fill="#fff"/>
+<text x="890" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Yes</text>
+<path d="M 1280 130 L 1420 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1330.45" y="118" width="39.1" height="24" fill="#fff"/>
+<text x="1350" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Yes</text>
+<path d="M 1740 130 L 1880 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1767.35" y="118" width="85.3" height="24" fill="#fff"/>
+<text x="1810" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Committed</text>
+<path d="M 660 230 L 660 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="644.3" y="273" width="31.4" height="24" fill="#fff"/>
+<text x="660" y="290" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">No</text>
+<path d="M 1120 230 L 1120 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1061.95" y="273" width="116.10000000000001" height="24" fill="#fff"/>
+<text x="1120" y="290" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">No / conflict</text>
+<path d="M 1580 185 L 1580 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1491.15" y="250.5" width="177.70000000000002" height="24" fill="#fff"/>
+<text x="1580" y="267.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Save fails / repeated</text>
+<path d="M 2040 185 L 2040 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1939.6" y="250.5" width="200.8" height="24" fill="#fff"/>
+<text x="2040" y="267.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Worker delayed / offline</text>
+<rect x="40" y="75" width="320" height="110" rx="10" fill="#C2E5FF" stroke="#3DADFF"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="200" y="125">AP1 User chooses</tspan>
+<tspan x="200" y="147">Approve ready version</tspan>
+</text>
+<polygon points="660,30 820,130 660,230 500,130" fill="#FFECBD" stroke="#FFC943"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="660" y="125">AP2 Approver</tspan>
+<tspan x="660" y="147">allowed?</tspan>
+</text>
+<polygon points="1120,30 1280,130 1120,230 960,130" fill="#FFECBD" stroke="#FFC943"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="1120" y="125">AP3 Ready version</tspan>
+<tspan x="1120" y="147">still current?</tspan>
+</text>
+<rect x="1420" y="75" width="320" height="110" rx="10" fill="#C2E5FF" stroke="#3DADFF"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="1580" y="125">AP4 Commit approval</tspan>
+<tspan x="1580" y="147">+ durable export intent</tspan>
+</text>
+<rect x="1880" y="75" width="320" height="110" rx="10" fill="#CDF4D3" stroke="#66D575"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="2040" y="125">AP5 Show state C</tspan>
+<tspan x="2040" y="147">Approved · Preparing files</tspan>
+</text>
+<rect x="500" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="524" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Authorization dependency</text>
+<text x="522" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="542" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Server enforces reviewer</text>
+<text x="542" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">permission and designer /</text>
+<text x="542" y="446" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">approver separation.</text>
+<text x="522" y="474" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="542" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Remain at B11; use an</text>
+<text x="542" y="496" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">authorized approver.</text>
+<rect x="960" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="984" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Version dependency</text>
+<text x="982" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1002" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Approval binds saved Figma</text>
+<text x="1002" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">version, frame mappings,</text>
+<text x="1002" y="446" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">source and output</text>
+<text x="1002" y="468" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">requirements.</text>
+<text x="982" y="496" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1002" y="496" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Refresh proof at B9; never</text>
+<text x="1002" y="518" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">approve latest blindly.</text>
+<rect x="1420" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="1444" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Atomic transition</text>
+<text x="1442" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1462" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Approval and export intent</text>
+<text x="1462" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">commit together.</text>
+<text x="1442" y="452" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1462" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Failure: remain in B.</text>
+<text x="1442" y="480" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1462" y="480" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Duplicate approval reuses the</text>
+<text x="1462" y="502" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">existing job.</text>
+<rect x="1880" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="1904" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Durable job dependency</text>
+<text x="1902" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1922" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Browser may close; worker</text>
+<text x="1922" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">still resumes the saved job.</text>
+<text x="1902" y="452" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1922" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Show honest progress.</text>
+<text x="1902" y="480" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1922" y="480" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Do not ask for another</text>
+<text x="1922" y="502" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">generate click.</text>
+</svg>

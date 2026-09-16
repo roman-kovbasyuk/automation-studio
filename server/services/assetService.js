@@ -22,6 +22,7 @@ function forbidden() {
 }
 
 const mimeTypesByKind = Object.freeze({
+  video: new Set(['video/mp4']),
   direction: new Set(['image/png', 'image/jpeg', 'image/webp']),
   final_image: new Set(['image/png', 'image/jpeg', 'image/webp']),
   review_png: new Set(['image/png']),

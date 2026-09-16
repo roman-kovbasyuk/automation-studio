@@ -27,3 +27,12 @@ describe('canonicalJson', () => {
     expect(() => canonicalJson(circular)).toThrow(TypeError)
   })
 })
+
+ test('hashes binary bytes without Web Crypto, including cross-realm buffers', async () => {
+  const {sha256Bytes}=await import('./canonicalJson.js')
+  const {createHash}=await import('node:crypto')
+  for(const size of [0,1,55,56,64,1024]){
+   const bytes=new Uint8Array(Array.from({length:size},(_,i)=>i%256))
+   expect(sha256Bytes(bytes)).toBe(createHash('sha256').update(bytes).digest('hex'))
+  }
+ })

@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import regularFontUrl from 'inter-ui/display/InterDisplay-Regular.woff2?url'
 import semiboldFontUrl from 'inter-ui/display/InterDisplay-SemiBold.woff2?url'
 import boldFontUrl from 'inter-ui/display/InterDisplay-Bold.woff2?url'
+import arimoFontUrl from '../../shared/fonts/Arimo.ttf?url'
+import arimoCss from '../../shared/fonts/arimo.css?raw'
 import animationCss from './banner-templates.css?raw'
 import { AnimatedBanner, studioSampleImage } from './AnimatedBanner.jsx'
 import { studioTemplates, studioTemplateSamples } from '../../shared/studioTemplates.js'
@@ -32,6 +34,8 @@ async function embedAsset(url, kind) {
     if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) mimeType = 'image/png'
     else if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) mimeType = 'image/jpeg'
     else throw new Error('Use a PNG or JPEG image for the animation draft.')
+  } else if (bytes[0] === 0 && bytes[1] === 1 && bytes[2] === 0 && bytes[3] === 0) {
+    mimeType = 'font/ttf'
   } else if (String.fromCharCode(...bytes.subarray(0, 4)) !== 'wOF2') {
     throw new Error('The bundled font could not be read. Please reload the app.')
   }
@@ -42,9 +46,9 @@ async function embedAsset(url, kind) {
 
 /** Returns a standalone text/html Blob. This is an unapproved draft, never an approved delivery artifact. */
 export async function createAnimatedBannerHtml({
-  templateId = 'editorial-split', headline, body, cta, tag = '', imageUrl = studioSampleImage, ratioId = 'square',
+  templateId = 'editorial-split', manifest, headline, body, cta, tag = '', imageUrl = studioSampleImage, ratioId = 'square',
 } = {}) {
-  const template = studioTemplates.find((item) => item.id === templateId)
+  const template = manifest ?? studioTemplates.find((item) => item.id === templateId)
   if (!template) throw new Error('Choose one of the bundled animation templates.')
   const ratio = template.ratios.find((item) => item.id === ratioId)
   if (!ratio) throw new Error('Choose a supported animation format.')
@@ -58,13 +62,15 @@ export async function createAnimatedBannerHtml({
   localUrl(imageUrl)
   const [imageData, ...fontData] = await Promise.all([
     embedAsset(imageUrl, 'image'), ...fonts.map(([, url]) => embedAsset(url, 'font')),
+    ...(template.slots.some(slot => slot.fontFamily === 'Arimo') ? [embedAsset(arimoFontUrl, 'font')] : []),
   ])
   let css = animationCss
   for (const [index, [name]] of fonts.entries()) {
     css = css.replaceAll(`url('inter-ui/display/InterDisplay-${name}.woff2')`, `url('${fontData[index]}')`)
   }
+  if (fontData[fonts.length]) css += arimoCss.replace("url('./Arimo.ttf')", `url('${fontData[fonts.length]}')`)
   const markup = renderToStaticMarkup(createElement(AnimatedBanner, {
-    templateId, ratioId, ...values, imageUrl: imageData, playing: true,
+    templateId, manifest: template, ratioId, ...values, imageUrl: imageData, playing: true,
   }))
   const html = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">

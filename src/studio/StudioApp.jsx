@@ -1,3 +1,4 @@
+import { FigmaPairingDialog } from './FigmaPairingDialog.jsx'
 import {
   lazy,
   Suspense,
@@ -10,13 +11,13 @@ import {
 import {
   ArrowLeft,
   ArrowUpRight,
+  AlertCircle,
   Check,
   ChevronDown,
   CircleHelp,
   LayoutTemplate,
   LogOut,
   Menu,
-  MessageSquare,
   MoreHorizontal,
   Pin,
   PinOff,
@@ -32,12 +33,20 @@ import {
 } from 'lucide-react'
 import { createStudioApi } from './api.js'
 import { useStudioAuth } from './auth.js'
-import { BriefStage } from './BriefStage.jsx'
-import { UpdatedText, useTextUpdate } from '../components/design-system/atoms/UpdatedText.jsx'
+import { HomeScreen } from './HomeScreen.jsx'
+import { useBriefingCapability } from './useBriefingCapability.js'
 import { CampaignPage } from './campaign/CampaignPage.jsx'
 import { useCampaignRuntime } from './campaign/useCampaignRuntime.js'
+import {createSourceCampaignSubmission} from './campaign/sourceCampaign.js'
+import {createCampaignRuntime} from './campaign/campaignRuntime.js'
+import {createWorkflowCoordinator} from './campaign/workflowCoordinator.js'
 import { campaignModuleUrl, parseCampaignModule } from './campaign/campaignRoutes.js'
-import { BrandDesignSystems } from './BrandDesignSystems.jsx'
+import { SettingsScreen } from './SettingsScreen.jsx'
+import { AssetComingSoon, NewAssetScreen, ProjectTypeIcon, getProjectType } from './NewAssetScreen.jsx'
+import { AdminApp } from './admin/AdminApp.jsx'
+import { AtomsRoot as DesignSystemRoot, TextField, Skeleton, Heading } from 'brutalist-design-system'
+import { SidebarPanel, AppButton, Menu as ActionMenu, Dialog, Drawer, Alert, AITaskStatus, StatusBadge } from "../components/design-system/compatibility.jsx"
+import { SidebarAccountMenu } from './SidebarAccountMenu.jsx'
 import { Button, ErrorNotice } from './primitives.jsx'
 import {
   editableStatuses,
@@ -49,6 +58,8 @@ import './campaign-layout.css'
 
 const TemplateLibrary = lazy(() => import('./TemplateLibrary.jsx')
   .then(module => ({ default: module.TemplateLibrary })))
+const BrandDesignSystemPage = lazy(() => import('./brand/BrandDesignSystemPage.jsx')
+  .then(module => ({ default: module.BrandDesignSystemPage })))
 
 const readRoute = () => ({ ...routeFromLocation(location.pathname, location.search),
   module: parseCampaignModule(location.search, location.hash) })
@@ -69,7 +80,7 @@ export function StudioApp() {
     )
   if (!auth.user)
     return (
-      <div className="bs-root bs-auth">
+      <DesignSystemRoot><div className="bs-auth">
         <span className="bs-wordmark">
           <Shapes size={24} />
           Banner Studio
@@ -85,27 +96,41 @@ export function StudioApp() {
           <ArrowUpRight size={18} />
         </Button>
         <a href="/docs/">Read the team documentation</a>
-      </div>
+      </div></DesignSystemRoot>
     )
   return (
     <ConnectedStudio
       key={`${auth.demo ? auth.role : auth.user.uid}`}
       api={api}
       demo={auth.demo}
-      onRole={auth.setRole}
+      authMethods={auth}
       onSignOut={auth.signOut}
     />
   )
 }
 
-export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
+export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, prototypeMode = false }) {
+  const [figmaPairingId,setFigmaPairingId]=useState(()=>new URLSearchParams(window.location.search).get('figmaPairing'))
+  const [scrollbarActive, setScrollbarActive] = useState(false)
+  const scrollbarTimer = useRef(null)
+  useEffect(() => () => clearTimeout(scrollbarTimer.current), [])
+  function showSidebarScrollbar() {
+    setScrollbarActive(true)
+    clearTimeout(scrollbarTimer.current)
+    scrollbarTimer.current = setTimeout(() => setScrollbarActive(false), 900)
+  }
+
   const [actor, setActor] = useState(null)
   const [campaigns, setCampaigns] = useState([])
   const [templates, setTemplates] = useState([])
   const [workspace, setWorkspace] = useState(null)
-  const titleUpdated = useTextUpdate(workspace?.campaign.title, workspace?.campaign.id)
+  const [personalSettings, setPersonalSettings] = useState(null)
+  const [generationReadiness, setGenerationReadiness] = useState(null)
+  const [settingsLoading, setSettingsLoading] = useState(false)
   const [route, setRoute] = useState(readRoute)
   const [loading, setLoading] = useState(true)
+  const [studioListsLoading, setStudioListsLoading] = useState(false)
+  const studioListsDeferred = useRef(false)
   const [workspaceLoading, setWorkspaceLoading] = useState(false)
   const [error, setError] = useState(null)
   const [pending, setPending] = useState('')
@@ -115,17 +140,25 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
   const [searchOpen, setSearchOpen] = useState(false)
   const [pinnedIds, setPinnedIds] = useState([])
   const [openCampaignMenu, setOpenCampaignMenu] = useState(null)
+  const [deleteConfirmation, setDeleteConfirmation] = useState(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const titleRef = useRef(null)
   const titleDraft = useRef('')
   const [requestedTemplate, setRequestedTemplate] = useState(null)
   const dirtyRef = useRef(false)
+  const adminBusyRef = useRef(false)
+  const [adminLeavePath, setAdminLeavePath] = useState(null)
+  const adminLeaveFocus = useRef(null)
+  const markAdminBusy = useCallback(value => { adminBusyRef.current = value }, [])
   const inFlight = useRef(false)
   const loadId = useRef(0)
   const mainRef = useRef(null)
-  const mobileRef = useRef(null)
+  const deleteTriggerRef = useRef(null)
   const analyzeOnOpen = useRef(null)
+  const sourceBriefingEnabled=useBriefingCapability(api)
+  const sourceSubmission=useMemo(()=>createSourceCampaignSubmission({api}),[api,route.view])
+  const sourceAnalysis=useRef(null)
   const runtime = useCampaignRuntime({ api, actor, templates,
     workspace: route.view === 'campaign' && workspace?.campaign.id === route.id ? workspace : null,
     onCampaignChange: campaign => {
@@ -137,7 +170,7 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
   const acceptedLocation = useRef({ route, url: location.pathname + location.search + location.hash })
   useEffect(() => { acceptedLocation.current = { route, url: location.pathname + location.search + location.hash } }, [route])
   const hasUnsavedChanges = () => dirtyRef.current || runtimeRef.current?.hasDirty()
-  const campaignBusy = () => inFlight.current || runtimeRef.current?.isBusy()
+  const campaignBusy = () => adminBusyRef.current || inFlight.current || runtimeRef.current?.isBusy()
   const markDirty = useCallback((value) => {
     dirtyRef.current = value
   }, [])
@@ -158,10 +191,27 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
       localStorage.setItem(`studio:pins:${actor.id}`, JSON.stringify(next))
     } catch { /* Pins still work for this session when browser storage is unavailable. */ }
   }
+  function closeDeleteConfirmation({ restoreFocus = true } = {}) {
+    setDeleteConfirmation(null)
+    if (restoreFocus) requestAnimationFrame(() => deleteTriggerRef.current?.focus())
+  }
+  function requestDeleteCampaign(campaign, trigger) {
+    if (!editor || campaignBusy()) return
+    deleteTriggerRef.current = trigger
+    setOpenCampaignMenu(null)
+    setDeleteConfirmation(campaign)
+  }
   const focusSearchInput = useCallback(() => {
     requestAnimationFrame(() => {
-      document.querySelector('.bs-sidebar .bs-search input, .bs-mobile-sidebar[open] .bs-search input')?.focus()
+      const scope = document.querySelector('[role="dialog"] .bs-mobile-navigation') ?? document.getElementById('sidebar-create')
+      const input = scope?.querySelector('input[type="search"]')
+      if (input) input.focus()
+      else scope?.querySelector('button[aria-label="Search campaigns"]')?.click()
     })
+  }, [])
+  const closeSearch = useCallback(() => {
+    setSearchOpen(false)
+    setSearch('')
   }, [])
   useEffect(() => {
     if (!editingTitle || !titleRef.current) return
@@ -175,6 +225,13 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
   }, [editingTitle])
 
   const loadLists = useCallback(async () => {
+    // Keep Studio's existing load timing; administration does not depend on
+    // the legacy campaign/template endpoints being available.
+    if (readRoute().view === 'admin') {
+      studioListsDeferred.current = true
+      setActor(await api.getSession())
+      return
+    }
     const [session, campaignList, templateList] = await Promise.all([
       api.getSession(),
       api.listCampaigns(),
@@ -183,6 +240,7 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
     setActor(session)
     setCampaigns(campaignList.campaigns)
     setTemplates(templateList.templates)
+    studioListsDeferred.current = false
   }, [api])
   useEffect(() => {
     let active = true
@@ -197,6 +255,35 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
       active = false
     }
   }, [loadLists])
+  useEffect(() => {
+    if (route.view === 'admin' || !studioListsDeferred.current) return
+    let active = true
+    setStudioListsLoading(true)
+    Promise.all([api.listCampaigns(), api.listTemplates()]).then(([campaignList, templateList]) => {
+      if (!active) return
+      setCampaigns(campaignList.campaigns)
+      setTemplates(templateList.templates)
+      studioListsDeferred.current = false
+    }).catch(value => {
+      if (active) setError(value)
+    }).finally(() => {
+      if (active) setStudioListsLoading(false)
+    })
+    return () => { active = false }
+  }, [api, route.view])
+  const previousView = useRef(route.view)
+  useEffect(() => {
+    const enteringTemplates = route.view === 'templates' && previousView.current !== 'templates'
+    previousView.current = route.view
+    if (!enteringTemplates || studioListsDeferred.current) return
+    let active = true
+    api.listTemplates().then(value => {
+      if (active) setTemplates(value.templates)
+    }).catch(value => {
+      if (active) setError(value)
+    })
+    return () => { active = false }
+  }, [api, route.view])
   const loadWorkspace = useCallback(
     async (id) => {
       const ticket = ++loadId.current
@@ -226,13 +313,55 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
       setWorkspaceLoading(false)
     }
   }, [route.view, route.id, loadWorkspace])
+  const loadPersonalSettings = useCallback(async () => {
+    setSettingsLoading(true)
+    setError(null)
+    try {
+      const value = await api.getPersonalSettings()
+      setPersonalSettings(value)
+    } catch (value) {
+      setPersonalSettings(null)
+      setError(value)
+    } finally {
+      setSettingsLoading(false)
+    }
+  }, [api])
+  const loadGenerationReadiness = useCallback(async () => {
+    if (typeof api.getGenerationReadiness !== 'function') return
+    try {
+      setGenerationReadiness(await api.getGenerationReadiness())
+    } catch (value) {
+      setGenerationReadiness({
+        state: 'unavailable', reasonCode: 'readiness_unavailable',
+        message: 'AI readiness could not be checked. Open Settings before generating.',
+        destination: null, textModel: null, imageModel: null, maskedCredential: null,
+        spendingControl: 'external',
+      })
+    }
+  }, [api])
+  useEffect(() => {
+    if (route.view !== 'settings') return
+    setPersonalSettings(null)
+    loadPersonalSettings()
+  }, [loadPersonalSettings, route.view])
+  useEffect(() => {
+    if (!actor?.id || route.view === 'admin' || route.view === 'campaign') return
+    loadGenerationReadiness()
+  }, [actor?.id, loadGenerationReadiness, route.view])
   useEffect(() => {
     const pop = () => {
       const next = readRoute()
+      const nextUrl = location.pathname + location.search + location.hash
       const previous = acceptedLocation.current
       const sameCampaign = next.view === 'campaign' && previous.route.view === 'campaign' && next.id === previous.route.id
       if (!sameCampaign) {
-        if (inFlight.current || runtimeRef.current?.isBusy() ||
+        if (previous.route.view === 'admin' && dirtyRef.current && !adminBusyRef.current) {
+          history.pushState({}, '', previous.url)
+          adminLeaveFocus.current = document.activeElement
+          setAdminLeavePath(nextUrl)
+          return
+        }
+        if (adminBusyRef.current || inFlight.current || runtimeRef.current?.isBusy() ||
           ((dirtyRef.current || runtimeRef.current?.hasDirty()) && !window.confirm('Discard your unsaved changes?'))) {
           history.pushState({}, '', previous.url)
           return
@@ -257,6 +386,7 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
     }
   }, [markDirty])
   useEffect(() => {
+    if (route.view === 'admin') return
     const onKeyDown = (event) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
@@ -266,15 +396,11 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
       if (event.key === 'Escape') {
         setOpenCampaignMenu(null)
         setUserMenuOpen(false)
-        if (searchOpen) {
-          setSearchOpen(false)
-          setSearch('')
-        }
+        if (searchOpen) closeSearch()
       }
     }
     const onPointerDown = (event) => {
-      if (!event.target.closest?.('.bs-campaign-item')) setOpenCampaignMenu(null)
-      if (!event.target.closest?.('.bs-profile-shell')) setUserMenuOpen(false)
+      if (searchOpen && !event.target.closest?.('.bs-brand-row')) closeSearch()
     }
     window.addEventListener('keydown', onKeyDown)
     document.addEventListener('pointerdown', onPointerDown)
@@ -282,15 +408,11 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
       window.removeEventListener('keydown', onKeyDown)
       document.removeEventListener('pointerdown', onPointerDown)
     }
-  }, [focusSearchInput, searchOpen])
-  useEffect(() => {
-    if (sidebarOpen) mobileRef.current?.showModal()
-    else mobileRef.current?.close()
-  }, [sidebarOpen])
+  }, [closeSearch, focusSearchInput, searchOpen, route.view])
   useEffect(() => {
     if (!workspaceLoading) mainRef.current?.focus({ preventScroll: true })
   }, [route.view, route.id, workspaceLoading])
-  function navigate(path) {
+  function navigate(path, { discardAdmin = false } = {}) {
     if (campaignBusy()) return
     const target = new URL(path, location.origin)
     const next = routeFromLocation(target.pathname, target.search)
@@ -300,7 +422,12 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
       setSidebarOpen(false)
       return
     }
-    if (hasUnsavedChanges() && !window.confirm('Discard your unsaved changes?')) return
+    if (route.view === 'admin' && hasUnsavedChanges() && !discardAdmin) {
+      adminLeaveFocus.current = document.activeElement
+      setAdminLeavePath(path)
+      return
+    }
+    if (hasUnsavedChanges() && !discardAdmin && !window.confirm('Discard your unsaved changes?')) return
     markDirty(false)
     history.pushState({}, '', path)
     setRoute(readRoute())
@@ -322,19 +449,35 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
     setPending('Create campaign')
     setError(null)
     try {
-      const campaign = await api.createCampaign(input)
+      const sourceBacked=Object.hasOwn(input,'sources')
+      let campaign=sourceBacked?await sourceSubmission({...input,projectType:input.projectType??'banners'}):await api.createCampaign({ ...input, projectType: input.projectType ?? 'banners' })
+      if(sourceBacked) {
+        if(sourceAnalysis.current?.id!==campaign.id) {
+          sourceAnalysis.current?.runtime.dispose()
+          const initialRuntime=createCampaignRuntime({api,actor,templates,workspace:await api.getWorkspace(campaign.id)})
+          sourceAnalysis.current={id:campaign.id,runtime:initialRuntime,coordinator:createWorkflowCoordinator({runtime:initialRuntime})}
+        }
+        setPending('Analyzing campaign materials')
+        const result=await sourceAnalysis.current.coordinator.analyzeAndGenerate()
+        if(!result.ok) {setError(new Error(result.message));return result}
+        campaign=(await api.getWorkspace(campaign.id)).campaign
+        sourceAnalysis.current.runtime.dispose();sourceAnalysis.current=null
+      }
       markDirty(false)
-      analyzeOnOpen.current = campaign.id
+      analyzeOnOpen.current = sourceBacked?null:campaign.id
       setCampaigns(items => [campaign, ...items.filter(item => item.id !== campaign.id)])
       history.pushState({}, '', campaignModuleUrl(campaign.id, 'brief'))
       setRoute(readRoute())
       return { ok: true }
     } catch (failure) {
-      const uncertain = failure.status === undefined || failure.status === 0 || failure.status >= 500
+      const uncertain = !failure.campaignId && (failure.status === undefined || failure.status === 0 || failure.status >= 500)
       const value = uncertain ? new Error('Creation may have completed. Check the campaign list before creating another campaign.') : failure
-      setError(value)
-      if (uncertain) await loadLists().catch(() => {})
-      return { ok: false, message: value.message }
+      // A transport failure leaves creation uncertain, so reconcile the list in
+      // the background without adding a blocking notice below the new-brief form.
+      // Known validation failures remain visible to the user.
+      if (!uncertain) setError(value)
+      if (uncertain || failure.campaignId) await loadLists().catch(() => {})
+      return { ok: false, message: value.message, silent: uncertain }
     } finally {
       inFlight.current = false
       setPending('')
@@ -364,7 +507,6 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
   }
   async function deleteCampaign(campaign) {
     if (!editor || campaignBusy()) return
-    if (!window.confirm(`Remove “${campaign.title}” from active campaigns? Its files and history will be retained.`)) return
     inFlight.current = true
     setOpenCampaignMenu(null)
     setPending('Remove campaign')
@@ -374,7 +516,7 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
       await loadLists()
       markDirty(false)
       if (route.id === campaign.id) {
-        history.pushState({}, '', '/mvp')
+        history.pushState({}, '', '/')
         setRoute(readRoute())
         setWorkspace(null)
       }
@@ -404,6 +546,7 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
     item.title.toLowerCase().includes(search.toLowerCase()),
   )
   const editor = actor?.role === 'admin' || actor?.role === 'marketer'
+  const canManageWorkflows = actor?.role === 'admin' && !actor.disabled && !actor.disabledAt
   const generationBlocked = workspace?.jobs.some((job) =>
     ['pending', 'unknown'].includes(job.status),
   )
@@ -412,271 +555,78 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
     !editableStatuses.has(workspace?.campaign.status) ||
     generationBlocked
   const navItems = [
-    ['campaigns', 'Campaigns', MessageSquare, '/mvp'],
+    ['campaigns', 'Home', Shapes, '/'],
     ['templates', 'Templates', LayoutTemplate, '/mvp/templates'],
     ['system', 'Design system', Shapes, '/mvp/system'],
   ]
-  const sidebar = (
-    <>
-      <div className="bs-brand-row">
-        <button className="bs-brand" onClick={() => navigate('/mvp')}>
-          <Shapes size={25} strokeWidth={1.7} aria-hidden="true" />
-          <span>Studio</span>
-        </button>
-        <button
-          className="bs-search-trigger"
-          type="button"
-          aria-label="Search campaigns"
-          aria-expanded={searchOpen}
-          onClick={() => {
-            setSearchOpen(true)
-            focusSearchInput()
-          }}
-        >
-          <Search size={18} aria-hidden="true" />
-        </button>
-      </div>
-      <Button
-        className="bs-new"
-        primary
-        disabled={!editor || Boolean(pending)}
-        onClick={() => navigate('/mvp/new')}
-      >
-        <Plus size={18} aria-hidden="true" />
-        New campaign
-      </Button>
-      <nav className="bs-navigation" aria-label="Main navigation">
-        {navItems.map(([view, label, Icon, path]) => (
-          <a
-            href={path}
-            key={view}
-            onClick={(event) => {
-              if (!event.metaKey && !event.ctrlKey) {
-                event.preventDefault()
-                navigate(path)
-              }
-            }}
-            aria-current={
-              route.view === view ||
-              (route.view === 'campaign' && view === 'campaigns')
-                ? 'page'
-                : undefined
-            }
-          >
-            <Icon size={19} aria-hidden="true" />
-            {label}
-          </a>
-        ))}
-      </nav>
-      <div className="bs-campaign-history">
-        {searchOpen && (
-          <div className="bs-search">
-            <Search size={16} aria-hidden="true" />
-            <label>
-              <span className="sr-only">Search campaigns</span>
-              <input
-                type="search"
-                placeholder="Search campaigns"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            </label>
-            <button
-              type="button"
-              aria-label="Close search"
-              onClick={() => {
-                setSearchOpen(false)
-                setSearch('')
-              }}
-            >
-              <X size={15} aria-hidden="true" />
-            </button>
-          </div>
-        )}
-        <div className="bs-project-groups">
-          {[
-            ['Pinned projects', pinnedIds.map((id) => visibleCampaigns.find((campaign) => campaign.id === id)).filter(Boolean)],
-            ['Recent projects', visibleCampaigns.filter((campaign) => !pinnedIds.includes(campaign.id))],
-          ].filter(([label, projects]) => label !== 'Pinned projects' || projects.length > 0).map(([label, projects]) => (
-          <section className="bs-project-group" aria-label={label} key={label}>
-            <p>{label}</p>
-          {projects.map((campaign) => (
-            <div className="bs-campaign-item" key={campaign.id}>
-              <a
-                href={`/mvp/campaign/${encodeURIComponent(campaign.id)}`}
-                onClick={(event) => {
-                  if (!event.metaKey && !event.ctrlKey) {
-                    event.preventDefault()
-                    navigate(event.currentTarget.getAttribute('href'))
-                  }
-                }}
-                aria-current={route.id === campaign.id ? 'page' : undefined}
-                title={campaign.title}
-              >
-                <UpdatedText value={campaign.title} identity={campaign.id} />
-              </a>
-              <button
-                type="button"
-                className="bs-campaign-actions"
-                aria-label={`${pinnedIds.includes(campaign.id) ? 'Unpin' : 'Pin'} ${campaign.title}`}
-                aria-pressed={pinnedIds.includes(campaign.id)}
-                onClick={() => togglePin(campaign.id)}
-              >
-                {pinnedIds.includes(campaign.id) ? <PinOff size={16} aria-hidden="true" /> : <Pin size={16} aria-hidden="true" />}
-              </button>
-              <button
-                type="button"
-                className="bs-campaign-actions"
-                aria-label={`Actions for ${campaign.title}`}
-                aria-expanded={openCampaignMenu === campaign.id}
-                onClick={() => setOpenCampaignMenu((value) => value === campaign.id ? null : campaign.id)}
-              >
-                <MoreHorizontal size={16} aria-hidden="true" />
-              </button>
-              {openCampaignMenu === campaign.id && (
-                <div className="bs-campaign-menu" role="menu" aria-label={`Actions for ${campaign.title}`}>
-                  <button type="button" role="menuitem" disabled={!editor} onClick={() => duplicateCampaign(campaign)}>
-                    <Copy size={15} aria-hidden="true" />
-                    Duplicate
-                  </button>
-                  <button type="button" role="menuitem" disabled={!editor} onClick={() => deleteCampaign(campaign)}>
-                    <Trash2 size={15} aria-hidden="true" />
-                    Delete
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-          {!projects.length && !search && <span className="bs-history-empty">No recent projects.</span>}
-          </section>
-          ))}
-          {!visibleCampaigns.length && (
-            <span className="bs-history-empty">
-              {search
-                ? 'No matching campaigns'
-                : 'Your campaigns will appear here.'}
-            </span>
-          )}
-        </div>
-      </div>
-      <footer className="bs-sidebar-footer">
-        {actor && (
-          <div className="bs-profile-shell">
-            <button
-              type="button"
-              className="bs-profile"
-              aria-haspopup="menu"
-              aria-expanded={userMenuOpen}
-              onClick={() => setUserMenuOpen((value) => !value)}
-            >
-              <span className="bs-avatar" aria-hidden="true">
-                {actor.displayName?.slice(0, 1) ?? 'B'}
-              </span>
-              <span className={`bs-profile-copy${demo ? ' is-demo' : ''}`}>
-                <strong>{actor.displayName}</strong>
-                <small>{actor.role}</small>
-              </span>
-              <ChevronDown size={16} aria-hidden="true" />
-            </button>
-            {demo && (
-              <label className="bs-profile-role">
-                <span className="sr-only">Demo role</span>
-                <select
-                  aria-label="Demo role"
-                  value={actor.role}
-                  disabled={Boolean(pending)}
-                  onChange={(event) => {
-                    if (campaignBusy()) return
-                    if (
-                      !hasUnsavedChanges() ||
-                      window.confirm('Discard your unsaved changes?')
-                    )
-                      onRole(event.target.value)
-                  }}
-                >
-                  <option value="marketer">Marketer</option>
-                  <option value="designer">Designer</option>
-                  <option value="admin">Admin</option>
-                </select>
-              </label>
-            )}
-            {userMenuOpen && (
-              <div className="bs-user-menu" role="menu" aria-label="User menu">
-                <button
-                  type="button"
-                  role="menuitem"
-                  disabled={!editor}
-                  onClick={() => {
-                    setUserMenuOpen(false)
-                    navigate('/mvp/new')
-                  }}
-                >
-                  <Plus size={17} aria-hidden="true" />
-                  New campaign
-                </button>
-                <hr />
-                <button type="button" role="menuitem" disabled>
-                  <Settings size={17} aria-hidden="true" />
-                  Settings
-                </button>
-                <button type="button" role="menuitem" disabled>
-                  <Users size={17} aria-hidden="true" />
-                  Teams
-                </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    if (campaignBusy() || (hasUnsavedChanges() && !window.confirm('Discard your unsaved changes?'))) return
-                    setUserMenuOpen(false)
-                    onSignOut?.()
-                  }}
-                >
-                  <LogOut size={17} aria-hidden="true" />
-                  Sign out
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-      </footer>
-    </>
-  )
+  if (canManageWorkflows) {
+    navItems.push(['admin', 'Administration', Settings, '/mvp/admin'])
+  }
+  // Route anchors through the app so unsaved-change and busy guards stay authoritative.
+  const onSidebarNavigate = event => {
+    const link = event.target.closest('a[href]')
+    if (!link || event.defaultPrevented || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return
+    const url = new URL(link.href, window.location.href)
+    if (url.origin !== window.location.origin) return
+    event.preventDefault()
+    navigate(`${url.pathname}${url.search}${url.hash}`)
+  }
+  const account = actor ? { label: actor.displayName, actions: [
+    { id: 'new', label: 'New campaign', disabled: !editor },
+    { id: 'settings', label: 'Settings' },
+    { id: 'teams', label: 'Teams', disabled: true },
+    { id: 'signout', label: 'Sign out' },
+  ], onAction: action => {
+    if (action === 'new') navigate('/mvp/new')
+    if (action === 'settings') navigate('/mvp/settings')
+    if (action === 'signout' && !campaignBusy() && (!hasUnsavedChanges() || window.confirm('Discard your unsaved changes?'))) onSignOut?.()
+  } } : undefined
+  const sidebar = <div className="bs-sidebar-shell"><SidebarPanel
+    brand={{ label: 'Studio', href: '/' }}
+    primaryAction={{ label: 'Create new', icon: <Plus size={18} />, onClick: () => { if (editor && !pending) navigate('/mvp/new') } }}
+    navigation={navItems.map(([id, label, Icon, href]) => ({ id, label, href, icon: <Icon size={18} />, current: route.view === id }))}
+    projects={campaigns.map(campaign => ({ id: campaign.id, title: campaign.title,
+      href: `/mvp/campaign/${encodeURIComponent(campaign.id)}`, pinned: pinnedIds.includes(campaign.id),
+      actions: [
+        { id: 'pin', label: pinnedIds.includes(campaign.id) ? 'Unpin' : 'Pin' },
+        { id: 'duplicate', label: 'Duplicate', disabled: !editor },
+        { id: 'delete', label: 'Delete', danger: true, disabled: !editor },
+      ] }))}
+    search={{ placeholder: 'Search campaigns' }}
+    onProjectAction={(id, action) => {
+      const campaign = campaigns.find(item => item.id === id)
+      if (!campaign) return
+      if (action === 'pin') togglePin(id)
+      if (action === 'duplicate') duplicateCampaign(campaign)
+      if (action === 'delete') requestDeleteCampaign(campaign, document.activeElement)
+    }}
+    />
+    {account && <SidebarAccountMenu {...account} />}
+  </div>
+
+  if (route.view === 'admin') return <AdminApp api={api} actor={actor} route={route} onNavigate={navigate} onDirtyChange={markDirty} onBusyChange={markAdminBusy} loading={loading} sessionError={error} leavePrompt={adminLeavePath !== null} onLeaveCancel={fallback => { setAdminLeavePath(null); requestAnimationFrame(() => { const previous = adminLeaveFocus.current; const target = previous?.isConnected ? previous : fallback?.isConnected ? fallback : document.getElementById('admin-main'); target?.focus?.() }) }} onLeaveConfirm={() => { const path = adminLeavePath; setAdminLeavePath(null); navigate(path, { discardAdmin: true }) }}/>
 
   return (
-    <div className="bs-root">
+    <DesignSystemRoot><div className="bs-root">
+      {actor?.id && figmaPairingId && api.confirmFigmaPairing && <FigmaPairingDialog api={api} pairingId={figmaPairingId} onClose={()=>{setFigmaPairingId(null);const url=new URL(window.location.href);url.searchParams.delete('figmaPairing');window.history.replaceState(null,'',url)}}/>}
       <a className="bs-skip" href="#studio-main">
         Skip to workspace
       </a>
-      <aside className="bs-sidebar">{sidebar}</aside>
-      <dialog
-        className="bs-mobile-sidebar"
-        ref={mobileRef}
-        onCancel={() => setSidebarOpen(false)}
-        onClick={(event) => {
-          if (event.target === mobileRef.current) setSidebarOpen(false)
-        }}
-      >
-        <div>
-          <Button
-            className="bs-mobile-close"
-            aria-label="Close navigation"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <X size={20} />
-          </Button>
-          {sidebar}
+      <div id="sidebar-create" onClickCapture={onSidebarNavigate}>{sidebar}</div>
+      {deleteConfirmation && <Dialog open onOpenChange={open => { if (!open) closeDeleteConfirmation() }}
+        title={`Remove ${deleteConfirmation.title}?`} description="Its files and history will be retained.">
+        <div className="bs-dialog-actions">
+          <AppButton variant="secondary" onClick={() => closeDeleteConfirmation()}>Cancel</AppButton>
+          <AppButton variant="danger" onClick={() => { const campaign = deleteConfirmation; closeDeleteConfirmation({ restoreFocus: false }); deleteCampaign(campaign) }}>Remove campaign</AppButton>
         </div>
-      </dialog>
+      </Dialog>}
       <div className="bs-main">
         <header className="bs-topbar">
-          <Button
-            className="bs-menu"
-            aria-label="Open navigation"
-            onClick={() => setSidebarOpen(true)}
-          >
-            <Menu size={20} />
-          </Button>
+          <span className="bs-menu"><Drawer side="left" open={sidebarOpen} onOpenChange={setSidebarOpen}
+            title="Navigation" closeLabel="Close navigation"
+            trigger={<AppButton variant="icon" aria-label="Open navigation"><Menu size={20} /></AppButton>}>
+            <div className="bs-mobile-navigation" onClickCapture={onSidebarNavigate}>{sidebar}</div>
+          </Drawer></span>
           <div className="bs-breadcrumb">
             <span>Workspace</span>
             <span aria-hidden="true">/</span>
@@ -685,18 +635,18 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
                 ? (workspace?.campaign.title ?? 'Campaign')
                 : route.view === 'templates'
                   ? 'Templates'
-                  : route.view === 'system'
+                : route.view === 'system'
                     ? 'Design system'
-                    : 'Campaigns'}
+                    : route.view === 'admin'
+                      ? 'Asset workflows'
+                    : route.view === 'settings'
+                      ? 'Settings'
+                    : route.view === 'new' ? 'Create new' : 'Home'}
             </strong>
             {route.view === 'campaign' && workspace && (
-              <span
-                className="bs-status bs-topbar-status"
-                data-status={workspace.campaign.status}
-                data-attention={['in_review', 'changes_requested', 'ready'].includes(workspace.campaign.status) || undefined}
-              >
+              <StatusBadge tone={['in_review', 'changes_requested', 'ready'].includes(workspace.campaign.status) ? 'info' : 'neutral'}>
                 {statusLabel(workspace.campaign.status)}
-              </span>
+              </StatusBadge>
             )}
           </div>
           <div className="bs-topbar-right">
@@ -721,41 +671,31 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
             }}
           />
           {notice && (
-            <div className="bs-notice" role="status">
-              <Check size={16} aria-hidden="true" />
-              {notice}
-              <button
-                aria-label="Dismiss notification"
-                onClick={() => setNotice('')}
-              >
-                <X size={15} />
-              </button>
-            </div>
+            <div className="bs-feedback-space" role="status"><Alert tone="success" onDismiss={() => setNotice('')}>{notice}</Alert></div>
           )}
           {pending && (
-            <div className="bs-pending" role="status">
-              <span className="bs-spinner">
-                <RefreshCw size={17} />
-              </span>
-              {pending}…
-            </div>
+            <div className="bs-feedback-space"><AITaskStatus status="running" label={`${pending}…`} /></div>
           )}
-          {loading || workspaceLoading || (route.view === 'campaign' && workspace && !runtime) ? (
+          {loading || studioListsLoading || workspaceLoading || (route.view === 'campaign' && workspace && !runtime) ? (
             <div
               className="bs-loading"
               role="status"
               aria-label="Loading workspace"
             >
-              <span />
-              <span />
-              <span />
+              <Skeleton lines={3} />
             </div>
           ) : route.view === 'system' ? (
-            <BrandDesignSystems />
+            <Suspense fallback={<div className="bs-loading" role="status" aria-label="Loading brand systems"><Skeleton lines={3} /></div>}>
+              <BrandDesignSystemPage api={api} actor={actor} route={route} onNavigate={navigate} onDirtyChange={markDirty} />
+            </Suspense>
+          ) : route.view === 'settings' ? (
+            personalSettings ? <SettingsScreen api={api} settings={personalSettings} auth={authMethods} readiness={generationReadiness} onReadinessRefresh={loadGenerationReadiness} /> : settingsLoading ? <div className="bs-loading" role="status" aria-label="Loading settings"><Skeleton lines={3} /></div> : <Alert tone="danger" title="Settings unavailable"><p>We couldn’t load your personal settings.</p><Button onClick={loadPersonalSettings}>Retry settings</Button></Alert>
           ) : route.view === 'templates' ? (
-            <Suspense fallback={<div className="bs-loading" role="status" aria-label="Loading templates"><span /><span /><span /></div>}>
+            <Suspense fallback={<div className="bs-loading" role="status" aria-label="Loading templates"><Skeleton lines={3} /></div>}>
               <TemplateLibrary
                 templates={templates}
+                api={api}
+                onCreateCampaign={() => navigate('/')}
                 canChoose={editor && !pending}
                 onChoose={(id) => {
                   setRequestedTemplate(id)
@@ -765,14 +705,21 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
                 }}
               />
             </Suspense>
+          ) : route.view === 'new' && !route.asset ? (
+            <NewAssetScreen onChoose={(asset) => {
+              if (asset === 'banners') navigate('/')
+              else if (asset === 'presentations') navigate('/mvp/templates?category=presentations#presentation-templates')
+              else navigate(`/mvp/new?asset=${encodeURIComponent(asset)}`)
+            }} />
+          ) : route.view === 'new' && route.asset ? (
+            <AssetComingSoon asset={route.asset} onBack={() => navigate('/mvp/new')} />
           ) : route.view === 'campaign' && workspace ? (
             <CampaignPage key={workspace.campaign.id} runtime={runtime} activeModule={route.module}
               onNavigate={goModule} requestedTemplate={requestedTemplate}
+              prototypeMode={prototypeMode}
               analyzeOnOpen={analyzeOnOpen.current === workspace.campaign.id}
               onAnalysisStarted={() => { analyzeOnOpen.current = null }}
-              heading={<h1
-                    className="v2-updated-text"
-                    data-updated={titleUpdated || undefined}
+              heading={<Heading level={1} variant="h3"
                     ref={titleRef}
                     contentEditable={editingTitle}
                     suppressContentEditableWarning
@@ -799,11 +746,13 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
                     data-editable={editor && !readOnly ? 'true' : undefined}
                   >
                     {workspace.campaign.title}
-                  </h1>} />
+                  </Heading>} />
           ) : editor ? (
-            <BriefStage
+            <HomeScreen
               key="new-campaign"
               api={api}
+              collectSources={sourceBriefingEnabled}
+              readiness={generationReadiness}
               pending={pending}
               onSave={create}
               onDirty={markDirty}
@@ -835,6 +784,6 @@ export function ConnectedStudio({ api, demo = false, onRole, onSignOut }) {
           )}
         </main>
       </div>
-    </div>
+    </div></DesignSystemRoot>
   )
 }

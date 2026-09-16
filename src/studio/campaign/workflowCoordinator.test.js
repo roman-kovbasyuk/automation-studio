@@ -2,9 +2,15 @@ import { describe, expect, test, vi } from 'vitest'
 import { createWorkflowCoordinator, startCampaign } from './workflowCoordinator.js'
 import { createCampaignRuntime } from './campaignRuntime.js'
 import { makeScenario } from './testing/workspaceFixtures.js'
+import { emptyBriefAnswers } from '../../../shared/briefingContracts.js'
 
 function setup() {
   const scenario = makeScenario('draft')
+  scenario.workspace.campaign.brief.briefing = {
+    schemaVersion: 2, sourceKey: 'a'.repeat(64), sourceIds: [], analysisJobId: null,
+    answers: { ...emptyBriefAnswers(), summary: 'Confirmed fixture', audience: 'Commuters', copyMode: 'create_new', reach: 'local', goal: 'signups' },
+    confirmation: { id: 'confirmation-1', analysisJobId: 'analysis-job-1', sourceKey: 'a'.repeat(64), copyKey: 'b'.repeat(64), visualKey: 'c'.repeat(64), answersKey: 'd'.repeat(64) },
+  }
   const generated = makeScenario('copy-ready').workspace
   const calls = []
   const api = {
@@ -12,7 +18,8 @@ function setup() {
     createCampaign: vi.fn(async () => scenario.workspace.campaign),
     patchCampaign: vi.fn(async (_id, patch) => {
       calls.push('save')
-      scenario.workspace.campaign.brief = { product: '', audience: '', objective: '', offer: '', locale: 'auto', ...patch.brief }
+      scenario.workspace.campaign.brief = { product: '', audience: '', objective: '', offer: '', locale: 'auto', ...patch.brief,
+        briefing: scenario.workspace.campaign.brief.briefing }
       scenario.workspace.campaign.revision += 1
     }),
     generate: vi.fn(async (_id, step) => {
@@ -45,7 +52,8 @@ test('the Copy owner can replay an uncertain initial request with its original k
     if (args[1] === 'copy' && !failed) { failed = true; throw Object.assign(new Error('Lost response'), { status: 0 }) }
     return generate(...args)
   })
-  expect((await state.coordinator.analyzeAndGenerate()).ok).toBe(false)
+  expect((await state.coordinator.analyzeAndGenerate()).ok).toBe(true)
+  expect((await state.coordinator.actions.copy.generate()).ok).toBe(false)
   expect((await state.coordinator.actions.copy.generate()).ok).toBe(true)
   const calls = state.api.generate.mock.calls.filter(call => call[1] === 'copy')
   expect(calls).toHaveLength(2)
@@ -56,12 +64,8 @@ test('the Copy owner can replay an uncertain initial request with its original k
 test('two tabs use the same server idempotency identity for initial text handoffs', async () => {
   const first = setup(), second = setup()
   await Promise.all([first.coordinator.analyzeAndGenerate(), second.coordinator.analyzeAndGenerate()])
-  for (const step of ['copy', 'directions']) {
-    const a = first.api.generate.mock.calls.find(call => call[1] === step)
-    const b = second.api.generate.mock.calls.find(call => call[1] === step)
-    expect(a[3]).toBe(b[3])
-    expect(a[3]).toContain('initial')
-  }
+  expect(first.api.generate.mock.calls.map(call => call[1])).toEqual(['brief'])
+  expect(second.api.generate.mock.calls.map(call => call[1])).toEqual(['brief'])
   first.runtime.dispose(); second.runtime.dispose()
 })
 
@@ -70,10 +74,10 @@ describe('explicit Brief → Copy coordination', () => {
     const { coordinator, runtime, calls, api, onNavigate } = setup()
     runtime.setDirty('banners', true)
     expect(await coordinator.analyzeAndGenerate({ brief: { notes: 'New headphones launch' } })).toEqual({ ok: true })
-    expect(calls).toEqual(['save', 'brief', 'copy', 'directions'])
+    expect(calls).toEqual(['save', 'brief'])
     expect(api.patchCampaign.mock.calls[0][1]).toEqual({ brief: { notes: 'New headphones launch' } })
     expect(onNavigate).not.toHaveBeenCalled()
-    expect(api.generate.mock.calls.find(call => call[1] === 'directions')[2]).toEqual({ mode: 'campaign' })
+    expect(api.generate.mock.calls).toHaveLength(1)
     expect(runtime.hasDirty()).toBe(true)
     runtime.dispose()
   })
@@ -91,7 +95,7 @@ describe('explicit Brief → Copy coordination', () => {
     const { coordinator, runtime, calls } = setup()
     expect(await coordinator.analyzeAndGenerate()).toEqual({ ok: true })
     expect(await coordinator.analyzeAndGenerate()).toEqual({ ok: true })
-    expect(calls).toEqual(['brief', 'copy', 'directions', 'brief'])
+    expect(calls).toEqual(['brief', 'brief'])
     runtime.dispose()
   })
   test('retrying uncertain Copy reconciles its original key instead of starting a new analysis', async () => {
@@ -105,10 +109,10 @@ describe('explicit Brief → Copy coordination', () => {
       }
       return original(...args)
     })
-    expect(await coordinator.analyzeAndGenerate()).toMatchObject({ ok: false })
-    expect(await coordinator.analyzeAndGenerate()).toEqual({ ok: true })
-    expect(api.generate.mock.calls.map(call => call[1])).toEqual(['brief', 'copy', 'copy', 'directions'])
-    expect(api.generate.mock.calls[1][3]).toBe(api.generate.mock.calls[2][3])
+    expect(await coordinator.analyzeAndGenerate()).toMatchObject({ ok: true })
+    expect(await coordinator.actions.copy.generate()).toMatchObject({ ok: false })
+    expect(await coordinator.actions.copy.generate()).toEqual({ ok: true })
+    expect(api.generate.mock.calls.map(call => call[1])).toEqual(['brief', 'copy', 'copy'])
     runtime.dispose()
   })
   test('file extraction is not a campaign mutation or a dirty reset', async () => {
@@ -119,7 +123,7 @@ describe('explicit Brief → Copy coordination', () => {
     expect(runtime.hasDirty()).toBe(true)
     runtime.dispose()
   })
-  test.each(['brief', 'copy'])('the same submitted patch resumes uncertain %s without saving or replaying preceding stages', async step => {
+  test.each(['brief'])('the same submitted patch resumes uncertain %s without saving or replaying preceding stages', async step => {
     const { coordinator, runtime, api, calls } = setup()
     const original = api.generate.getMockImplementation()
     let failed = false
@@ -131,7 +135,7 @@ describe('explicit Brief → Copy coordination', () => {
     const expectedInputKey = runtime.getSnapshot('brief').inputKey
     expect(await coordinator.actions.brief.submit(patch, { expectedInputKey })).toMatchObject({ ok: false })
     expect(await coordinator.actions.brief.submit(patch, { expectedInputKey })).toEqual({ ok: true })
-    expect(calls).toEqual(['save', 'brief', 'copy', 'directions'])
+    expect(calls).toEqual(['save', 'brief'])
     const attempts = api.generate.mock.calls.filter(call => call[1] === step)
     expect(attempts).toHaveLength(2)
     expect(attempts[0][3]).toBe(attempts[1][3])
@@ -157,10 +161,11 @@ describe('explicit Brief → Copy coordination', () => {
       if (args[1] === 'copy' && !failed) { failed = true; throw Object.assign(new Error('Copy rejected'), { status: 422, code: 'generation_failed' }) }
       return original(...args)
     })
-    expect(await coordinator.analyzeAndGenerate()).toMatchObject({ ok: false })
-    expect(workspace.directions).toHaveLength(3)
-    expect(await coordinator.analyzeAndGenerate()).toEqual({ ok: true })
-    expect(api.generate.mock.calls.map(call => call[1])).toEqual(['brief', 'copy', 'directions', 'copy'])
+    expect(await coordinator.analyzeAndGenerate()).toMatchObject({ ok: true })
+    expect(workspace.directions).toHaveLength(0)
+    expect(await coordinator.actions.copy.generate()).toMatchObject({ ok: false })
+    expect(await coordinator.actions.copy.generate()).toEqual({ ok: true })
+    expect(api.generate.mock.calls.map(call => call[1])).toEqual(['brief', 'copy', 'copy'])
     runtime.dispose()
   })
   test('adopts a saved analysis after its response was lost and reconciled', async () => {
@@ -170,7 +175,7 @@ describe('explicit Brief → Copy coordination', () => {
     expect(await coordinator.analyzeAndGenerate()).toMatchObject({ ok: false })
     await runtime.refresh()
     expect(await coordinator.analyzeAndGenerate()).toEqual({ ok: true })
-    expect(api.generate.mock.calls.map(call => call[1])).toEqual(['brief', 'copy', 'directions'])
+    expect(api.generate.mock.calls.map(call => call[1])).toEqual(['brief'])
     runtime.dispose()
   })
   test('remount resumes only unattempted initial text outputs, never analysis or images', async () => {
@@ -181,7 +186,7 @@ describe('explicit Brief → Copy coordination', () => {
     const coordinator = createWorkflowCoordinator({ runtime })
     await coordinator.resumeInitialDrafts()
     await coordinator.resumeInitialDrafts()
-    expect(api.generate.mock.calls.map(call => call[1])).toEqual(['copy', 'directions'])
+    expect(api.generate.mock.calls.map(call => call[1])).toEqual([])
     runtime.dispose()
   })
   test('a failed create never starts generation or automatically repeats POST', async () => {
@@ -207,4 +212,16 @@ describe('explicit Brief → Copy coordination', () => {
     expect(api.createCampaign).toHaveBeenCalledOnce()
     created.runtime.dispose(); runtime.dispose()
   })
+})
+
+test('Banners hands completed footage to Review for explicit selection before freezing', async () => {
+  const scenario=makeScenario('composed')
+  scenario.workspace.jobs.push({id:'video-job',step:'video',status:'succeeded',result:{video:{id:'video-1'}}})
+  const api={getWorkspace:vi.fn(async()=>scenario.workspace),createVersion:vi.fn(async()=>({}))}
+  const runtime=createCampaignRuntime({...scenario,api})
+  const coordinator=createWorkflowCoordinator({runtime,onNavigate:vi.fn()})
+  expect(await coordinator.actions.banners.prepareReview({expectedInputKey:runtime.getSnapshot('review').inputKey})).toEqual({ok:true})
+  expect(api.createVersion).not.toHaveBeenCalled()
+  expect(runtime.getSnapshot('review').input.phase).toBe('prepare')
+  runtime.dispose()
 })

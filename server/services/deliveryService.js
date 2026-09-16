@@ -1,6 +1,7 @@
+import { decodeGeneratedVideo } from '../media/videoDecoder.js'
 import { createHash, randomUUID } from 'node:crypto'
 import { createReadStream } from 'node:fs'
-import { readFile } from 'node:fs/promises'
+import { readFile, writeFile } from 'node:fs/promises'
 import {
   campaignRecordSchema,
   campaignVersionRecordSchema,
@@ -138,7 +139,7 @@ function reviewAssetSets(records, version, reviewAssets) {
   if (!records || !Array.isArray(records.source) || !Array.isArray(records.review) || !Array.isArray(reviewAssets)) {
     throw new Error('Persistence returned invalid version assets')
   }
-  const snapshotSources = version.snapshot.assets.filter((asset) => ['direction', 'final_image'].includes(asset.kind))
+  const snapshotSources = version.snapshot.assets.filter((asset) => ['direction', 'final_image', 'video'].includes(asset.kind))
   const snapshotReview = version.snapshot.assets.filter((asset) => ['review_png', 'manifest'].includes(asset.kind))
   const source = hashes(records.source)
   const review = hashes(records.review)
@@ -204,6 +205,21 @@ function verifyReviewChain({ campaign, version, events, assetSets, expectedStatu
   return { ready, approved, delivered: expectedStatus === 'delivered' ? events.at(-1) : null }
 }
 
+function verifiedVideoAssets(assets, version) {
+  const videos = version.snapshot.videos ?? []
+  if (!Array.isArray(assets) || assets.length !== videos.length) fail(409,'version_asset_mismatch','Reviewed video sources are unavailable')
+  for (const asset of assets) {
+    const expected = videos.find(video => video.id === asset.id)
+    if (!expected || asset.campaignId !== version.campaignId || asset.kind !== 'video' || asset.source !== 'generation'
+      || asset.generationJobId !== expected.generationJobId || asset.versionId !== null
+      || ['id','sha256','mimeType','byteSize','width','height'].some(key => asset[key] !== expected[key])) {
+      fail(409,'version_asset_mismatch','Reviewed video metadata is invalid')
+    }
+    try { assertSafeObjectKey(asset.objectKey) } catch { fail(409,'version_asset_mismatch','Reviewed video storage identity is invalid') }
+  }
+  return assets
+}
+
 function immutableReviewAsset(asset) {
   return {
     id: asset.id, kind: asset.kind, objectKey: asset.objectKey, mimeType: asset.mimeType,
@@ -226,8 +242,26 @@ function deliveryObjectKey(version) {
   return `campaigns/${campaign}/versions/${id}/delivery/package.zip`
 }
 
-function buildPlan({ version, approval, reviewAssets, assetSets }) {
+function buildPlan({ version, approval, reviewAssets, videoAssets = [], assetSets, figmaDelivery }) {
   const identity = deterministicIdentity(version)
+  let figmaSubmission=null
+  if(figmaDelivery) {
+    const submission=figmaDelivery.submission
+    if(!submission || submission.manifest?.sourceHash!==version.contentHash || submission.manifest?.versionId!==version.id
+      || hashCanonical(submission.manifest)!==submission.submission_hash) fail(409,'figma_submission_changed','The approved Figma artwork is unavailable or changed')
+    const returned=Object.values(submission.outputs)
+    if(returned.length!==submission.manifest.frames.length || returned.length!==reviewAssets.filter(a=>a.kind==='review_png').length) {
+      fail(409,'figma_submission_changed','The returned artwork does not cover every banner')
+    }
+    for(const frame of returned) {
+      const declared=submission.manifest.frames.find(f=>f.outputId===frame.outputId)
+      const {objectKey,kind,...asset}=frame.asset
+      if(kind!=='review_png'||!declared||hashCanonical(declared.asset)!==hashCanonical(asset)) fail(409,'figma_submission_changed','Returned artwork metadata changed')
+      try{assertSafeObjectKey(objectKey)}catch{fail(409,'figma_submission_changed','Invalid artwork storage identity')}
+    }
+    reviewAssets=returned.map(frame=>frame.asset)
+    figmaSubmission={id:submission.id,hash:submission.submission_hash,manifest:submission.manifest}
+  }
   return {
     schemaVersion: 1,
     campaignId: version.campaignId,
@@ -237,7 +271,8 @@ function buildPlan({ version, approval, reviewAssets, assetSets }) {
     contentHash: version.contentHash,
     approval: { eventId: approval.id, actorId: approval.actorId, at: approval.createdAt },
     immutableAssetHashes: assetSets.all,
-    reviewAssets: reviewAssets.map(immutableReviewAsset).sort((left, right) => compareText(left.id, right.id)),
+    ...(figmaSubmission ? {figmaSubmission} : {}),
+    reviewAssets: [...reviewAssets, ...videoAssets].map(immutableReviewAsset).sort((left, right) => compareText(left.id, right.id)),
     buildId: identity.buildId,
     deliveryId: identity.deliveryId,
     assetId: identity.assetId,
@@ -300,7 +335,8 @@ function parseCanonicalManifest(bytes) {
 export function verifyRenderManifest(value, version, pngAssets) {
   const designs = version.snapshot.designs
   const expectedKeys = (designs ?? [null]).flatMap(design => version.snapshot.composition.ratioIds.map(ratioId => JSON.stringify([design?.id ?? null, ratioId])))
-  if (!exactKeys(value, ['schemaVersion', 'campaignId', 'versionId', 'versionNumber', 'template', 'compositionId', 'sourceAssets', 'renders'])
+  if (!exactKeys(value, ['schemaVersion', 'campaignId', 'versionId', 'versionNumber', 'template', 'compositionId', 'sourceAssets', 'renders', ...(version.snapshot.videos ? ['videos'] : [])])
+    || hashCanonical(value.videos ?? []) !== hashCanonical(version.snapshot.videos ?? [])
     || value.schemaVersion !== 1 || value.campaignId !== version.campaignId || value.versionId !== version.id
     || value.versionNumber !== version.versionNumber || value.compositionId !== version.snapshot.composition.id
     || !exactKeys(value.template, ['id', 'version', 'sha256'])
@@ -310,7 +346,7 @@ export function verifyRenderManifest(value, version, pngAssets) {
     || !Array.isArray(value.sourceAssets) || !Array.isArray(value.renders)) {
     fail(502, 'manifest_integrity_failure', 'Stored render manifest does not match the immutable version')
   }
-  const sourceRefs = version.snapshot.assets.filter((asset) => ['direction', 'final_image'].includes(asset.kind))
+  const sourceRefs = version.snapshot.assets.filter((asset) => ['direction', 'final_image', 'video'].includes(asset.kind))
     .map(({ id, kind, sha256 }) => ({ id, kind, sha256 })).sort((left, right) => compareText(left.id, right.id))
   const manifestSources = value.sourceAssets.map((asset) => ({ id: asset?.id, kind: asset?.kind, sha256: asset?.sha256 }))
     .sort((left, right) => compareText(String(left.id), String(right.id)))
@@ -397,20 +433,45 @@ async function buildPackage({
         fail(502, 'asset_integrity_failure', 'Stored approved PNG dimensions are invalid')
       }
     }
+    if (asset.kind === 'video') {
+      const expected = version.snapshot.videos.find(video => video.id === asset.id)
+      const decoded = await decodeGeneratedVideo(await readFile(file.path, { signal }), expected)
+      if (!decoded || decoded.sha256 !== expected.sha256 || decoded.byteSize !== expected.byteSize
+        || decoded.frameRate !== expected.frameRate || decoded.hasAudio !== expected.hasAudio) {
+        fail(502, 'asset_integrity_failure', 'Stored approved video failed full decode verification')
+      }
+    }
     spooled.push({ asset, path: file.path })
+  }
+  if(plan.figmaSubmission) {
+    const bytes=Buffer.from(canonicalJson(plan.figmaSubmission.manifest),'utf8')
+    if(hashCanonical(plan.figmaSubmission.manifest)!==plan.figmaSubmission.hash) fail(409,'figma_submission_changed','The sealed submission manifest changed')
+    if(bytes.length>maxManifestBytes) fail(413,'delivery_too_large','The Figma manifest exceeds its byte limit')
+    const path=workspace.file(spooled.length)
+    await writeFile(path,bytes,{signal})
+    spooled.push({path,asset:{id:`figma-manifest-${plan.figmaSubmission.id}`,kind:'manifest',mimeType:'application/json',byteSize:bytes.length,
+      width:null,height:null,sha256:createHash('sha256').update(bytes).digest('hex')}})
   }
   const manifestEntry = spooled.find((entry) => entry.asset.kind === 'manifest')
   const pngEntries = spooled.filter((entry) => entry.asset.kind === 'review_png')
+  const videoEntries = spooled.filter(entry => entry.asset.kind === 'video').sort((a,b) => compareText(a.asset.id,b.asset.id))
   const renderManifestBytes = await readFile(manifestEntry.path, { signal })
   const renderManifest = parseCanonicalManifest(renderManifestBytes)
-  verifyRenderManifest(renderManifest, version, pngEntries.map((entry) => entry.asset))
+  if(!plan.figmaSubmission) verifyRenderManifest(renderManifest, version, pngEntries.map((entry) => entry.asset))
 
   const sortedPng = [...pngEntries].sort((left, right) => {
+    if(plan.figmaSubmission) return compareText(left.asset.id,right.asset.id)
     const leftRender = renderManifest.renders.find((render) => render.asset.id === left.asset.id)
     const rightRender = renderManifest.renders.find((render) => render.asset.id === right.asset.id)
     return compareText(leftRender.ratioId, rightRender.ratioId) || compareText(left.asset.id, right.asset.id)
   })
   const files = [
+    ...videoEntries.map((entry,index) => {
+      const video = version.snapshot.videos.find(video => video.id === entry.asset.id)
+      return { filename: `videos/video-${String(index+1).padStart(3,'0')}.mp4`, assetId: video.id,
+        mimeType: video.mimeType, byteSize: video.byteSize, width: video.width, height: video.height, sha256: video.sha256,
+        durationSeconds: video.durationSeconds, frameRate: video.frameRate, hasAudio: video.hasAudio }
+    }),
     ...sortedPng.map((entry, index) => ({
       filename: `banners/banner-${String(index + 1).padStart(3, '0')}.png`,
       assetId: entry.asset.id, mimeType: entry.asset.mimeType, byteSize: entry.asset.byteSize,
@@ -435,6 +496,7 @@ async function buildPackage({
   try {
     archive = await buildDeterministicDeliveryArchiveFile({
       entries: [
+        ...videoEntries.map((entry,index) => ({ filename: `videos/video-${String(index+1).padStart(3,'0')}.mp4`, path: entry.path, byteSize: entry.asset.byteSize })),
         ...sortedPng.map((entry, index) => ({
           filename: `banners/banner-${String(index + 1).padStart(3, '0')}.png`,
           path: entry.path, byteSize: entry.asset.byteSize,
@@ -521,7 +583,9 @@ export function createDeliveryService({
     const events = strictEvents(await repository.listEvents(version.id, { forUpdate }), version)
     const reviewAssets = await repository.listReviewAssets(version.id, { forUpdate })
     const assetSets = reviewAssetSets(await repository.listVersionAssetHashes(version.id), version, reviewAssets)
-    return { version, campaign, events, reviewAssets, assetSets }
+    const videoAssets = verifiedVideoAssets(version.snapshot.videos ? await repository.listVersionVideoAssets(version.id) : [], version)
+    const figmaDelivery=await repository.findFigmaDelivery?.(version.id)
+    return { version, campaign, events, reviewAssets, videoAssets, assetSets, figmaDelivery }
   }
 
   async function prepare({ actor, versionId, key, fingerprint, ownerToken, deadlineAt }) {
@@ -835,6 +899,7 @@ export function createDeliveryService({
       const events = strictEvents(await repository.listEvents(versionId), version)
       const reviewAssets = await repository.listReviewAssets(versionId)
       const assetSets = reviewAssetSets(await repository.listVersionAssetHashes(versionId), version, reviewAssets)
+      verifiedVideoAssets(version.snapshot.videos ? await repository.listVersionVideoAssets(version.id) : [], version)
       const delivery = verifyStoredDeliveryRecord(deliveryRow, version)
       verifyReviewChain({ campaign, version, events, reviewAssets, assetSets, expectedStatus: 'delivered', delivery })
       return delivery

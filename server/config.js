@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 const validNodeEnvironments = new Set(['development', 'production', 'test'])
 const validGenerationProviders = new Set(['mock', 'gemini'])
 const validAssetStores = new Set(['memory', 'gcs'])
+const validLogLevels = new Set(['trace', 'debug', 'info', 'warn', 'error', 'fatal', 'silent'])
 const defaultStaticRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'dist')
 
 function parsePort(value) {
@@ -86,6 +87,8 @@ export function loadConfig(environment) {
   if (environment.STATIC_ROOT !== undefined && !suppliedStaticRoot) throw new Error('STATIC_ROOT must be a non-empty path')
   const staticRoot = resolve(suppliedStaticRoot || defaultStaticRoot)
   const runMigrationsOnStartup = parseMigrationStartup(environment.RUN_MIGRATIONS, nodeEnv)
+  const logLevel = environment.LOG_LEVEL?.trim() || (nodeEnv === 'test' ? 'silent' : 'info')
+  if (!validLogLevels.has(logLevel)) throw new Error('LOG_LEVEL must be trace, debug, info, warn, error, fatal, or silent')
 
   return Object.freeze({
     nodeEnv,
@@ -93,6 +96,12 @@ export function loadConfig(environment) {
     port: parsePort(environment.PORT),
     databaseUrl,
     firebaseProjectId,
+    firebaseWeb: Object.freeze({
+      apiKey: environment.FIREBASE_WEB_API_KEY?.trim(),
+      authDomain: environment.FIREBASE_WEB_AUTH_DOMAIN?.trim(),
+      projectId: firebaseProjectId,
+      appId: environment.FIREBASE_WEB_APP_ID?.trim(),
+    }),
     generation: Object.freeze({
       provider: generationProvider,
       projectId: vertexProjectId,
@@ -110,5 +119,6 @@ export function loadConfig(environment) {
       root: staticRoot,
     }),
     runMigrationsOnStartup,
+    logLevel,
   })
 }

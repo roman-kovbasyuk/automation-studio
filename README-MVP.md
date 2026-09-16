@@ -13,6 +13,12 @@ npm install
 npm run dev
 ```
 
+This starts the browser-only prototype. The deployable API is a separate process: run `npm start`
+with PostgreSQL and the environment variables in `.env.example`. Generate the credential-encryption
+key once with `openssl rand -hex 32`, set it as `PERSONAL_CREDENTIAL_ENCRYPTION_KEY`, then connect
+Gemini from **Settings → Text & analysis**. The Gemini API key is checked server-side and stored
+encrypted; it is never returned to the browser. For a local API demo, use `npm run dev:api`.
+
 Production build:
 
 ```bash
@@ -39,12 +45,14 @@ npm run test:run
 - Downloadable JSON production manifest.
 - Separate template-library and design-system screens.
 - Responsive desktop and mobile interfaces.
+- Personal Gemini connection and separate text/image defaults, with owner-scoped encrypted credentials.
 
 ## Deliberate prototype boundaries
 
-The V1 does not call an image model, video model, Figma API, or renderer. Those steps are presented
+The browser-only V1 does not call an image model, video model, Figma API, or renderer. Those steps are presented
 as explicit demo states and never claim that a real external operation occurred. Refreshing the
-page resets campaign state.
+page resets campaign state. The production server has durable PostgreSQL-backed workflow and
+generation records; it is a separate runtime from this local browser prototype.
 
 The existing `.claude/` directory is legacy/reference material. The new application has no imports
 from it and runs normally without Claude Code or any token configuration.
@@ -81,3 +89,20 @@ The domain layer is pure JavaScript. Real integrations should preserve these bou
 3. Export the review packet to Figma or an internal review service.
 4. Render static and animated assets from the approved layout contract.
 5. Add persistence, accounts, billing, and delivery only after the creative loop is validated.
+
+
+### Local Gemini credentials from the environment
+
+`npm run dev:api` reads the checkout root `.env` at startup. Keep the text credential in
+`GEMINI_TEXT_API_KEY` and the image/video credential in `GEMINI_MEDIA_API_KEY`.
+The environment file is Git-ignored; keep its permissions at `0600`. Do not use a
+`VITE_` prefix or copy values into personal Settings, client storage, or task records.
+
+When either environment credential is configured, the local generation service uses
+only environment access: brief analysis, copy, and visual prompt preparation use the
+text key; image generation uses the media key. Missing credentials fail closed rather
+than falling back to the other key or a personal connection. Restart the API after
+changing `.env`. The production launcher retains its existing deployment configuration.
+
+`GEMINI_VIDEO_MODEL` selects the model for the separately authorized video check.
+The campaign UI does not yet implement durable video generation or review/delivery.

@@ -2,6 +2,28 @@ import { describe, expect, test, vi } from 'vitest'
 import { createStudioApi, StudioApiError } from './api.js'
 
 describe('Studio HTTP client', () => {
+  test('reads generation readiness through the authenticated endpoint', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ state: 'paused', spendingControl: 'external' })))
+    const api = createStudioApi({ fetchImpl })
+
+    await expect(api.getGenerationReadiness()).resolves.toMatchObject({ state: 'paused', spendingControl: 'external' })
+    expect(fetchImpl).toHaveBeenCalledWith('/api/v1/me/ai/readiness', expect.objectContaining({ method: 'GET' }))
+  })
+
+  test('reads and updates only the authenticated personal profile', async () => {
+    const fetchImpl = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ profile: { firstName: 'Roman' } })))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ firstName: 'Romy', lastName: 'Kovbasyuk' })))
+    const api = createStudioApi({ fetchImpl })
+
+    await api.getPersonalSettings()
+    await api.updatePersonalProfile({ firstName: 'Romy', lastName: 'Kovbasyuk' })
+
+    expect(fetchImpl.mock.calls[0][0]).toBe('/api/v1/me/settings')
+    expect(fetchImpl.mock.calls[0][1].method).toBe('GET')
+    expect(fetchImpl.mock.calls[1][0]).toBe('/api/v1/me/profile')
+    expect(fetchImpl.mock.calls[1][1]).toMatchObject({ method: 'PATCH', body: JSON.stringify({ firstName: 'Romy', lastName: 'Kovbasyuk' }) })
+  })
   test('approves the exact encoded candidate with a revision-protected PUT', async () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ id: 'campaign/1' })))
     const api = createStudioApi({ fetchImpl })
@@ -90,5 +112,41 @@ describe('Studio HTTP client', () => {
     expect(() => api.review('v', 'delete')).toThrow('Unknown review action')
     await expect(api.patchCampaign('c', {}, -1)).rejects.toThrow('revision')
     expect(fetchImpl).not.toHaveBeenCalled()
+  })
+  test('uses revision-safe brand design system endpoints', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ id: 'brand-1', revision: 3 })))
+    const api = createStudioApi({ fetchImpl })
+    await api.getBrandSystemConfig()
+    await api.listBrandSystems()
+    await api.createBrandSystem({ name: 'Northstar' })
+    await api.getBrandSystem('brand/1')
+    await api.inspectBrandSources('brand/1')
+    await api.patchBrandDraft('brand/1', { name: 'Northstar' }, 2)
+    await api.addBrandSource('brand/1', { kind: 'figma', label: 'Library', url: 'https://www.figma.com/design/a' }, 3)
+    await api.addBrandAsset('brand/1', { name: 'logo.png', kind: 'logo', mimeType: 'image/png', data: 'iVBORwE=' }, 4)
+    await api.getBrandAssetBlob('brand/1', 'asset/1')
+    await api.analyseBrandSources('brand/1', 4)
+    await api.listBrandVersions('brand/1')
+    await api.restoreBrandVersion('brand/1', 'version/1', 5)
+    await api.publishBrandSystem('brand/1', 3, 'publish-1')
+    await api.proposeBrandChange('brand/1', 'Make type smaller')
+    await api.applyBrandProposal('brand/1', 'proposal/1', 3)
+    await api.discardBrandProposal('brand/1', 'proposal/1')
+
+    expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual([
+      '/api/v1/brand-design-systems/config', '/api/v1/brand-design-systems', '/api/v1/brand-design-systems',
+      '/api/v1/brand-design-systems/brand%2F1', '/api/v1/brand-design-systems/brand%2F1/sources/inspect', '/api/v1/brand-design-systems/brand%2F1/draft',
+      '/api/v1/brand-design-systems/brand%2F1/sources', '/api/v1/brand-design-systems/brand%2F1/assets', '/api/v1/brand-design-systems/brand%2F1/assets/asset%2F1', '/api/v1/brand-design-systems/brand%2F1/analyse',
+      '/api/v1/brand-design-systems/brand%2F1/versions', '/api/v1/brand-design-systems/brand%2F1/versions/version%2F1/restore',
+      '/api/v1/brand-design-systems/brand%2F1/publish', '/api/v1/brand-design-systems/brand%2F1/proposals',
+      '/api/v1/brand-design-systems/brand%2F1/proposals/proposal%2F1/apply',
+      '/api/v1/brand-design-systems/brand%2F1/proposals/proposal%2F1/discard',
+    ])
+    expect(fetchImpl.mock.calls[5][1].headers.get('if-match')).toBe('"2"')
+    expect(fetchImpl.mock.calls[6][1].headers.get('if-match')).toBe('"3"')
+    expect(fetchImpl.mock.calls[7][1].headers.get('if-match')).toBe('"4"')
+    expect(fetchImpl.mock.calls[9][1].headers.get('if-match')).toBe('"4"')
+    expect(fetchImpl.mock.calls[11][1].headers.get('if-match')).toBe('"5"')
+    expect(fetchImpl.mock.calls[12][1].headers.get('idempotency-key')).toBe('publish-1')
   })
 })

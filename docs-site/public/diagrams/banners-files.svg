@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2800" height="650" viewBox="0 0 2800 650" role="img" aria-labelledby="title description">
+<title id="title">banners files logic</title>
+<desc id="description">Read left to right. Recovery paths appear below their owning step. Return IDs identify where to resume.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M 0 0 L 10 5 L 0 10" fill="none" stroke="#555" stroke-width="1.5"/></marker></defs>
+<rect width="100%" height="100%" fill="#fff"/>
+<path d="M 360 130 L 500 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<path d="M 820 130 L 960 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="870.45" y="118" width="39.1" height="24" fill="#fff"/>
+<text x="890" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Yes</text>
+<path d="M 1280 130 L 1420 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1315.05" y="118" width="69.9" height="24" fill="#fff"/>
+<text x="1350" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Results</text>
+<path d="M 1740 130 L 1880 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1790.45" y="118" width="39.1" height="24" fill="#fff"/>
+<text x="1810" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Yes</text>
+<path d="M 2200 130 L 2340 130" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="2242.75" y="118" width="54.5" height="24" fill="#fff"/>
+<text x="2270" y="135" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Saved</text>
+<path d="M 200 185 L 200 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="122.7" y="250.5" width="154.6" height="24" fill="#fff"/>
+<text x="200" y="267.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Resume / duplicate</text>
+<path d="M 660 230 L 660 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="644.3" y="273" width="31.4" height="24" fill="#fff"/>
+<text x="660" y="290" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">No</text>
+<path d="M 1120 185 L 1120 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1050.4" y="250.5" width="139.2" height="24" fill="#fff"/>
+<text x="1120" y="267.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Partial / failed</text>
+<path d="M 1580 230 L 1580 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1564.3" y="273" width="31.4" height="24" fill="#fff"/>
+<text x="1580" y="290" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">No</text>
+<path d="M 2040 185 L 2040 340" stroke="#555" stroke-width="1.5" marker-end="url(#arrow)" fill="none"/>
+<rect x="1947.3" y="250.5" width="185.4" height="24" fill="#fff"/>
+<text x="2040" y="267.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#333">Save fails / new edits</text>
+<rect x="40" y="75" width="320" height="110" rx="10" fill="#C2E5FF" stroke="#3DADFF"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="200" y="125">F1 Load approved version</tspan>
+<tspan x="200" y="147">Mappings + export spec</tspan>
+</text>
+<polygon points="660,30 820,130 660,230 500,130" fill="#FFECBD" stroke="#FFC943"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="660" y="125">F2 Source accessible</tspan>
+<tspan x="660" y="147">and complete?</tspan>
+</text>
+<rect x="960" y="75" width="320" height="110" rx="10" fill="#C2E5FF" stroke="#3DADFF"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="1120" y="125">F3 Export and retrieve</tspan>
+<tspan x="1120" y="147">Required files + videos</tspan>
+</text>
+<polygon points="1580,30 1740,130 1580,230 1420,130" fill="#FFECBD" stroke="#FFC943"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="1580" y="125">F4 All files saved</tspan>
+<tspan x="1580" y="147">and verified?</tspan>
+</text>
+<rect x="1880" y="75" width="320" height="110" rx="10" fill="#C2E5FF" stroke="#3DADFF"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="2040" y="125">F5 Seal file manifest</tspan>
+<tspan x="2040" y="147">Immutable approved set</tspan>
+</text>
+<rect x="2340" y="75" width="320" height="110" rx="10" fill="#CDF4D3" stroke="#66D575"/>
+<text text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#1E1E1E">
+<tspan x="2500" y="125">F6 Files ready</tspan>
+<tspan x="2500" y="147">Show final previews</tspan>
+</text>
+<rect x="40" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="64" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Job identity</text>
+<text x="62" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="82" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Resume the saved</text>
+<text x="82" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">approval-bound job.</text>
+<text x="62" y="452" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="82" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Retrying files never recreates</text>
+<text x="82" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">frames or reruns AI.</text>
+<rect x="500" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="524" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Source dependency</text>
+<text x="522" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="542" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Restore access to the same</text>
+<text x="542" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">approved version.</text>
+<text x="522" y="452" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="542" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">If unrecoverable: new revision</text>
+<text x="542" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">at BG1.</text>
+<text x="522" y="502" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="542" y="502" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Never substitute latest.</text>
+<rect x="960" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="984" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Export dependency</text>
+<text x="982" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1002" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Keep approval and successful</text>
+<text x="1002" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">files.</text>
+<text x="982" y="452" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1002" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Reconcile timeouts; bounded</text>
+<text x="1002" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">backoff / explicit retry of</text>
+<text x="1002" y="496" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">failed outputs at F3.</text>
+<rect x="1420" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="1444" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">File integrity</text>
+<text x="1442" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1462" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Check mapping, format,</text>
+<text x="1462" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">dimensions, decode and</text>
+<text x="1462" y="446" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">checksum.</text>
+<text x="1442" y="474" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1462" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Video: full playback +</text>
+<text x="1462" y="496" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">metadata.</text>
+<text x="1442" y="524" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1462" y="524" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Quarantine failures; repair at</text>
+<text x="1462" y="546" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">F3.</text>
+<rect x="1880" y="340" width="320" height="280" rx="10" fill="#FFCDC2" stroke="#FF7556"/>
+<text x="1904" y="374" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#1E1E1E">Manifest dependency</text>
+<text x="1902" y="402" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1922" y="402" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Retry sealing the same</text>
+<text x="1922" y="424" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">verified set.</text>
+<text x="1902" y="452" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1922" y="452" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">Later edits start a new</text>
+<text x="1922" y="474" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">revision at BG1;</text>
+<text x="1902" y="502" font-family="Arial,sans-serif" font-size="16" fill="#1E1E1E">•</text>
+<text x="1922" y="502" text-anchor="start" font-family="Arial,sans-serif" font-size="16" font-weight="400" fill="#1E1E1E">never mutate approved bytes.</text>
+</svg>

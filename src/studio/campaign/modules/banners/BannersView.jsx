@@ -1,37 +1,22 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Image, Send, X } from 'lucide-react'
-import { AppButton } from '../../../../components/design-system/atoms/AppButton.jsx'
-import { PillTabs, PillTabPanel } from '../../../../components/design-system/molecules/PillTabs.jsx'
-import { SelectMenu } from '../../../../components/design-system/molecules/SelectMenu.jsx'
-import { EmptyState } from '../../../../components/design-system/molecules/EmptyState.jsx'
-import { SelectionTile } from '../../../../components/design-system/molecules/SelectionTile.jsx'
-import { PreviewDialog } from '../../../../components/design-system/organisms/PreviewDialog.jsx'
-import { AnimatedBanner } from '../../../AnimatedBanner.jsx'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Alert, Button, Dialog, Divider, EmptyState, Grid, Heading, Inline, Panel, Select, Spinner, Stack, Surface, Tabs, Text } from 'brutalist-design-system'
 import { useAssetUrl } from '../../../primitives.jsx'
 import { designKey, designIdentity, addDesigns, toggleDesign, resolvePair, selectionFromComposition, availableFormats, previewRatioFor } from './bannerSelection.js'
 import { bannerFormats } from '../../../../../shared/bannerFormats.js'
-import './banners.css'
-
-const tabs = ['Design', 'Sizes & formats']
+import { AnimatedBanner } from '../../../AnimatedBanner.jsx'
+const renderBanner = props => <AnimatedBanner {...props} />
+const tabs = ['design', 'sizes']
 const categories = { 'All formats': null, 'Social media': 'social', 'Google Ads': 'google-ads', Stories: 'stories', Video: 'video' }
-const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`
+const plural = (count, word) => `${count} ${count === 1 ? word : word === 'copy' ? 'copies' : `${word}s`}`
 const sizeLabel = size => `${size.name} · ${size.width} × ${size.height}`
 const noop = () => {}
-
-function Filter({ label, value, options, onChange, disabled }) {
-  const id = useId()
-  return <div className="bs-banner-filter"><label htmlFor={id}>{label}</label><SelectMenu triggerId={id} label={label}
-    triggerLabel={label} value={value} options={options} onChange={onChange} disabled={disabled} /></div>
+function Filter({ label, value, options, onChange, disabled }) { return <Select label={label} value={value} placeholder={`Choose ${label.toLowerCase()}`} options={options.map(value=>({value,label:value}))} onValueChange={onChange} disabled={disabled} /> }
+function SelectionTotal({designs,sizes}) {
+  const copies=new Set(designs.map(design=>design.copyId)).size
+  const templates=new Set(designs.map(design=>`${design.templateId}@${design.templateVersion}`)).size
+  return <Surface padding={4} radius="small"><Inline gap={4} role="status" aria-label="Banner selection total"><Text as="span" variant="h2">{designs.length*sizes.length}</Text><Stack gap={1}><Text variant="h7">{plural(designs.length,'design')} × {plural(sizes.length,'size')}</Text><Text variant="small" tone="secondary">Banners to prepare · {plural(copies,'copy')}, {plural(templates,'template')}</Text></Stack></Inline></Surface>
 }
-
-function SelectionTotal({ designs, sizes }) {
-  return <div className="bs-banner-total" role="status" aria-label="Banner selection total">
-    <span className="bs-banner-total__circle">{designs * sizes}</span>
-    <div><strong>{plural(designs, 'design')} × {plural(sizes, 'size')}</strong><span>Banners to prepare</span></div>
-  </div>
-}
-
-export function BannersView({ input, inputKey, assets, pending, readOnly, onSave, onPrepareReview, onLoadTemplate, onNext, onDirty = noop, heading = false, requestedTemplate }) {
+export function BannersView({ input, inputKey, assets, pending, readOnly, accessReason, onSave, onPrepareReview, onLoadTemplate, onNext, onChooseVisuals, onDirty = noop, heading = false, requestedTemplate, renderPreview = renderBanner }) {
   const { composition, copies = [], directions = [] } = input
   // A library choice leads the gallery without changing an existing selection.
   const templates = useMemo(() => [...input.templates].sort((a, b) => Number(b.id === requestedTemplate) - Number(a.id === requestedTemplate)), [input.templates, requestedTemplate])
@@ -52,7 +37,6 @@ export function BannersView({ input, inputKey, assets, pending, readOnly, onSave
   const [templateReload, setTemplateReload] = useState(0)
   const savedSubmission = useRef(null)
   const sourceKey = useRef(inputKey)
-  const id = useId()
   const busy = Boolean(pending) || submitting
   const locked = readOnly || busy
   const pair = resolvePair(copyId, directionId, copies, directions)
@@ -92,7 +76,9 @@ export function BannersView({ input, inputKey, assets, pending, readOnly, onSave
   const sourceChanged = dirty && sourceKey.current !== inputKey
   const canSubmit = !locked && selected.length > 0 && ratioIds.length > 0 && !invalidSizes.length && !sourceChanged && !templateDetailsMissing
 
-  useEffect(() => { onDirty(dirty) }, [dirty, onDirty])
+  const dirtyReporter = useRef(onDirty)
+  dirtyReporter.current = onDirty
+  useEffect(() => { dirtyReporter.current(dirty) }, [dirty])
   useEffect(() => {
     if (dirty || confirming) return
     sourceKey.current = inputKey
@@ -147,69 +133,72 @@ export function BannersView({ input, inputKey, assets, pending, readOnly, onSave
   const validationIssues = errorDetails.length > 0 && <ul aria-label="Banner validation issues">{errorDetails.map((detail, index) => {
     const template = knownTemplates.find(template => template.id === detail.templateId)
     const format = catalog.find(format => format.id === detail.ratioId)
-    return <li key={index}><strong>{template?.name ?? detail.templateId ?? 'Selection'}{format ? ` · ${format.width} × ${format.height}` : ''}</strong><p>{detail.message}</p></li>
+    return <li key={index}><Text as="span" variant="h7">{template?.name ?? detail.templateId ?? 'Selection'}{format ? ` · ${format.width} × ${format.height}` : ''}</Text><Text>{detail.message}</Text></li>
   })}</ul>
 
-  return <section className="bs-banners-module" aria-label="Banners module" aria-busy={busy || undefined}>
-    {heading && <h2>Banners</h2>}
-    <div className="bs-banner-selection-bar"><SelectionTotal designs={selected.length} sizes={ratioIds.length} />
-      {!readOnly && <AppButton variant="primary" onClick={() => { setError(''); setConfirming(true) }} disabled={!canSubmit}><Send size={18} aria-hidden="true" />Send to Figma</AppButton>}
-    </div>
-    <PillTabs tabs={tabs} value={tab} onChange={setTab} ariaLabel="Banner selection" idPrefix={id} />
-    <PillTabPanel tab="Design" value={tab} idPrefix={id}>
-      <div className="bs-banner-filters">
-        <Filter label="Copy" value={copyLabels[copies.findIndex(copy => copy.id === pair.copy?.id)] ?? 'Choose copy'} options={copyLabels} onChange={chooseCopy} disabled={busy || !copies.length} />
-        <Filter label="Visual" value={visualLabels[directions.findIndex(direction => direction.id === pair.direction?.id)] ?? 'Choose visual'} options={visualLabels} onChange={chooseVisual} disabled={busy || !directions.length} />
-        <Filter label="Preview proportion" value={proportion} options={['Square', 'Horizontal', 'Vertical']} onChange={setProportion} disabled={busy} />
-      </div>
-      {pair.direction?.copy && <p className="bs-note">This visual is paired with its original copy.</p>}
-      <div className="bs-banner-grid-toolbar"><span>{plural(templates.length, 'template')}</span><AppButton disabled={locked || !visibleDesigns.length}
-        onClick={() => edit(allVisibleSelected ? selected.filter(item => !visibleDesigns.some(design => designKey(design) === designKey(item))) : addDesigns(selected, visibleDesigns))}>
-        {allVisibleSelected ? 'Deselect visible designs' : 'Select all designs'}</AppButton></div>
-      {!pair.copy || !pair.direction ? <EmptyState icon={<Image size={28} />}>Choose copy and a ready visual to preview your banners.</EmptyState>
-        : <><div className="bs-banner-design-grid">{templates.map(template => {
-          const ratio = previewRatioFor(template, proportion)
-          if (!ratio) return <div className="bs-banner-unavailable" key={template.id}><strong>{template.name}</strong><p>No {proportion.toLowerCase()} preview available.</p></div>
-          const design = { templateId: template.id, templateVersion: template.version, copySetId: pair.copy.copySetId, copyId: pair.copy.id, directionId: pair.direction.id }
-          return <SelectionTile key={`${template.id}-${template.version}`} label={template.name} selected={selected.some(item => designKey(item) === designKey(design))}
-            disabled={locked} onChange={() => edit(toggleDesign(selected, design))} caption={template.name}>
-            <AnimatedBanner manifest={template.manifest} ratioId={ratio.id} headline={pair.copy.headline} body={pair.copy.body} cta={pair.copy.cta} tag={pair.copy.offer ?? ''} imageUrl={imageUrl ?? ''} playing={false} />
-          </SelectionTile>
-        })}</div>{imageError && <p className="bs-note" role="alert">The visual preview could not load. Your saved image is unchanged.</p>}</>}
-      <p className="bs-note">Preview proportion only changes this grid. Choose output dimensions in Sizes &amp; formats.</p>
-    </PillTabPanel>
-    <PillTabPanel tab="Sizes & formats" value={tab} idPrefix={id}>
-      <div className="bs-banner-size-toolbar"><Filter label="Placement category" value={category} options={Object.keys(categories)} onChange={setCategory} />
-        <AppButton disabled={locked || !visibleFormats.length} onClick={() => edit(selected, [...new Set([...ratioIds, ...visibleFormats.map(format => format.id)])])}>Select all shown sizes</AppButton></div>
-      <div className="bs-banner-size-grid">{visibleFormats.map(format => <SelectionTile key={format.id} label={sizeLabel(format)} selected={ratioIds.includes(format.id)} disabled={locked}
-        onChange={() => edit(selected, ratioIds.includes(format.id) ? ratioIds.filter(id => id !== format.id) : [...ratioIds, format.id])}
-        caption={<><strong>{format.name}</strong><small>{format.width} × {format.height}</small></>}>
-        <span className="bs-banner-ratio-icon" aria-hidden="true"><svg viewBox="0 0 100 80"><rect x={(100 - 64 * Math.min(1, format.width / format.height)) / 2} y={(80 - 64 * Math.min(1, format.height / format.width)) / 2}
-          width={64 * Math.min(1, format.width / format.height)} height={64 * Math.min(1, format.height / format.width)} fill="none" stroke="currentColor" strokeWidth="1" /></svg></span>
-      </SelectionTile>)}</div>
-      {!visibleFormats.length && <EmptyState icon={<Image size={28} />}>No compatible sizes in this category.</EmptyState>}
-      <p className="bs-note">Only sizes supported by the selected designs are shown. Older saved design versions retain their saved sizes. Video placements are size presets; this review package contains static PNGs.</p>
-    </PillTabPanel>
-    {selected.length > 0 && <details className="bs-banner-selected"><summary>{plural(selected.length, 'selected design')}</summary><ul>{selected.map(design => {
-      const item = describe(design)
-      return <li key={designKey(design)}><div><strong>{item.title}</strong><span>{item.copy} · {item.visual}</span></div>
-        {!readOnly && <AppButton iconOnly aria-label={`Remove ${item.title} selection`} disabled={busy} onClick={() => edit(selected.filter(item => designKey(item) !== designKey(design)))}><X size={16} aria-hidden="true" /></AppButton>}</li>
-    })}</ul></details>}
-    {templateDetailsMissing && !templateError && <p role="status">Loading saved template details…</p>}
-    {invalidSizes.length > 0 && !templateDetailsMissing && <div className="bs-info"><p>Some selected sizes are not supported by every selected design.</p><AppButton disabled={locked} onClick={() => edit(selected, ratioIds.filter(id => supportedIds.has(id)))}>Remove unsupported sizes</AppButton></div>}
-    {templateError && <div className="bs-info" role="alert"><p>{templateError}</p><AppButton onClick={() => setTemplateReload(value => value + 1)}>Retry template details</AppButton></div>}
-    {sourceChanged && <div className="bs-info"><p>The source changed. Your selection is kept here; reload the saved selection before saving again.</p><AppButton disabled={busy} onClick={() => { savedSubmission.current = null; setDirty(false); onDirty(false) }}>Reload saved selection</AppButton></div>}
-    {!confirming && validationIssues && <div className="bs-info" role="alert"><p>{error}</p>{validationIssues}</div>}
-    {confirming && <PreviewDialog title="Verify your banners" onClose={() => { if (!submitting) setConfirming(false) }}>
-      <div className="bs-banner-confirmation"><SelectionTotal designs={selected.length} sizes={ratioIds.length} />
-        <h3>Designs &amp; content</h3><ul>{selected.map(design => { const item = describe(design); return <li key={designKey(design)}><strong>{item.title}</strong><span>{item.copy}</span><small>{item.visual}</small></li> })}</ul>
-        <h3>Sizes &amp; formats</h3><ul>{ratioIds.map(id => { const format = catalog.find(format => format.id === id); return <li key={id}>{format ? sizeLabel(format) : id}</li> })}</ul>
-        <p>We’ll prepare an immutable PNG review package. Import the PNGs into Figma, then add the Figma link in Review. Designer checks and approval are still required.</p>
-        {error && <p role="alert">{error}</p>}
-        {validationIssues}
-        <footer><AppButton disabled={submitting} onClick={() => setConfirming(false)}>Back to selection</AppButton><AppButton variant="primary" disabled={submitting} busy={submitting} onClick={confirm}>
-          {submitting ? 'Preparing review…' : savedSubmission.current ? 'Retry review preparation' : 'Confirm and prepare review'}</AppButton></footer>
-      </div>
-    </PreviewDialog>}
+  const selectionCards = <>
+    {!pair.copy || !pair.direction ? <EmptyState title="Choose copy and a ready visual to preview your banners." /> : <Grid minItemWidth="14rem" gap={4}>
+      {templates.map(template => {
+        const ratio = previewRatioFor(template, proportion)
+        if (!ratio) return <EmptyState key={template.id} title={template.name} description={`No ${proportion.toLowerCase()} preview available.`} />
+        const design = { templateId: template.id, templateVersion: template.version, copySetId: pair.copy.copySetId, copyId: pair.copy.id, directionId: pair.direction.id }
+        const checked = selected.some(item => designKey(item) === designKey(design))
+        return <Surface key={`${template.id}-${template.version}`} padding={4} radius="small"><Stack gap={3}>
+          {renderPreview({ manifest: template.manifest, ratioId: ratio.id, headline: pair.copy.headline, body: pair.copy.body, cta: pair.copy.cta, tag: pair.copy.offer ?? '', imageUrl: imageUrl ?? '' })}
+          <Heading level={3} variant="h6">{template.name}</Heading>
+          <Button disabled={locked} aria-pressed={checked} aria-label={`${checked ? 'Deselect' : 'Select'} ${template.name}`} variant={checked ? 'primary' : 'secondary'} icon={checked ? 'check' : 'plus'} onClick={() => edit(toggleDesign(selected, design))}>{checked ? 'Selected' : 'Select design'}</Button>
+        </Stack></Surface>
+      })}
+    </Grid>}
+    {imageError && <Alert title="The visual preview could not load. Your saved image is unchanged." tone="danger" />}
+  </>
+  const designPanel = <Stack gap={6}>
+    <Grid minItemWidth="12rem" gap={4}>
+      <Filter label="Copy" value={copyLabels[copies.findIndex(copy => copy.id === pair.copy?.id)] ?? ''} options={copyLabels} onChange={chooseCopy} disabled={busy || !copies.length} />
+      <Filter label="Visual" value={visualLabels[directions.findIndex(direction => direction.id === pair.direction?.id)] ?? ''} options={visualLabels} onChange={chooseVisual} disabled={busy || !directions.length} />
+      <Filter label="Preview proportion" value={proportion} options={['Square', 'Horizontal', 'Vertical']} onChange={setProportion} disabled={busy} />
+    </Grid>
+    {pair.direction?.copy && <Text variant="small" tone="secondary">This visual is paired with its original copy.</Text>}
+    <Inline gap={4}><Text tone="secondary">{plural(templates.length, 'template')}</Text><Button disabled={locked || !visibleDesigns.length} onClick={() => edit(allVisibleSelected ? selected.filter(item => !visibleDesigns.some(design => designKey(design) === designKey(item))) : addDesigns(selected, visibleDesigns))}>{allVisibleSelected ? 'Deselect visible designs' : 'Select all designs'}</Button></Inline>
+    {selectionCards}
+    <Text variant="small" tone="secondary">Preview proportion only changes this grid. Choose output dimensions in Sizes &amp; formats.</Text>
+  </Stack>
+  const sizesPanel = <Stack gap={6}>
+    <Inline gap={4}><Filter label="Placement category" value={category} options={Object.keys(categories)} onChange={setCategory} />
+      <Button disabled={locked || !visibleFormats.length} onClick={() => edit(selected, [...new Set([...ratioIds, ...visibleFormats.map(format => format.id)])])}>Select all shown sizes</Button></Inline>
+    <Grid minItemWidth="14rem" gap={4}>{visibleFormats.map(format => <Surface key={format.id} padding={4} radius="small"><Stack gap={3}>
+      <Heading level={3} variant="h6">{format.name}</Heading><Text tone="secondary">{format.width} × {format.height}</Text>
+      <Button disabled={locked} aria-label={`${ratioIds.includes(format.id) ? 'Deselect' : 'Select'} ${sizeLabel(format)}`} aria-pressed={ratioIds.includes(format.id)} variant={ratioIds.includes(format.id) ? 'primary' : 'secondary'} icon={ratioIds.includes(format.id) ? 'check' : 'plus'} onClick={() => edit(selected, ratioIds.includes(format.id) ? ratioIds.filter(id => id !== format.id) : [...ratioIds, format.id])}>{ratioIds.includes(format.id) ? 'Selected' : 'Select size'}</Button>
+    </Stack></Surface>)}</Grid>
+    {!visibleFormats.length && <EmptyState title="No compatible sizes in this category." />}
+    <Text variant="small" tone="secondary">Only sizes supported by the selected designs are shown. Older saved design versions retain their saved sizes. Video placements are size presets; this review package contains static PNGs.</Text>
+  </Stack>
+  return <section id="atomic-banner-selection" aria-label="Banners module" aria-busy={busy || undefined}>
+    <Stack gap={6}>
+      {heading && <Heading level={2}>Banners</Heading>}
+      <SelectionTotal designs={selected} sizes={ratioIds} />
+      {!readOnly && (canSubmit || confirming ? <Dialog title="Verify your banners" trigger="Send to Figma" open={confirming} onOpenChange={open => { if (!submitting) { setError(''); setConfirming(open) } }}>
+        <Stack gap={4}>
+          <SelectionTotal designs={selected} sizes={ratioIds} />
+          <Heading level={3} variant="h5">Designs &amp; content</Heading>
+          {selected.map(design => { const item = describe(design); return <Stack gap={1} key={designKey(design)}><Text variant="h7">{item.title}</Text><Text>{item.copy}</Text><Text variant="small" tone="secondary">{item.visual}</Text></Stack> })}
+          <Divider /><Heading level={3} variant="h5">Sizes &amp; formats</Heading>
+          {ratioIds.map(id => <Text key={id}>{catalog.find(format => format.id === id) ? sizeLabel(catalog.find(format => format.id === id)) : id}</Text>)}
+          <Text>{input.hasVideos ? 'Next, choose the videos to include in Review before creating the immutable package. ' : 'We’ll prepare an immutable PNG review package. '}Import the PNGs into Figma, then add the Figma link in Review. Designer checks and approval are still required.</Text>
+          {error && <Alert title={error} tone="danger" announce />}{validationIssues}
+          <Inline><Button disabled={submitting} onClick={() => setConfirming(false)}>Back to selection</Button><Button variant="primary" disabled={submitting} busy={submitting} onClick={confirm}>{submitting ? 'Preparing review…' : savedSubmission.current ? 'Retry review preparation' : 'Confirm and prepare review'}</Button></Inline>
+        </Stack>
+      </Dialog> : <Button disabled icon="Send">Send to Figma</Button>)}
+      {readOnly && accessReason === 'Select a current image first.' && <div role="status" aria-label="Banner selection unavailable"><Alert title="Choose a visual in Visuals to unlock banner and format selection." action={<Button onClick={onChooseVisuals} disabled={!onChooseVisuals}>Choose a visual</Button>} /></div>}
+      <Tabs label="Banner selection" value={tab} onChange={setTab} items={[{ id: 'design', label: 'Design', content: designPanel }, { id: 'sizes', label: 'Sizes & formats', content: sizesPanel }]} />
+      {selected.length > 0 && <Panel title={plural(selected.length, 'selected design')}>
+        {selected.map(design => { const item = describe(design); return <Inline gap={4} key={designKey(design)}><Stack gap={1}><Text variant="h7">{item.title}</Text><Text variant="small" tone="secondary">{item.copy} · {item.visual}</Text></Stack>{!readOnly && <Button iconOnly icon="close" aria-label={`Remove ${item.title} selection`} disabled={busy} onClick={() => edit(selected.filter(item => designKey(item) !== designKey(design)))} />}</Inline> })}
+      </Panel>}
+      {templateDetailsMissing && !templateError && <Spinner label="Loading saved template details…" />}
+      {invalidSizes.length > 0 && !templateDetailsMissing && <Alert title="Some selected sizes are not supported by every selected design." action={<Button disabled={locked} onClick={() => edit(selected, ratioIds.filter(id => supportedIds.has(id)))}>Remove unsupported sizes</Button>} />}
+      {templateError && <Alert title={templateError} tone="danger" announce action={<Button onClick={() => setTemplateReload(value => value + 1)}>Retry template details</Button>} />}
+      {sourceChanged && <Alert title="The source changed. Your selection is kept here; reload the saved selection before saving again." action={<Button disabled={busy} onClick={() => { savedSubmission.current = null; setDirty(false); onDirty(false) }}>Reload saved selection</Button>} />}
+      {!confirming && validationIssues && <Stack><Alert title={error} tone="danger" announce />{validationIssues}</Stack>}
+    </Stack>
   </section>
 }

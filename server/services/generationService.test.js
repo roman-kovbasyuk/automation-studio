@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest'
 import sharp from 'sharp'
+import { createHash } from 'node:crypto'
 import { createGenerationService } from './generationService.js'
 
 const actor = { id: 'marketer-1', role: 'marketer', disabled: false }
@@ -85,6 +86,27 @@ describe('generation service external-call recovery', () => {
     expect(controlPlane.prepareGeneration).not.toHaveBeenCalled()
     expect(controlPlane.markDispatched).not.toHaveBeenCalled()
     expect(provider.generateImage).not.toHaveBeenCalled()
+  })
+
+  test.each(['png', 'jpeg', 'webp'])('fits native %s output to the requested canvas before persistence without another provider call', async (format) => {
+    const imageBytes = await sharp({ create: { width: 1024, height: 1024, channels: 3, background: '#2563eb' } }).toFormat(format).toBuffer()
+    let storedBytes
+    const assetStore = {
+      put: vi.fn(async ({ objectKey, bytes }) => { storedBytes = bytes; return { objectKey, byteSize: bytes.length } }),
+      get: vi.fn(async () => storedBytes), delete: vi.fn(),
+    }
+    const { service, controlPlane, provider } = harness({ assetStore, provider: {
+      generateImage: vi.fn(async () => ({ provider: job.provider, model: job.model, region: job.region, usage: copyResult.usage, safety: copyResult.safety, actualCostMicrounits: 1000,
+        image: { bytes: new Uint8Array(imageBytes), mimeType: `image/${format}`, width: 1024, height: 1024 } })),
+    } })
+    const result = await service.generateImage({ actor, campaignId: 'campaign-1', idempotencyKey: 'native-size',
+      input: { directionId: 'direction-1', width: 1080, height: 1080 } })
+    expect(result.status).toBe(201)
+    expect(await sharp(storedBytes).metadata()).toMatchObject({ width: 1080, height: 1080, format })
+    expect(controlPlane.completeGeneratedImage.mock.calls[0][0].asset).toMatchObject({ width: 1080, height: 1080,
+      byteSize: storedBytes.length, sha256: createHash('sha256').update(storedBytes).digest('hex') })
+    expect(provider.generateImage).toHaveBeenCalledTimes(1)
+    expect(controlPlane.recoverGeneration).not.toHaveBeenCalled()
   })
 
   test('uploads validated image bytes before atomically committing the asset, direction, and job response', async () => {

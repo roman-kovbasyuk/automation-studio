@@ -2,10 +2,16 @@ import { MODULE_IDS, assertModuleId, projectModuleInput, moduleInputKey, stableI
   getCurrentVersion } from './moduleContracts.js'
 import { deriveWorkflowState } from './workflowState.js'
 import { observeJob } from './jobObserver.js'
+import { generationLimitMessage } from '../../../shared/generationErrors.js'
 
 const idle = Object.freeze({ kind: 'idle', actionId: null, jobId: null, error: null })
 const failure = (code, message) => Object.assign(new Error(message), { code })
 const resultError = error => ({ ok: false, code: error.code ?? 'request_failed', message: error.message })
+const jobFailure = job => {
+  const message = job.status === 'failed' && generationLimitMessage(job.errorCode)
+  return message ? failure(job.errorCode, message)
+    : failure(`generation_${job.status}`, `Generation ${job.status}. Check its status before trying again.`)
+}
 const jobOwner = { brief_analysis: 'brief', copy: 'copy', directions: 'visuals', image: 'visuals' }
 
 function freeze(value) {
@@ -55,14 +61,18 @@ export function createCampaignRuntime({ api, actor, templates = [], workspace: i
   const dirty = new Set(), observers = new Map()
   let workspace = scopedWorkspace(initial, campaignId)
   let history = reviewHistory ? freeze(structuredClone(reviewHistory)) : null
+  let figmaReview = api.getFigmaHandoff ? {loaded:false,handoff:null,submission:null} : null
   let snapshots = {}, disposed = false, refreshTicket = 0, inFlight = false, unresolved = null
   let latestRefresh = Promise.resolve(), historyTicket = 0
 
   function publish(nextWorkspace = workspace, nextHistory = history) {
-    const workflow = deriveWorkflowState(nextWorkspace, scopeActor, nextHistory)
+    if (figmaReview && figmaReview.versionId !== getCurrentVersion(nextWorkspace)?.id) {
+      figmaReview = freeze({loaded:false,versionId:getCurrentVersion(nextWorkspace)?.id??null,handoff:null,submission:null})
+    }
+    const workflow = deriveWorkflowState(nextWorkspace, scopeActor, nextHistory, figmaReview)
     const nextSnapshots = {}
     for (const id of MODULE_IDS) {
-      const input = projectModuleInput(id, nextWorkspace, { actor: scopeActor, templates: scopeTemplates, reviewHistory: nextHistory })
+      const input = projectModuleInput(id, nextWorkspace, { actor: scopeActor, templates: scopeTemplates, reviewHistory: nextHistory, figmaReview })
       nextSnapshots[id] = share(snapshots[id], { input, inputKey: moduleInputKey(id, input),
         access: workflow.modules[id], operation: operations.get(id) })
     }
@@ -90,12 +100,18 @@ export function createCampaignRuntime({ api, actor, templates = [], workspace: i
     const current = () => !disposed && ticket === historyTicket
       && getCurrentVersion(workspace)?.id === version.id && workspace.campaign.status === status
     try {
-      const value = await api.getReview(version.id, { signal: lifetime.signal })
+      const [value,handoff,submission] = await Promise.all([
+        api.getReview(version.id, { signal: lifetime.signal }),
+        api.getFigmaHandoff?.(version.id,{signal:lifetime.signal}),
+        api.getFigmaSubmission?.(version.id,{signal:lifetime.signal}),
+      ])
       if (!current()) return
+      if(api.getFigmaHandoff) figmaReview=freeze({loaded:true,versionId:version.id,handoff:handoff?.handoff??null,submission:submission?.submission??null})
       publish(workspace, value ? freeze(structuredClone(value)) : null)
       if (operations.get('review').actionId === 'history') setOperation('review', idle)
     } catch (error) {
       if (!current()) return
+      if(api.getFigmaHandoff) figmaReview=freeze({loaded:false,handoff:null,submission:null})
       publish(workspace, null)
       showError('review', 'history', error)
     }
@@ -137,7 +153,7 @@ export function createCampaignRuntime({ api, actor, templates = [], workspace: i
         const { moduleId: owner, actionId } = unresolved
         unresolved = null
         if (terminalJob && resolvedJob.status !== 'succeeded') {
-          showError(owner, actionId, failure(`generation_${resolvedJob.status}`, `Generation ${resolvedJob.status}.`), false, resolvedJob.id)
+          showError(owner, actionId, jobFailure(resolvedJob), false, resolvedJob.id)
         } else setOperation(owner, idle)
       }
       onCampaignChange(workspace.campaign)
@@ -158,7 +174,7 @@ export function createCampaignRuntime({ api, actor, templates = [], workspace: i
         const moduleId = jobOwner[job?.step]
         if (moduleId && operations.get(moduleId).actionId === `observe:${id}`) {
           if (job.status === 'succeeded') setOperation(moduleId, idle)
-          else showError(moduleId, `observe:${id}`, failure(`generation_${job.status}`, `Generation ${job.status}.`), job.status === 'unknown', id)
+          else showError(moduleId, `observe:${id}`, jobFailure(job), job.status === 'unknown', id)
         }
       }
     }
@@ -176,7 +192,7 @@ export function createCampaignRuntime({ api, actor, templates = [], workspace: i
           stop?.(); observers.delete(job.id)
           if (!inFlight) {
             if (value.status === 'succeeded') setOperation(moduleId, idle)
-            else showError(moduleId, `observe:${job.id}`, failure(`generation_${value.status}`, `Generation ${value.status}.`), value.status === 'unknown', job.id)
+            else showError(moduleId, `observe:${job.id}`, jobFailure(value), value.status === 'unknown', job.id)
           }
           void refresh().catch(error => showError(moduleId, 'refresh', error, true, job.id))
         },
@@ -193,7 +209,7 @@ export function createCampaignRuntime({ api, actor, templates = [], workspace: i
     const initialJob = response.job ?? response
     const check = job => {
       if (job.status === 'succeeded') return job
-      throw Object.assign(failure(`generation_${job.status}`, `Generation ${job.status}. Check its status before trying again.`),
+      throw Object.assign(jobFailure(job),
         { status: job.status === 'unknown' || job.status === 'pending' ? 0 : 422, jobId: job.id })
     }
     if (initialJob.status !== 'pending') return check(initialJob)
@@ -229,7 +245,7 @@ export function createCampaignRuntime({ api, actor, templates = [], workspace: i
       return resultError(failure('generation_unresolved', 'A generation is pending or needs reconciliation.'))
     }
     const snapshot = snapshots[moduleId]
-    if (!replay && !snapshot.access.canEdit) return resultError(failure('not_allowed', snapshot.access.reason))
+    if (!replay && !(snapshot.access.canEdit || (moduleId==='review' && actionId==='sendToFigma' && snapshot.access.canSendToFigma))) return resultError(failure('not_allowed', snapshot.access.reason))
     if (!replay && expectedInputKey !== undefined && snapshot.inputKey !== expectedInputKey) {
       const error = failure('source_changed', 'The source changed. Review it before applying this draft.')
       showError(moduleId, actionId, error)
@@ -264,7 +280,7 @@ export function createCampaignRuntime({ api, actor, templates = [], workspace: i
 
   publish()
   observePendingJobs()
-  if (getCurrentVersion(workspace) && !history) void loadHistory()
+  if (getCurrentVersion(workspace) && (!history || api.getFigmaHandoff)) void loadHistory()
   return Object.freeze({
     getSnapshot(moduleId) { assertModuleId(moduleId); return snapshots[moduleId] },
     subscribe(moduleId, listener) {
@@ -285,8 +301,10 @@ export function createCampaignRuntime({ api, actor, templates = [], workspace: i
     isBusy: () => inFlight,
     assets: Object.freeze({ getAssetBlob: (id, options = {}) => disposed
       ? Promise.reject(failure('disposed', 'This campaign is no longer active.'))
-      : api.getAssetBlob(id, { ...options, signal: options.signal
-        ? AbortSignal.any([lifetime.signal, options.signal]) : lifetime.signal }) }),
+      : (id.startsWith('figma:')
+        ? api.getFigmaOutputBlob(id.split(':')[1],id.split(':')[2],{...options,signal:options.signal?AbortSignal.any([lifetime.signal,options.signal]):lifetime.signal})
+        : api.getAssetBlob(id, { ...options, signal: options.signal
+        ? AbortSignal.any([lifetime.signal, options.signal]) : lifetime.signal })) }),
     dispose() {
       disposed = true; refreshTicket += 1; lifetime.abort()
       for (const stop of observers.values()) stop()

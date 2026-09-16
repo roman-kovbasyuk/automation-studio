@@ -1,9 +1,5 @@
-import './workflow-module-frame.css'
+import { Heading, Stack, Surface } from 'brutalist-design-system'
 
-/** Domain-free workflow card: its caller owns state, actions and navigation. */
 export function WorkflowModuleFrame({ id, title, busy = false, children }) {
-  return <section id={id} className="v2-workflow-module bs-long-section" aria-labelledby={`${id}-title`} aria-busy={busy || undefined}>
-    <header className="v2-workflow-module-heading"><h2 id={`${id}-title`}>{title}</h2></header>
-    {children}
-  </section>
+  return <Surface role="region" id={id} aria-labelledby={id+'-title'} aria-busy={busy || undefined}><Stack gap={8}><Heading level={2} id={id+'-title'}>{title}</Heading>{children}</Stack></Surface>
 }

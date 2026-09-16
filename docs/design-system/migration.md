@@ -1,4 +1,58 @@
+# Current consumer boundary (2026-09-11)
+
+The app imports public `brutalist-design-system` components and its stylesheet.
+`npm run design-system:update` rebuilds canonical main in a temporary clone,
+installs a commit-pinned archive, verifies provenance and imports, runs the
+application tests and builds the app/docs. Compatible existing imports require
+no rebinding. New components require adoption; breaking APIs require migration.
+
+The copied catalog and example-only entrypoints are removed. The app reference
+reads the installed CSS tokens and package commit. Shared buttons are direct
+reexports; callbacks and application state remain in thin app adapters.
+Surfaces, fields, menus, dialogs, tables and feedback use the upstream rendering.
+Layout is placed on plain containers, with app text referencing upstream tokens.
+
+See `missing-components.md` for the explicit native-default exceptions and
+`vendor/BRUTALIST_DESIGN_SYSTEM.md` for update and recovery instructions.
+Static guards and rendered route checks cover the migration; arbitrary future
+spread props or ancestor selectors still need review. The external repository
+was not changed. No commit, push or deployment was performed in this cleanup.
+
+The following extraction-era notes are historical only. References to retained
+example exports, copied catalog files and proposed field/status migration no
+longer describe the current source tree.
+
+---
+
 # Migration map and compatibility
+
+## Current external component adoption (2026-09-10)
+
+The installed `brutalist-design-system` package owns the shared button, field,
+and surface rendering. The external repository and packaged artifact remain unchanged.
+
+- Studio uses `DesignSystemRoot`; directly rendered Studio actions use `AppButton`.
+- The shared app `PromptComposer` combines upstream `Surface`, `TextArea`, and
+  `AppButton`. It retains file uploads/removal, drag/drop, keyboard submission,
+  read-only mode, and busy locks. Home, campaign briefs, brand prompts, and the
+  presentation composer use this same composition. The installed public API has
+  no standalone `PromptComposer` or `PromptInputBlock` export.
+- `WorkflowModuleFrame` and `SettingsRow` use upstream `Surface`. Their local CSS
+  supplies layout only. They use app-specific class names to avoid the old
+  package's border, radius, and typography overrides.
+- The app's single-choice `SelectMenu` retains listbox semantics and keyboard
+  focus behavior while using upstream `AppButton` and `Surface`. All Studio
+  consumers share it. Its styles use the upstream floating-shadow token.
+- The generic Studio form-control reset has zero specificity, so the installed
+  components retain their own font styles.
+
+Legacy tabs, workflow steps, asynchronous feedback, editable copy, and preview
+adapters still exist. This change does not claim that the old package can yet be
+removed. Preserve their interaction contracts during subsequent migration;
+never patch the external package to accommodate consumer behavior.
+
+The map below records the earlier local extraction, rather than the current
+source-of-truth policy.
 
 All paths below are repository-relative. Reversible moves retain the original module as a re-export of the **same component**, preserving component identity and old consumers. This work introduces no removed export, renamed state value, route change or backend mutation. HMR may reset a currently open demo's local state; persistent campaign data is unaffected.
 

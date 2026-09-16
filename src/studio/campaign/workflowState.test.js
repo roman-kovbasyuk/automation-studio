@@ -8,10 +8,21 @@ function state(name, change = () => {}) {
   return deriveWorkflowState(scenario.workspace, scenario.actor, scenario.reviewHistory)
 }
 
-describe('six-module progress and permissions', () => {
+describe('Banners-owned review progress and permissions', () => {
+  test('creating a review version without a Figma handoff leaves copy editable', () => {
+    expect(state('in-review').modules.copy.canEdit).toBe(true)
+  })
+  test('a recorded current handoff locks copy until the campaign is reopened', () => {
+    const scenario = makeScenario('in-review')
+    const figma = { loaded: true, versionId: scenario.workspace.versions[0].id, handoff: { id: 'handoff-1' } }
+    expect(deriveWorkflowState(scenario.workspace, scenario.actor, scenario.reviewHistory, figma).modules.copy.canEdit).toBe(false)
+    scenario.workspace.campaign.status = 'composed'
+    scenario.workspace.campaign.openVersionId = null
+    expect(deriveWorkflowState(scenario.workspace, scenario.actor, scenario.reviewHistory, figma).modules.copy.canEdit).toBe(true)
+  })
   test.each([['draft', 'brief'], ['copy-ready', 'copy'], ['visuals-ready', 'banners'],
-    ['composed', 'review'], ['in-review', 'review'], ['changes-requested', 'review'],
-    ['ready', 'review'], ['approved', 'distribute'], ['delivered', 'distribute']])(
+    ['composed', 'banners'], ['in-review', 'banners'], ['changes-requested', 'banners'],
+    ['ready', 'banners'], ['approved', 'distribute'], ['delivered', 'distribute']])(
     '%s resolves from domain state to %s', (scenario, expected) => {
       expect(state(scenario).currentModule).toBe(expected)
     },
@@ -68,9 +79,9 @@ describe('six-module progress and permissions', () => {
     expect(result.modules.banners.canEdit).toBe(false)
     expect(result.modules.review.canEdit).toBe(false)
   })
-  test('approval completes Review but not distribution', () => {
+  test('approval completes Banners and enables distribution', () => {
     const result = state('approved')
-    expect(result.modules.review.complete).toBe(true)
+    expect(result.modules.banners.complete).toBe(true)
     expect(result.modules.distribute.complete).toBe(false)
     expect(result.modules.distribute.canEdit).toBe(true)
     expect(state('delivered').modules.distribute.complete).toBe(true)
@@ -79,4 +90,11 @@ describe('six-module progress and permissions', () => {
     const result = state('delivered', ({ workspace }) => { workspace.delivery.versionId = 'other' })
     expect(result.modules.distribute.complete).toBe(false)
   })
+})
+
+test('ready images expose banner previews before selecting an image without enabling writes',()=>{
+ const result=state('visuals-ready',({workspace})=>{workspace.campaign.selectedDirectionId=null;workspace.campaign.status='copy_ready'})
+ expect(result.modules.banners.canVisit).toBe(true)
+ expect(result.modules.banners.canEdit).toBe(false)
+ expect(result.modules.banners.canEdit).toBe(false)
 })

@@ -1,14 +1,33 @@
 import { describe, expect, test, vi } from 'vitest'
-import { BlockedReason, FinishReason } from '@google/genai'
+import { ApiError, BlockedReason, FinishReason } from '@google/genai'
 import { createMockProvider } from './mockProvider.js'
 import {
   buildBriefAnalysisPrompt,
   buildCopyPrompt,
   buildDirectionsPrompt,
   buildImagePrompt,
+  buildBrandMaterialsPrompt,
+  buildBrandChangePrompt,
   createConservativeGeminiCostEstimator,
   createGeminiProvider,
 } from './geminiProvider.js'
+import { createEmptyBrandDraft } from '../../shared/brandDesignSystem.js'
+import { emptyBriefAnswers } from '../../shared/briefingContracts.js'
+
+test('managed briefing analysis includes labeled sources and inline media; personal keys refuse them',async()=>{
+  const sourceKey='a'.repeat(64)
+  const reviewed={...analysis,briefingProposal:{sourceKey,foundCopy:[],answers:emptyBriefAnswers(),suggestedVisualTags:[]}}
+  const {provider,client}=harness(textResponse({analysis:reviewed}))
+  const input={brief:{...brief,briefing:{schemaVersion:2,sourceIds:['s1'],sourceKey,analysisJobId:null,answers:emptyBriefAnswers(),confirmation:null}},
+    sources:[{id:'s1',name:'Synthetic.pdf',contentHash:'b'.repeat(64),blocks:[],attachmentRefs:[{kind:'pdf',mimeType:'application/pdf'}],attachments:[{mimeType:'application/pdf',data:'JVBERi0='}]}]}
+  expect((await provider.analyseBrief(input,new AbortController().signal)).analysis.briefingProposal).toEqual(reviewed.briefingProposal)
+  const parts=client.models.generateContent.mock.calls[0][0].contents[0].parts
+  expect(parts.some(part=>part.inlineData?.data==='JVBERi0=')).toBe(true)
+  expect(parts[0].text).toContain('Synthetic.pdf')
+  const personal=harness(textResponse({analysis:reviewed}),{apiKey:'synthetic-not-a-secret'})
+  await expect(personal.provider.analyseBrief(input,new AbortController().signal)).rejects.toThrow(/Vertex AI EU/)
+  expect(personal.client.models.generateContent).not.toHaveBeenCalled()
+})
 
 const brief = {
   product: 'Nordic language course',
@@ -27,6 +46,7 @@ const direction = {
   id: 'direction-1', title: 'Nordic focus', prompt: 'Soft daylight on a clean desk.',
   status: 'pending', previewAssetId: null,
 }
+const brandDraft = createEmptyBrandDraft('Northstar')
 
 function textResponse(value, overrides = {}) {
   const text = typeof value === 'string' ? value : JSON.stringify(value)
@@ -94,6 +114,33 @@ function harness(response, overrides = {}) {
 }
 
 describe('Gemini Vertex AI generation provider', () => {
+  test('inspects brand materials with policy-bound structured output', async () => {
+    const draft = { ...brandDraft, sources: [{ id: 'source-1', kind: 'file', label: 'brand.pdf', mimeType: 'application/pdf', byteSize: 100, status: 'added' }] }
+    const { client, provider } = harness(textResponse({ draft }))
+    const result = await provider.inspectBrandMaterials({ draft, sources: draft.sources, policyVersion: 'brand-system-v1' }, new AbortController().signal)
+    expect(result).toMatchObject({ provider: 'gemini', model: 'gemini-3.5-flash', draft })
+    expect(client.models.generateContent).toHaveBeenCalledWith(expect.objectContaining({
+      contents: buildBrandMaterialsPrompt({ draft, sources: draft.sources }),
+      config: expect.objectContaining({ systemInstruction: expect.stringContaining('untrusted brand material') }),
+    }))
+  })
+
+  test('proposes only typed brand changes and rejects a missing policy version', async () => {
+    const proposal = { operations: [{ operation: 'scale_typography', factor: 0.9 }], unchanged: ['colors', 'logos', 'assets'] }
+    const { provider } = harness(textResponse(proposal))
+    const result = await provider.proposeBrandChanges({ draft: brandDraft, prompt: 'Make typography 10% smaller', policyVersion: 'brand-system-v1' }, new AbortController().signal)
+    expect(result.operations).toEqual(proposal.operations)
+    expect(buildBrandChangePrompt({ draft: brandDraft, prompt: 'Make typography 10% smaller' })).toMatch(/^UNTRUSTED_BRAND_CHANGE_REQUEST\n/)
+    await expect(provider.proposeBrandChanges({ draft: brandDraft, prompt: 'x', policyVersion: 'wrong' }, new AbortController().signal)).rejects.toThrow()
+  })
+  test('supports API-key mode without a Vertex project', async () => {
+    const response = textResponse({ analysis })
+    const clientFactory = vi.fn(() => ({ models: { generateContent: vi.fn(async () => response) } }))
+    const provider = createGeminiProvider({ apiKey: 'synthetic-gemini-key', clientFactory })
+    const result = await provider.analyseBrief({ brief }, new AbortController().signal)
+    expect(result.analysis).toEqual(analysis)
+    expect(clientFactory).toHaveBeenCalledWith({ apiKey: 'synthetic-gemini-key' })
+  })
   test('constructs the v1 Vertex AI client when an SDK client is not injected', () => {
     const client = { models: { generateContent: vi.fn() } }
     const clientFactory = vi.fn(() => client)
@@ -135,6 +182,26 @@ describe('Gemini Vertex AI generation provider', () => {
         responseJsonSchema: expect.objectContaining({ type: 'object', additionalProperties: false }),
       }),
     }))
+  })
+
+  test('bounds text generation while allowing larger explicitly requested direction sets', async () => {
+    const analysisCall = harness(textResponse({ analysis }))
+    await analysisCall.provider.analyseBrief({ brief }, new AbortController().signal)
+    const copyCall = harness(textResponse({ copies: copyVariants() }))
+    await copyCall.provider.generateCopy({ brief, analysis }, new AbortController().signal)
+    const directionCall = harness(textResponse({ directions: directions(5) }))
+    await directionCall.provider.generateDirections({ brief, analysis, mode: 'campaign', copies: [] }, new AbortController().signal)
+    const limits = [analysisCall, copyCall, directionCall].map(({client}) => client.models.generateContent.mock.calls[0][0].config)
+    expect(limits.every(config => config.candidateCount === 1 && config.maxOutputTokens > 0)).toBe(true)
+    expect(limits[0].maxOutputTokens).toBeLessThanOrEqual(2048)
+    expect(limits[1].maxOutputTokens).toBeLessThanOrEqual(4096)
+    expect(limits[2].maxOutputTokens).toBeLessThanOrEqual(5120)
+    expect(limits[2].responseJsonSchema.properties.directions).toMatchObject({minItems:5,maxItems:5})
+    const many = harness(textResponse({ directions: directions(30) }))
+    await many.provider.generateDirections({ brief, analysis, mode: 'selected_copy', copies: copyVariants(30) }, new AbortController().signal)
+    const larger = many.client.models.generateContent.mock.calls[0][0].config.maxOutputTokens
+    expect(larger).toBeGreaterThan(limits[2].maxOutputTokens)
+    expect(larger).toBeLessThanOrEqual(16384)
   })
 
   test('returns exactly five strict copy variants and rejects a different count', async () => {
@@ -444,6 +511,57 @@ describe('Gemini Vertex AI generation provider', () => {
 
     expect(result).toMatchObject({ error: { code, message, retryable: true } })
     expect(JSON.stringify(result)).not.toContain('credential')
+  })
+
+  test('normalizes an invalid API key into a terminal provider error', async () => {
+    const { client, provider } = harness(undefined)
+    client.models.generateContent.mockRejectedValueOnce(new ApiError({ status: 400, message: JSON.stringify({ error: {
+      code: 400, status: 'INVALID_ARGUMENT', message: 'API key not valid. Please pass a valid API key.',
+    } }) }))
+
+    const result = await provider.generateCopy({ brief, analysis }, new AbortController().signal)
+
+    expect(result).toMatchObject({ error: {
+      code: 'invalid_key',
+      message: 'The saved Google Gemini credential was rejected.',
+      retryable: false,
+    } })
+    expect(JSON.stringify(result)).not.toContain('API key not valid')
+  })
+
+  test.each([
+    [{ quotaId: 'GenerateRequestsPerDayPerProjectPerModel-FreeTier' }, 'quota_exhausted'],
+    [{ quotaId: 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', quotaValue: '0' }, 'quota_exhausted'],
+    [{ quotaId: 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', quotaValue: 0 }, 'quota_exhausted'],
+  ])('does not invite retries for an exhausted quota: %j', async (violation, code) => {
+    const { client, provider } = harness(undefined)
+    client.models.generateContent.mockRejectedValueOnce(new ApiError({ status: 429, message: JSON.stringify({ error: {
+      code: 429, status: 'RESOURCE_EXHAUSTED', message: 'synthetic-private-provider-detail',
+      details: [{ '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [violation] }],
+    } }) }))
+    const result = await provider.generateImage({ direction, width: 1024, height: 1024 }, new AbortController().signal)
+    expect(result.error).toMatchObject({ code, retryable: false })
+    expect(JSON.stringify(result)).not.toContain('synthetic-private-provider-detail')
+    expect(client.models.generateContent).toHaveBeenCalledTimes(1)
+  })
+
+  test('recognizes a billing prerequisite without leaking the provider response', async () => {
+    const { client, provider } = harness(undefined)
+    client.models.generateContent.mockRejectedValueOnce(new ApiError({ status: 403, message: JSON.stringify({ error: {
+      code: 403, status: 'PERMISSION_DENIED', message: 'Billing must be enabled for this project. synthetic-private-detail',
+    } }) }))
+    expect(await provider.generateImage({ direction, width: 1024, height: 1024 }, new AbortController().signal))
+      .toMatchObject({ error: { code: 'billing_required', retryable: false } })
+  })
+
+  test('keeps a minute throttle transient even when Google suggests checking billing details', async () => {
+    const { client, provider } = harness(undefined)
+    client.models.generateContent.mockRejectedValueOnce(new ApiError({ status: 429, message: JSON.stringify({ error: {
+      code: 429, status: 'RESOURCE_EXHAUSTED', message: 'Please check your plan and billing details.',
+      details: [{ '@type': 'type.googleapis.com/google.rpc.QuotaFailure', violations: [{ quotaId: 'GenerateRequestsPerMinutePerProjectPerModel-FreeTier', quotaValue: '10' }] }],
+    } }) }))
+    expect(await provider.analyseBrief({ brief }, new AbortController().signal))
+      .toMatchObject({ error: { code: 'rate_limited', retryable: true } })
   })
 
   test('throws ambiguous transport errors so the generation service can record unknown', async () => {

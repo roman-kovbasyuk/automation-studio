@@ -1,5 +1,7 @@
 # Lingu Agents — Marketing Pipeline System
 
+> **Scope for Banner Studio application work — 15 September 2026.** Read [AGENTS.md](AGENTS.md) and [FRONTEND.md](FRONTEND.md) before designing or changing application pages/screens. They govern the active web application. The marketing-agent pipeline below is separate historical tooling; its stage ordering, Figma capability claims and language about runtime requirements do not specify the Banner Studio front end. Verify application integrations against their current contracts and accepted feature specifications.
+
 A closed-loop Claude Code system that turns a social account into researched, on-brand marketing
 creative — video or static — with a **real human review checkpoint in Figma** built into both
 pipelines. HyperFrames (motion) only ever runs at the very last video step, after a human has

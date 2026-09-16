@@ -1,13 +1,13 @@
-import { render, screen } from '@testing-library/react'
+import { selectOption } from "../../test/selectOption.js"
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { expect, test, vi } from 'vitest'
 import { PromptComposer } from './PromptComposer.jsx'
 import { SelectMenu } from './molecules/SelectMenu.jsx'
 import { TemplateLibrary } from '../../studio/TemplateLibrary.jsx'
-import { DesignSystemScreen } from '../../screens/DesignSystemScreen.jsx'
 
-test('the status selector opens at its selection, moves with arrows, and restores focus', async () => {
+test('the status selector uses upstream popup selection and forwards its value', async () => {
   const user = userEvent.setup()
   function StatusSelectorFixture() {
     const [value, setValue] = useState('Draft')
@@ -15,17 +15,13 @@ test('the status selector opens at its selection, moves with arrows, and restore
       value={value} options={['Draft', 'In review', 'Ready', 'Published']} onChange={setValue} />
   }
   render(<StatusSelectorFixture />)
-  const trigger = screen.getByRole('button', { name: 'Open campaign status options' })
-  await user.click(trigger)
-  expect(screen.getByRole('option', { name: 'Draft' })).toHaveFocus()
-  await user.keyboard('{ArrowDown}{Enter}')
-  expect(trigger).toHaveTextContent('In review')
-  expect(trigger).toHaveFocus()
-  expect(screen.queryByRole('listbox', { name: 'Campaign status options' })).not.toBeInTheDocument()
-  await user.keyboard('{ArrowDown}{End}')
-  expect(screen.getByRole('option', { name: 'Published' })).toHaveFocus()
-  await user.keyboard('{Escape}')
-  expect(trigger).toHaveFocus()
+  const select = screen.getByRole('combobox', { name: 'Open campaign status options' })
+  expect(select).toHaveTextContent('Draft')
+  await selectOption(select, 'In review')
+  expect(select).toHaveTextContent('In review')
+  await waitFor(() => expect(select).toHaveFocus())
+  await selectOption(select, 'Published')
+  expect(select).toHaveTextContent('Published')
 })
 
 test('read-only campaign briefs remain selectable and focusable without submitting', async () => {
@@ -56,7 +52,7 @@ test('every template category controls a labelled panel and keyboard focus follo
   render(<TemplateLibrary templates={[]} onChoose={vi.fn()} />)
   expect(document.getElementById('template-categories')).toBeInTheDocument()
   const tabs = screen.getAllByRole('tab')
-  expect(tabs.map(tab => tab.textContent)).toEqual(['Banners', 'Presentations', 'Websites', 'Documents'])
+  expect(tabs.map(tab => tab.textContent)).toEqual(['Ads', 'Web', 'Presentations', 'Other'])
   for (const tab of tabs) {
     const panel = document.getElementById(tab.getAttribute('aria-controls'))
     expect(panel).not.toBeNull()
@@ -66,8 +62,8 @@ test('every template category controls a labelled panel and keyboard focus follo
   await user.click(tabs[0])
   await user.keyboard('{ArrowRight}')
   expect(tabs[1]).toHaveFocus()
-  expect(screen.getByRole('tabpanel', { name: 'Presentations' })).toBeVisible()
+  expect(screen.getByRole('tabpanel', { name: 'Web' })).toBeVisible()
   expect(document.getElementById(tabs[0].getAttribute('aria-controls'))).not.toBeVisible()
   await user.tab()
-  expect(screen.getByRole('tabpanel', { name: 'Presentations' })).toHaveFocus()
+  expect(screen.getByRole('tabpanel', { name: 'Web' })).toHaveFocus()
 })

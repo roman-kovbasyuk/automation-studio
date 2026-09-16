@@ -1,6 +1,10 @@
+import { reviewVideoSchema } from '../../shared/videoContracts.js'
+import { decodeGeneratedVideo } from '../media/videoDecoder.js'
 import { createHash, randomUUID } from 'node:crypto'
 import { z } from 'zod'
 import { rawBrief } from '../../shared/briefAnalysis.js'
+import {authoredCopyVariantSchema} from '../../shared/briefingContracts.js'
+import {copyProjection,visualProjection,reviewedAnalysis} from '../../shared/briefingDependencies.js'
 import {
   analyseBriefInputSchema,
   briefAnalysisSchema,
@@ -8,7 +12,7 @@ import {
   campaignVersionRecordSchema,
   campaignVersionSnapshotSchema,
   compositionSchema,
-  copyVariantSchema,
+  campaignCopyVariantSchema,
   createCampaignVersionRequestSchema,
   generateCopyInputSchema,
   generateDirectionsInputSchema,
@@ -139,23 +143,44 @@ function verifyTemplate(template) {
   }
 }
 
-function verifyCopyLineage(copy, campaignBrief, analysis) {
+export function verifyCopyLineage(copy, campaignBrief, analysis) {
+  if(copy?.origin==='supplied') {
+    const snapshot=copy.authoredSnapshot,original=snapshot?.suppliedCopy
+    if(!campaignBrief.briefing || !snapshot || snapshot.confirmation?.id!==copy.sourceConfirmationId
+      || snapshot.confirmation?.importedCopySetId!==copy.id || original?.id!==copy.id
+      || snapshot.confirmation.copyKey!==copy.copySourceKey
+      || (copy.retainedBriefHash!==hashCanonical(copyProjection(campaignBrief)) && copy.copySourceKey!==hashCanonical(copyProjection(campaignBrief)))
+      || copy.stale || !Array.isArray(original.candidates) || !Array.isArray(copy.candidates)
+      || hashCanonical(copy.originalCandidates)!==hashCanonical(original.candidates)
+      || copy.candidates.length!==original.candidates.length
+      || !copy.candidates.every((candidate,index)=>authoredCopyVariantSchema.safeParse(candidate).success
+        && candidate.id===original.candidates[index].id && hashCanonical(candidate)===(copy.editHashes?.[candidate.id]??hashCanonical(original.candidates[index])))
+      || copy.deletedCandidateIds?.includes(copy.selectedCandidateId)
+      || !copy.candidates.some(candidate=>candidate.id===copy.selectedCandidateId && hashCanonical(candidate)===hashCanonical(copy.selectedCopy)))
+      fail(409,'copy_selection_invalid','The supplied copy has missing, changed or stale provenance')
+    return
+  }
+  const retained = copy?.retainedBriefHash === hashCanonical(copyProjection(campaignBrief))
   // Capacity is persisted control-plane metadata, not part of the provider prompt.
   const copyInput = generateCopyInputSchema.extend({ copySlots: z.number().int().min(1).max(5).optional() }).safeParse(copy?.generationInput)
   const analysisInput = analyseBriefInputSchema.extend({ title: z.string().optional() }).safeParse(analysis?.generationInput)
   const analysisResult = briefAnalysisSchema.safeParse(analysis?.generationResult?.analysis)
   if (!copy?.selectedCopy || copy.stale || copy.generationStep !== 'copy' || !isSafeGeneration(copy)
     || !copyInput.success
-    || hashCanonical(copyInput.data.brief) !== hashCanonical(campaignBrief)
+    || (!retained && hashCanonical(copyProjection(copyInput.data.brief)) !== hashCanonical(copyProjection(campaignBrief)))
     || !analysis || analysis.generationStep !== 'brief_analysis' || !isSafeGeneration(analysis)
     || !analysisInput.success || !analysisResult.success
     || !exactObjectKeys(analysis.generationResult, ['analysis'])
-    || hashCanonical(rawBrief(analysisInput.data.brief)) !== hashCanonical(rawBrief(campaignBrief))
-    || hashCanonical(copyInput.data.analysis) !== hashCanonical(campaignBrief.analysis ?? analysisResult.data)
+    || (campaignBrief.briefing?analysisInput.data.brief.briefing?.sourceKey!==campaignBrief.briefing.sourceKey:hashCanonical(rawBrief(analysisInput.data.brief)) !== hashCanonical(rawBrief(campaignBrief)))
+    || (!retained && hashCanonical(copyInput.data.analysis) !== hashCanonical(reviewedAnalysis(campaignBrief,campaignBrief.analysis ?? analysisResult.data)))
     || copy.generationResult?.copySetId !== copy.id
     || !Array.isArray(copy.generationResult?.copies) || !Array.isArray(copy.candidates)
-    || hashCanonical(copy.generationResult?.copies) !== hashCanonical(copy.candidates)
-    || !copy.generationResult.copies.some((candidate) => (
+    || copy.generationResult.copies.length !== copy.candidates.length
+    || !copy.candidates.every((candidate, index) => {
+      const generated = copy.generationResult.copies[index]
+      return generated?.id === candidate.id && hashCanonical(candidate) === (copy.editHashes?.[candidate.id] ?? hashCanonical(generated))
+    })
+    || !copy.candidates.some((candidate) => (
       candidate.id === copy.selectedCandidateId && hashCanonical(candidate) === hashCanonical(copy.selectedCopy)
     ))) {
     fail(409, 'copy_selection_invalid', 'The selected copy is stale, unsafe, or unavailable')
@@ -163,9 +188,9 @@ function verifyCopyLineage(copy, campaignBrief, analysis) {
 }
 
 function matchesVisualSource(input, direction, selectedCopy, campaignBrief, analysis) {
-  if (hashCanonical(input.brief) !== hashCanonical(campaignBrief)) return false
+  if (hashCanonical(visualProjection(input.brief)) !== hashCanonical(visualProjection(campaignBrief))) return false
   if (!input.mode) return hashCanonical(input.copy) === hashCanonical(selectedCopy)
-  if (direction.scope !== input.mode || hashCanonical(input.analysis) !== hashCanonical(campaignBrief.analysis ?? analysis.generationResult.analysis)) return false
+  if (direction.scope !== input.mode || hashCanonical(input.analysis) !== hashCanonical(reviewedAnalysis(campaignBrief,campaignBrief.analysis ?? analysis.generationResult.analysis))) return false
   return input.mode === 'campaign' ? direction.copy == null
     : direction.copy && hashCanonical(direction.copy) === hashCanonical(selectedCopy)
       && input.copies.some(copy => copy.id === selectedCopy.id && hashCanonical(copy) === hashCanonical(selectedCopy))
@@ -386,16 +411,18 @@ function immutableBriefAnalysis(analysis) {
 function immutableDesignContexts(contexts) {
   return contexts.map(context => ({
     id: context.composition.id,
-    selectedCopy: copyVariantSchema.parse(context.copy.selectedCopy),
+    selectedCopy: campaignCopyVariantSchema.parse(context.copy.selectedCopy),
     selectedDirection: publicDirection(context.direction),
     templateManifest: context.template.manifest,
     templateManifestHash: context.template.manifestHash,
   }))
 }
 
-function contextMatchesPlan({ analysis, copy, direction, composition, template, sourceAssets, batchContexts }, plan) {
+function contextMatchesPlan({ analysis, copy, direction, composition, template, sourceAssets, batchContexts, videoSources = [], videos = [] }, plan) {
   const sources = sourceAssets.map(immutableSourceAsset)
-  return hashCanonical(immutableBriefAnalysis(analysis)) === hashCanonical(plan.briefAnalysis)
+  return hashCanonical(videoSources.map(immutableSourceAsset)) === hashCanonical(plan.videoSources ?? [])
+    && hashCanonical(videos) === hashCanonical(plan.videos ?? [])
+    && hashCanonical(immutableBriefAnalysis(analysis)) === hashCanonical(plan.briefAnalysis)
     && hashCanonical(copy.selectedCopy) === hashCanonical(plan.selectedCopy)
     && hashCanonical(publicDirection(direction)) === hashCanonical(plan.selectedDirection)
     && hashCanonical(composition) === hashCanonical(plan.composition)
@@ -560,6 +587,31 @@ export function createVersionService({
     return { analysis, copy, direction, composition, template, previewAsset, sourceAssets }
   }
 
+  const attachVideos = async (repository, campaign, context, ids = [], { lock = false } = {}) => {
+    if (!ids.length) return { ...context, videoSources: [], videos: [] }
+    const videoSources = await repository[lock ? 'findAssetsForUpdate' : 'findAssets'](campaign.id, [...ids].sort())
+    const directions = context.batchContexts?.map(item => item.direction) ?? [context.direction]
+    if (videoSources.length !== ids.length) fail(409, 'video_source_invalid', 'A selected video is unavailable.')
+    const videos = videoSources.map(asset => {
+      const metadata = asset.generationResult?.video
+      const direction = directions.find(item => item?.id === asset.generationInput?.directionId)
+      if (asset.kind !== 'video' || asset.source !== 'generation' || asset.generationStep !== 'video'
+        || asset.generationStatus !== 'succeeded' || asset.generationSafety?.verdict !== 'safe' || !direction
+        || !metadata || ['id','sha256','mimeType','byteSize','width','height'].some(key => asset[key] !== metadata[key])) {
+        fail(409, 'video_source_invalid', 'A selected video does not match a completed campaign source.')
+      }
+      const external = asset.generationInput?.origin === 'external_live_check'
+      if (!external && (asset.generationInput.direction?.prompt !== direction.prompt
+        || asset.generationInput.direction?.preview_asset_id !== direction.previewAssetId
+        || hashCanonical(asset.generationInput.brief) !== hashCanonical(campaign.brief))) {
+        fail(409, 'video_source_changed', 'The source of a selected video changed. Review the current footage selection.')
+      }
+      return reviewVideoSchema.parse({ ...metadata, generationJobId: asset.generationJobId,
+        directionId: direction.id, model: asset.generationModel, origin: external ? 'external_live_check' : 'generation' })
+    })
+    return { ...context, videoSources, videos }
+  }
+
   const saveBannerBatch = async ({ actor, campaignId, expectedRevision, input }) => {
     requireRole(actor, editors)
     validateRevision(expectedRevision)
@@ -600,7 +652,7 @@ export function createVersionService({
     })
   }
 
-  const prepareBuild = ({ actor, campaignId, expectedRevision, key, fingerprint, ownerToken, deadlineAt }) => mainTransaction(deadlineAt, async (client) => {
+  const prepareBuild = ({ actor, campaignId, expectedRevision, key, fingerprint, ownerToken, deadlineAt, videoAssetIds = [] }) => mainTransaction(deadlineAt, async (client) => {
     const idempotency = idempotencyRepositoryFactory(client)
     const lockedOwner = await idempotency.lockOwner({
       actorId: actor.id, method: 'POST', resourceId: campaignId, key, fingerprint, ownerToken, now: safeInstant(clock()),
@@ -629,7 +681,7 @@ export function createVersionService({
         existing = await repository.takeOverBuild({ id: existing.id, ownerToken })
         if (!existing) fail(409, 'version_build_in_progress', 'Another review version is being created')
       }
-      const currentContext = await loadContext(repository, campaign)
+      const currentContext = await attachVideos(repository, campaign, await loadContext(repository, campaign), existing.plan.videos?.map(video => video.id))
       validatePreparedContext({ campaign, ...currentContext, expectedRevision })
       if (!contextMatchesPlan(currentContext, existing.plan)) {
         fail(409, 'version_source_changed', 'The selected source changed while the review version was being created')
@@ -639,7 +691,7 @@ export function createVersionService({
 
     const active = await repository.findActiveBuildForUpdate(campaignId)
     if (active) fail(409, 'version_build_in_progress', 'Another review version is being created')
-    const context = await loadContext(repository, campaign)
+    const context = await attachVideos(repository, campaign, await loadContext(repository, campaign), videoAssetIds)
     const { analysis, copy, direction, composition, template, sourceAssets, batchContexts } = context
     validatePreparedContext({ campaign, ...context, expectedRevision })
     const versionId = idGenerator()
@@ -656,13 +708,14 @@ export function createVersionService({
         currentVersionNumber: campaign.currentVersionNumber,
       },
       briefAnalysis: immutableBriefAnalysis(analysis),
-      selectedCopy: copyVariantSchema.parse(copy.selectedCopy),
+      selectedCopy: campaignCopyVariantSchema.parse(copy.selectedCopy),
       selectedDirection: publicDirection(direction),
       composition: compositionSchema.parse(composition),
       templateManifest: template.manifest,
       templateManifestHash: template.manifestHash,
       ...(batchContexts ? { designs: immutableDesignContexts(batchContexts) } : {}),
       sourceAssets: sourceAssets.map(immutableSourceAsset),
+      ...(context.videos.length ? { videos: context.videos, videoSources: context.videoSources.map(immutableSourceAsset) } : {}),
       ratioAssets,
       manifestAsset: {
         id: manifestAssetId,
@@ -692,6 +745,15 @@ export function createVersionService({
   }
 
   const renderBuild = async (build, deadlineAt) => {
+    for (const asset of build.plan.videoSources ?? []) {
+      const bytes = await beforeDeadline(deadlineAt, () => assetStore.get({ objectKey: asset.objectKey, maxBytes: asset.byteSize }))
+      const expected = build.plan.videos.find(video => video.id === asset.id)
+      const decoded = await beforeDeadline(deadlineAt, () => decodeGeneratedVideo(bytes, expected))
+      if (!decoded || decoded.sha256 !== expected.sha256 || decoded.byteSize !== expected.byteSize
+        || decoded.frameRate !== expected.frameRate || decoded.hasAudio !== expected.hasAudio) {
+        fail(502, 'video_integrity_failure', 'The selected video bytes do not match the review source.')
+      }
+    }
     const sources = await loadRenderSources(build.plan, deadlineAt)
     const sourceById = new Map(sources.map((source) => [source.id, source]))
     const renders = []
@@ -766,7 +828,8 @@ export function createVersionService({
       versionNumber: build.versionNumber,
       template: { id: build.plan.templateManifest.id, version: build.plan.templateManifest.version, sha256: build.plan.templateManifestHash },
       compositionId: build.plan.composition.id,
-      sourceAssets: build.plan.sourceAssets.map(({ objectKey: _objectKey, ...asset }) => asset),
+      sourceAssets: [...build.plan.sourceAssets, ...(build.plan.videoSources ?? [])].map(({ objectKey: _objectKey, ...asset }) => asset),
+      ...(build.plan.videos ? { videos: build.plan.videos } : {}),
       renders: renders.map((render) => ({ ratioId: render.ratioId, ...(render.designId ? { designId: render.designId } : {}), asset: { id: render.asset.id, kind: render.asset.kind, sha256: render.asset.sha256 }, manifest: render.renderManifest })),
     }
     const manifestBytes = Buffer.from(canonicalJson(renderManifest), 'utf8')
@@ -883,7 +946,7 @@ export function createVersionService({
       || campaign.currentVersionNumber !== build.plan.binding.currentVersionNumber) {
       fail(409, 'version_source_changed', 'Campaign content changed while the review version was being created')
     }
-    const currentContext = await loadContext(repository, campaign, { lock: true })
+    const currentContext = await attachVideos(repository, campaign, await loadContext(repository, campaign, { lock: true }), build.plan.videos?.map(video => video.id), { lock: true })
     if (hashCanonical(currentContext.sourceAssets.map(immutableSourceAsset)) !== hashCanonical(build.plan.sourceAssets)) {
       fail(409, 'version_source_changed', 'Campaign content changed while the review version was being created')
     }
@@ -892,7 +955,7 @@ export function createVersionService({
       fail(409, 'version_source_changed', 'Campaign content changed while the review version was being created')
     }
     const assetReferences = [
-      ...build.plan.sourceAssets.map((asset) => ({ id: asset.id, kind: asset.kind, sha256: asset.sha256 })),
+      ...[...build.plan.sourceAssets, ...(build.plan.videoSources ?? [])].map((asset) => ({ id: asset.id, kind: asset.kind, sha256: asset.sha256 })),
       ...rendered.renders.map((entry) => ({ id: entry.asset.id, kind: 'review_png', sha256: entry.asset.sha256 })),
       { id: rendered.manifest.id, kind: 'manifest', sha256: rendered.manifest.sha256 },
     ]
@@ -901,6 +964,7 @@ export function createVersionService({
       selectedDirection: build.plan.selectedDirection,
       composition: build.plan.composition,
       assets: assetReferences,
+      ...(build.plan.videos ? { videos: build.plan.videos } : {}),
       templateManifest: build.plan.templateManifest,
       templateManifestHash: build.plan.templateManifestHash,
       ...(build.plan.designs ? { designs: build.plan.designs } : {}),
@@ -913,7 +977,7 @@ export function createVersionService({
       actor,
       snapshot,
       contentHash,
-      sourceAssets: currentContext.sourceAssets,
+      sourceAssets: [...currentContext.sourceAssets, ...currentContext.videoSources],
       assets: rendered.assets.map(({ bytes: _bytes, ...asset }) => asset),
       reviewEventId: idGenerator(),
       auditId: idGenerator(),
@@ -987,7 +1051,7 @@ export function createVersionService({
       const possiblyCreated = new Set()
       try {
         build = await prepareBuild({
-          actor, campaignId, expectedRevision, key: idempotencyKey, fingerprint, ownerToken, deadlineAt,
+          actor, campaignId, expectedRevision, key: idempotencyKey, fingerprint, ownerToken, deadlineAt, videoAssetIds: command.videoAssetIds,
         })
         for (const objectKey of [
           ...build.plan.ratioAssets.map((asset) => asset.objectKey), build.plan.manifestAsset.objectKey,

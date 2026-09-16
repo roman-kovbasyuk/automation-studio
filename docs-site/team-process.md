@@ -1,5 +1,9 @@
 # Team process
 
+::: info Historical planning
+This page preserves the earlier MVP team plan. Its responsibilities and task table have not been revalidated in the latest architecture discussion. See [Decisions and explorations](/decisions/) for the current proposals and open choices.
+:::
+
 ## Who owns what
 
 | Owner | Main responsibility |

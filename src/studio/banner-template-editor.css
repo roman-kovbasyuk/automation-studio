@@ -1,0 +1,52 @@
+.bs-main { min-height: 100vh; min-height: 100dvh; }
+.bs-topbar { flex-shrink: 0; }
+.bs-template-campaign { display: flex; align-items: center; gap: 32px; width: 100%; padding: 28px 36px; }
+.bs-template-campaign img { width: 195px; height: 195px; object-fit: contain; flex: none; }
+.bs-template-campaign__copy { flex: 1; min-width: 0; }
+.bs-template-campaign h2 { margin: 0 0 10px; }
+.bs-template-campaign p { margin: 0; color: var(--a-color-secondary); }
+.bs-template-editor { min-width: 0; }
+.bs-template-editor__heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 32px; flex-wrap: wrap; }
+.bs-template-editor__actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.bs-template-editor__workspace { min-width: 0; }
+.bs-template-editor__canvas { min-width: 0; container-type: inline-size; }
+.bs-template-editor__tabbar { display: flex; align-items: center; justify-content: space-between; gap: var(--a-space-4); flex-wrap: wrap; margin-bottom: var(--a-space-6); }
+.bs-template-editor__selection-count { color: var(--a-color-secondary); font-size: var(--a-type-small-size); }
+.bs-template-carousel { display: grid; grid-template-columns: 48px minmax(0, 1fr) 48px; gap: var(--a-space-6); align-items: center; justify-items: center; }
+.bs-template-output { min-width: 0; width: 100%; max-width: min(720px, calc(62vh * var(--preview-ratio))); justify-self: center; }
+.bs-template-output__artwork { position: relative; }
+.bs-template-output__format { margin-top: var(--a-space-4); text-align: center; font-size: var(--a-type-small-size); }
+.bs-template-editor__image-info { display: flex; justify-content: center; flex-wrap: wrap; align-items: center; gap: var(--a-space-2); margin-top: var(--a-space-2); color: var(--a-color-secondary); font-size: var(--a-type-small-size); overflow-wrap: anywhere; }
+.bs-template-format-layout { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: var(--a-space-8); align-items: start; }
+.bs-template-editor__selectors { display: grid; gap: var(--a-space-8); }
+.bs-template-editor__selector-group { display: grid; gap: var(--a-space-4); }
+.bs-template-editor__selector-group h2 { margin: 0; font-size: var(--a-type-small-size); color: var(--a-color-secondary); }
+.bs-template-format-results { min-width: 0; container-type: inline-size; }
+.bs-template-editor__accessible-note { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.bs-template-image-region { position: absolute; display: flex; align-items: center; justify-content: center; }
+.bs-template-image-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 8px; opacity: 0; pointer-events: none; transition: opacity 140ms ease-out; }
+.bs-template-image-region:hover .bs-template-image-actions, .bs-template-image-region:focus-within .bs-template-image-actions { opacity: 1; pointer-events: auto; }
+.bs-template-formats { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--a-space-6); }
+@container (min-width: 480px) { .bs-template-formats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (min-width: 800px) { .bs-template-formats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.bs-template-formats small { display: block; color: var(--a-color-secondary); }
+.bs-template-action-dialog { padding: 28px; display: grid; gap: 20px; max-width: 640px; }
+.bs-template-action-dialog p { margin: 0; }
+.bs-template-editor__empty { padding: 48px 24px; text-align: center; }
+@media (max-width: 1150px) {
+  .bs-template-campaign { gap: 20px; padding: 24px; flex-wrap: wrap; }
+}
+@container (max-width: 700px) {
+  .bs-template-format-layout { grid-template-columns: minmax(0, 1fr); gap: var(--a-space-6); }
+  .bs-template-editor__selectors { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .bs-template-campaign { gap: 16px; padding: 20px; }
+  .bs-template-campaign img { width: 114px; height: 114px; }
+  .bs-template-carousel { grid-template-columns: 40px minmax(0, 1fr) 40px; gap: var(--a-space-2); justify-items: center; }
+  .bs-template-editor__actions { width: 100%; }
+}
+@media (hover: none) { .bs-template-image-actions { opacity: 1; pointer-events: auto; } }
+@media (prefers-reduced-motion: reduce) { .bs-template-image-actions, .bs-template-campaign { transition: none; } }
+
+.bs-template-campaign-slot { margin-block: var(--a-space-8); }

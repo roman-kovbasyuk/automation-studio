@@ -51,6 +51,7 @@ function mapAsset(row) {
     generationJobId: row.generation_job_id,
     versionId: row.version_id,
     generationStatus: row.generation_status,
+    generationModel: row.generation_model,
     generationStep: row.generation_step,
     generationSafety: row.generation_safety,
     generationRequestFingerprint: row.generation_request_fingerprint,
@@ -158,22 +159,31 @@ export function createVersionRepository(client) {
       const result = await client.query(
         `SELECT cs.*, gj.step AS generation_step, gj.status AS generation_status,
                 gj.safety AS generation_safety, gj.input_snapshot AS generation_input,
-                gj.result_metadata AS generation_result
+                gj.result_metadata AS generation_result, bc.snapshot AS authored_snapshot
          FROM copy_sets cs
          LEFT JOIN generation_jobs gj ON gj.id = cs.generation_job_id AND gj.campaign_id = cs.campaign_id
+         LEFT JOIN brief_confirmations bc ON bc.id=cs.source_confirmation_id AND bc.campaign_id=cs.campaign_id
          WHERE cs.campaign_id = $1 AND cs.id = $2`,
         [campaignId, copySetId],
       )
       const row = result.rows[0]
       if (!row) return null
+      const edits = await client.query(`SELECT DISTINCT ON (payload->>'copyId') payload
+        FROM audit_events WHERE entity_type='campaign' AND entity_id=$1
+          AND action='campaign.copy_edited' AND actor_role IN ('marketer','admin')
+          AND payload->>'copySetId'=$2 ORDER BY payload->>'copyId', (payload->>'revision')::bigint DESC, created_at DESC, id DESC`, [campaignId, copySetId])
       return {
         id: row.id,
         selectedCandidateId: row.selected_candidate_id,
+        editHashes: Object.fromEntries(edits.rows.map(edit => [edit.payload.copyId, edit.payload.contentHash])),
         selectedCopy: row.candidates?.find((candidate) => candidate.id === row.selected_candidate_id) ?? null,
         candidates: row.candidates,
         approvedCandidateIds: row.approved_candidate_ids ?? [],
         deletedCandidateIds: row.deleted_candidate_ids ?? [],
         stale: row.stale,
+        retainedBriefHash: row.retained_brief_hash ?? null,
+        origin:row.origin,copySourceKey:row.copy_source_key,authoredSnapshot:row.authored_snapshot,
+        originalCandidates:row.original_candidates,sourceConfirmationId:row.source_confirmation_id,
         generationStep: row.generation_step,
         generationStatus: row.generation_status,
         generationSafety: row.generation_safety,
@@ -209,7 +219,7 @@ export function createVersionRepository(client) {
     async findAsset(campaignId, assetId) {
       if (!assetId) return null
       const result = await client.query(
-        `SELECT a.*, gj.status AS generation_status, gj.step AS generation_step,
+        `SELECT a.*, gj.status AS generation_status, gj.model AS generation_model, gj.step AS generation_step,
                 gj.safety AS generation_safety, gj.request_fingerprint AS generation_request_fingerprint,
                 gj.input_snapshot AS generation_input,
                 gj.result_metadata AS generation_result
@@ -224,7 +234,7 @@ export function createVersionRepository(client) {
     async findAssets(campaignId, assetIds) {
       if (!Array.isArray(assetIds) || assetIds.length === 0) return []
       const result = await client.query(
-        `SELECT a.*, gj.status AS generation_status, gj.step AS generation_step,
+        `SELECT a.*, gj.status AS generation_status, gj.model AS generation_model, gj.step AS generation_step,
                 gj.safety AS generation_safety, gj.request_fingerprint AS generation_request_fingerprint,
                 gj.input_snapshot AS generation_input,
                 gj.result_metadata AS generation_result
@@ -240,7 +250,7 @@ export function createVersionRepository(client) {
     async findAssetsForUpdate(campaignId, assetIds) {
       if (!Array.isArray(assetIds) || assetIds.length === 0) return []
       const result = await client.query(
-        `SELECT a.*, gj.status AS generation_status, gj.step AS generation_step,
+        `SELECT a.*, gj.status AS generation_status, gj.model AS generation_model, gj.step AS generation_step,
                 gj.safety AS generation_safety, gj.request_fingerprint AS generation_request_fingerprint,
                 gj.input_snapshot AS generation_input,
                 gj.result_metadata AS generation_result

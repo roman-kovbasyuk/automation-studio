@@ -84,6 +84,7 @@ function short(value, limit) {
 export function createMockProvider({ model = 'mock-v1', region = 'europe-west6' } = {}) {
   const options = { model, region }
   return Object.freeze({
+    sourceDestination:'local-mock',
     async analyseBrief(input, signal) {
       abortIfNeeded(signal)
       const command = analyseBriefInputSchema.parse(input)
@@ -100,6 +101,17 @@ export function createMockProvider({ model = 'mock-v1', region = 'europe-west6' 
         summary: short(`${command.brief.analysis?.summary || `${subject} for ${audience}, focused on ${intent}.`}${command.instruction ? ` ${command.instruction}` : ''}`, 1_000),
         themes: [intent, command.brief.offer || 'clear value', 'confident simplicity'],
         warnings: command.brief.notes.toLowerCase().includes('personal data') ? ['Review the brief for personal data before publishing.'] : [],
+      }
+      if(command.sources) {
+        const foundCopy=[]
+        for(const source of command.sources) for(const block of source.blocks) {
+          const match=/Headline: (.+)/.exec(block.text)
+          if(match) { const start=match.index+'Headline: '.length
+            foundCopy.push({id:`found-${foundCopy.length+1}`,fields:{headline:match[1],body:'',offer:'',cta:''},verification:'text_verified',
+              sourceRefs:[{sourceId:source.id,label:source.name,blockId:block.id,start,end:start+match[1].length,...(block.page?{page:block.page}:{})}]}) }
+        }
+        analysis.briefingProposal={sourceKey:command.brief.briefing.sourceKey,foundCopy,answers:{summary:analysis.summary,audience:audience,
+          copyMode:foundCopy.length?null:'create_new',ageGroups:[],gender:'all',reach:null,goal:null,goalCustom:'',visualTags:[]},suggestedVisualTags:[]}
       }
       return analyseBriefResultSchema.parse({ ...metadata({ ...options, input: command, outputUnits: 36, actualCostMicrounits: 80 }), analysis })
     },
@@ -149,7 +161,7 @@ export function createMockProvider({ model = 'mock-v1', region = 'europe-west6' 
         ['Product clarity', 'Clean studio still life, exact details, restrained palette'],
         ['Editorial story', 'Magazine composition, tactile layers, premium art direction'],
       ]
-      const count = command.mode === 'campaign' ? 3 : command.mode === 'selected_copy' ? command.copies.length : 5
+      const count = command.mode === 'campaign' ? 5 : command.mode === 'selected_copy' ? command.copies.length : 5
       const directions = Array.from({ length: count }, (_, index) => {
         const [title, style] = concepts[index % concepts.length]
         const message = command.mode === 'selected_copy' ? command.copies[index].headline

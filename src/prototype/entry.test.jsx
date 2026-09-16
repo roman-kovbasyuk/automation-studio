@@ -1,7 +1,7 @@
 import { expect, test, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
-vi.mock('../studio/StudioApp.jsx', () => ({ StudioApp: () => <main>live studio</main> }))
+vi.mock('../studio/StudioApp.jsx', () => ({ StudioApp: () => <main>live studio</main>, ConnectedStudio: () => <main>prototype studio</main> }))
 
 test('prototype entry renders without initializing live authentication or APIs', async () => {
   const { PrototypeApp } = await import('./PrototypeApp.jsx')
