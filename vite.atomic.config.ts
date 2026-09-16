@@ -15,7 +15,7 @@ export default defineConfig({
         if (owner < 0) continue
         const info = this.getModuleInfo(id)
         for (const imported of [...(info?.importedIds ?? []), ...(info?.dynamicallyImportedIds ?? [])]) {
-          if (imported.includes('/node_modules/') || imported.startsWith('\0')) continue
+          if (imported.includes('/node_modules/') || imported.startsWith('\0') || (imported.includes('/docs/') && imported.includes('?raw'))) continue
           const dependency = layerOf(imported)
           if (dependency < 0 || dependency > owner) {
             this.error(`Atomic layer violation: ${id} → ${imported}`)

@@ -21,7 +21,11 @@ export type BasicsPage = {
   reference: ReferenceRow[]; notes: string[]
 }
 function tokenRows(...groups: (keyof typeof tokens)[]): ReferenceRow[] {
-  return groups.flatMap(group => Object.entries(tokens[group]).map(([key, value]) => ({ name: `--a-${group}-${key}`, value: String(value), purpose: `tokens.${group}.${key}` })))
+  const flatten = (value: Record<string, unknown>, namePrefix: string, purposePrefix: string): ReferenceRow[] => Object.entries(value).flatMap(([key, entry]) => {
+    if (typeof entry === 'object' && entry !== null) return flatten(entry as Record<string, unknown>, `${namePrefix}-${key}`, `${purposePrefix}.${key}`)
+    return [{ name: `${namePrefix}-${key}`, value: String(entry), purpose: `${purposePrefix}.${key}` }]
+  })
+  return groups.flatMap(group => flatten(tokens[group] as Record<string, unknown>, `--a-${group}`, `tokens.${group}`))
 }
 const prop = (name: string, value: string, purpose: string): ReferenceRow => ({ name, value, purpose })
 

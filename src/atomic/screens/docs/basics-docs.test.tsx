@@ -4,6 +4,7 @@ import { expect, test } from 'vitest'
 import { BasicsDocs } from './BasicsDocs'
 import { componentPageMap } from './componentContent'
 import { blockPageMap } from './blockContent'
+import Color, { colorGroupItems } from './examples/Color'
 
 test('direct links select the requested page; history changes update the article', () => {
   window.history.replaceState({}, '', '/page-20.html?basic=typography#reference')
@@ -20,6 +21,41 @@ test('foundation previews do not offer global source copying', () => {
   expect(screen.queryByRole('button', { name: 'Copy Typography overview code' })).not.toBeInTheDocument()
 })
 
+test('icons preview hides names and copies the selected icon size', async () => {
+  window.history.replaceState({}, '', '/page-20.html?basic=icons#overview')
+  const user = userEvent.setup()
+  render(<BasicsDocs />)
+  const icon = screen.getByRole('button', { name: 'Accessibility' })
+  expect(icon).not.toHaveTextContent('Accessibility')
+  await user.click(icon)
+  expect(screen.getByRole('menuitem', { name: '32 px' })).toBeInTheDocument()
+  await user.click(screen.getByRole('menuitem', { name: '32 px' }))
+  expect(await navigator.clipboard.readText()).toBe('<Icon name="Accessibility" size="xlarge" />')
+  expect(screen.getByText('Copied Accessibility at 32px', { exact: true })).toHaveRole('status')
+  await user.click(icon)
+  await user.click(screen.getByRole('menuitem', { name: 'Copy SVG' }))
+  expect(await navigator.clipboard.readText()).toMatch(/^<svg /)
+  expect(screen.getByText('Copied Accessibility SVG', { exact: true })).toHaveRole('status')
+  const token = screen.getByRole('button', { name: 'Copy --a-icon-small' })
+  expect(token).toHaveTextContent('--a-icon-small')
+  await user.click(token)
+  expect(await navigator.clipboard.readText()).toBe('--a-icon-small')
+})
+
+test('icon copy controls reserve a 64px square placeholder', () => {
+  window.history.replaceState({}, '', '/page-20.html?basic=icons#overview')
+  render(<BasicsDocs />)
+  expect(document.querySelector('.docs-icons-grid')).not.toBeNull()
+  const icon = screen.getByRole('button', { name: 'Accessibility' })
+  expect(icon).toHaveClass('docs-icon-button')
+})
+
+test('icon sizes preview omits the redundant accessibility note', () => {
+  window.history.replaceState({}, '', '/page-20.html?basic=icons#examples')
+  render(<BasicsDocs />)
+  expect(screen.queryByText('Give standalone meaningful icons a label. Omit it inside an already labeled control.')).not.toBeInTheDocument()
+})
+
 test('unknown pages recover to Color and all eight Basics destinations work', async () => {
   window.history.replaceState({}, '', '/page-20.html?basic=missing')
   const user = userEvent.setup()
@@ -27,7 +63,9 @@ test('unknown pages recover to Color and all eight Basics destinations work', as
   expect(screen.getByRole('heading', { name: 'Color', level: 1 })).toBeVisible()
   const sidebar = within(screen.getByRole('complementary', { name: 'Documentation' }))
   for (const title of ['Color', 'Typography', 'Spacing', 'Shape & sizing', 'Elevation', 'Motion', 'Icons', 'Layout']) {
-    await user.click(sidebar.getByRole('link', { name: title }))
+    const destination = sidebar.getAllByRole('link', { name: title }).find(link => link.getAttribute('href')?.startsWith('/page-20.html?basic='))
+    expect(destination).toBeDefined()
+    await user.click(destination!)
     expect(screen.getByRole('heading', { name: title, level: 1 })).toBeVisible()
     if (title !== 'Color') expect(screen.getByRole('table', { name: `${title} reference` })).toBeInTheDocument()
   }
@@ -60,11 +98,35 @@ test('mobile navigation closes after selecting a Basics page', async () => {
   expect(screen.getByRole('heading', { name: 'Elevation', level: 1 })).toBeVisible()
 })
 
-test('sidebar Installation retains its section destination on a selected Basics page', async () => {
+test('Basics sidebar Installation points to the shared Getting Started workflow', () => {
   window.history.replaceState({}, '', '/page-20.html?basic=color')
   render(<BasicsDocs />)
-  await userEvent.click(within(screen.getByRole('navigation', { name: 'Getting Started' })).getByRole('link', { name:'Installation' }))
-  await waitFor(() => expect(window.location.hash).toBe('#installation'))
+  expect(within(screen.getByRole('navigation', { name: 'Getting Started' })).getByRole('link', { name: 'Installation' }))
+    .toHaveAttribute('href', '/page-23.html#installation')
+})
+
+test('Color docs keep semantic tokens out of the standalone palette groups', () => {
+  expect(colorGroupItems.some(item => item.id === 'color-group-semantic')).toBe(false)
+  window.history.replaceState({}, '', '/page-20.html?basic=color#overview')
+  render(<Color />)
+  expect(screen.queryByRole('heading', { name: 'Semantic roles' })).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Static' })).toBeInTheDocument()
+})
+
+test('Color docs place the Static palette group first', () => {
+  expect(colorGroupItems[0]).toEqual({ id: 'color-group-static', label: 'Static' })
+  window.history.replaceState({}, '', '/page-20.html?basic=color#overview')
+  render(<Color />)
+  const headings = screen.getAllByRole('heading', { level: 3 }).map(heading => heading.textContent)
+  expect(headings[0]).toBe('Static')
+})
+
+test('foundation pages do not repeat the global installation workflow', async () => {
+  window.history.replaceState({}, '', '/page-20.html?basic=spacing')
+  render(<BasicsDocs />)
+  expect(screen.queryByRole('heading', { name: 'Installation', level: 2 })).not.toBeInTheDocument()
+  await userEvent.click(within(screen.getByRole('complementary', { name: 'Documentation' })).getByRole('link', { name: 'Typography' }))
+  expect(screen.queryByRole('heading', { name: 'Installation', level: 2 })).not.toBeInTheDocument()
 })
 
 test('every component and block navigation link reaches a real documentation page', () => {

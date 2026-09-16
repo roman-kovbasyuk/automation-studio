@@ -1,5 +1,7 @@
 export { Button } from './Button'
 export type { ButtonProps } from './Button'
+export { FeedbackButton } from './FeedbackButton'
+export type { FeedbackButtonProps } from './FeedbackButton'
 export { Panel } from './Panel'
 export type { PanelProps } from './Panel'
 export { TextField } from './TextField'
@@ -37,7 +39,7 @@ export type { ProgressRingProps } from './ProgressRing'
 export { StatusBadge } from './StatusBadge'
 export type { StatusBadgeProps } from './StatusBadge'
 export { Alert } from './Alert'
-export type { AlertProps } from './Alert'
+export type { AlertProps, AlertTone, AlertVariant, AlertSize } from './Alert'
 export { InlineText } from './InlineText'
 export type { InlineTextProps } from './InlineText'
 export { TextAction } from './TextAction'
@@ -93,3 +95,14 @@ export type { WorkflowStep } from './WorkflowSteps'
 export type { FileItem } from './Files'
 export { NavigationList, type NavigationListProps, type NavigationItem } from './NavigationList'
 export { AttachmentArea, type AttachmentAreaProps } from './AttachmentArea'
+export {
+  Accordion, Avatar, AvatarGroup, AvatarGroupCompact, Badge, Banner, ButtonGroup, ColorPicker,
+  CommandMenu, CompactButton, DigitInput, DotStepper, FancyButton, Hint, Kbd, Label, Notification,
+  TabMenuVertical, VerticalStepper,
+} from './ReferenceComponents'
+export type {
+  AccordionItem, AccordionProps, AvatarProps, AvatarGroupProps, BadgeProps, BannerProps, ButtonGroupProps,
+  ColorPickerProps, CommandMenuProps, CompactButtonProps, DigitInputProps, DotStepperProps, FancyButtonProps,
+  HintProps, KbdProps, LabelProps, NotificationProps, TabMenuVerticalItem, TabMenuVerticalProps,
+  VerticalStepperProps,
+} from './ReferenceComponents'

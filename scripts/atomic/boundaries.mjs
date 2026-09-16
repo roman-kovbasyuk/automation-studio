@@ -34,6 +34,7 @@ export function checkAtomicBoundaries(root) {
     if (!allowed[owner]) { errors.push(`Unknown atomic layer: ${display}`); continue }
     function inspect(specifier) {
       if (!specifier) { errors.push(`${display}: computed module imports are not allowed`); return }
+      if (specifier.endsWith('?raw') && specifier.includes('/docs/')) return
       if (external.test(specifier)) return
       if (!specifier.startsWith('.')) { errors.push(`${display}: unknown external or alias ${specifier}`); return }
       const target = resolve(dirname(file), specifier)

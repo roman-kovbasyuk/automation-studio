@@ -1,4 +1,8 @@
 .c-attachment-area[data-dragging] { outline:var(--a-focus-width) solid var(--a-color-accent); outline-offset:var(--a-focus-offset); }
+.c-attachment-area__content { display:flex; flex-direction:column; gap:var(--a-space-2); width:100%; min-width:0; }
+.c-attachment-area__content > .a-inline { width:100%; align-items:flex-start; }
+.c-attachment-area__content > .c-field { width:100%; }
 .c-attachment-area__toolbar { justify-content:space-between; }
+.c-attachment-area__toolbar { width:100%; }
 .c-attachment-area__actions { margin-inline-start:auto; }
 .c-attachment-area__picker { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }

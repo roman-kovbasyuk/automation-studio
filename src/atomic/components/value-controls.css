@@ -4,6 +4,7 @@
 .c-number-stepper > .a-inline { flex-wrap: nowrap; align-self: flex-start; }
 .c-number-stepper .c-button:first-child { border-start-end-radius: 0; border-end-end-radius: 0; }
 .c-number-stepper .c-button:last-child { border-start-start-radius: 0; border-end-start-radius: 0; }
+.c-slider { width: min(100%, 16rem); }
 .c-slider__label { display: flex; justify-content: space-between; align-items: baseline; gap: var(--a-space-4); }
 .c-slider input { appearance: none; width: 100%; height: var(--a-size-compact); margin: 0; background: transparent; cursor: pointer; }
 .c-slider input::-webkit-slider-runnable-track { height: var(--a-space-3); border: var(--a-border-width) solid var(--a-color-ink); border-radius: var(--a-radius-pill); background: linear-gradient(to right, var(--a-color-accent) var(--range-progress), var(--a-color-surface) var(--range-progress)); }

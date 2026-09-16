@@ -11,6 +11,10 @@
 - Keep design-system styling and interaction behavior canonical; do not create one-off tabs, buttons, menus, or form controls in screen components.
 - Reuse the existing design tokens and responsive rules. Product-specific CSS should only compose or size a shared component, not redefine its interaction model.
 
+## Component usage guidance
+
+Before choosing or documenting a component, check the [Component Usage Guidance](docs/guides/2026-09-16-component-usage-guidance.md). The component’s purpose, context, alternatives, and application responsibilities must be consistent with that document.
+
 <!-- task-observatory:start -->
 ## Task Observatory
 

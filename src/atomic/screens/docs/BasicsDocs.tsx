@@ -1,30 +1,33 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react'
-import { AtomsRoot, Container, Divider, Heading, Icon, Inline, Stack, Text } from '../../atoms'
-import { Button, Drawer, Menu, NavigationList, Panel, SearchField, Table, Tabs } from '../../components'
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent } from 'react'
+import { AtomsRoot, Container, Divider, Heading, Icon, Stack, Text } from '../../atoms'
+import { Drawer, Menu, NavigationList, Panel, SearchField, Table, Tag } from '../../components'
 import { CodeExample } from '../../ui-blocks/CodeExample'
 import { basicsPages, publicSource } from './basicsContent'
-import Color from './examples/Color'
+import Color, { colorGroupItems } from './examples/Color'
 import { componentGroups } from './docsNavigation'
+import { DocsBrand } from './DocsBrand'
+import { DocsNavGroup } from './DocsNavGroup'
 import './docs.css'
 
 const pageFromUrl = () => basicsPages.find(page => page.id === new URLSearchParams(window.location.search).get('basic')) ?? basicsPages[0]
 
-function Installation() {
-  const [manager, setManager] = useState('npm')
-  const install = { npm:'npm install', pnpm:'pnpm add', yarn:'yarn add' }[manager]
-  return <Panel title="Installation workflow" description="Build, install and provide the shared foundation in one workflow." variant="split" density="compact" className="docs-installation-group">
-    <Stack gap={0}>
-      <CodeExample className="docs-installation-step" title="1. Build the local package" description="In the design-system repository, build and pack the library." filename="terminal · design-system repository" source={'npm run build:atomic-library\nnpm pack ./dist-atomic-library'} />
-      <CodeExample className="docs-installation-step" title="2. Install in your application" description="Copy the generated tarball into your app’s vendor folder. Use the actual filename printed by npm pack; the command shows the current default build." filename="terminal · consuming application" source={`${install} ./vendor/brutalist-design-system-0.1.0-atomic.0.tgz`} controls={<Tabs label="Package manager" size="compact" value={manager} onChange={setManager} options={[{value:'npm',label:'npm'},{value:'pnpm',label:'pnpm'},{value:'yarn',label:'yarn'}]} />} />
-      <Text className="docs-installation-note" variant="small" tone="secondary">This is a local package workflow. The library is private; React 19 or newer and React DOM are required in the consuming application.</Text>
-      <CodeExample className="docs-installation-step" title="3. Provide the shared foundation" description="Import the stylesheet once and wrap your application with AtomsRoot. All examples below use the public package exports." filename="App.tsx" source={"import { AtomsRoot } from 'brutalist-design-system'\nimport 'brutalist-design-system/styles.css'\n\nexport default function App() {\n  return <AtomsRoot>Your application</AtomsRoot>\n}"} />
-    </Stack>
-  </Panel>
+function CopyableToken({ value }: { value: string }) {
+  const copy = () => { navigator.clipboard?.writeText(value) }
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); copy() }
+  }
+  return <Tag tone="accent" role="button" tabIndex={0} aria-label={`Copy ${value}`} className="docs-reference-token" onClick={copy} onKeyDown={handleKeyDown}>{value}</Tag>
+}
+
+function ReferenceName({ value }: { value: string }) {
+  return value.startsWith('--') ? <CopyableToken value={value} /> : <code>{value}</code>
 }
 
 export function BasicsDocs() {
   const [page, setPage] = useState(pageFromUrl)
-  const contents = [{id:'overview',label:'Overview'}, ...((page.id === 'color' || page.id === 'typography') ? [] : [{id:'installation',label:'Installation'}, {id:'examples',label:'Examples'}, {id:'example-preview',label:page.example.title,icon:'arrowRight' as const}, {id:'usage',label:'Usage guidance'}, {id:'reference',label:'Reference'}])]
+  const contents = page.id === 'color'
+    ? [{ id: 'overview', label: 'Overview' }, ...colorGroupItems]
+    : [{id:'overview',label:'Overview'}, ...((page.id === 'typography') ? [] : [{id:'examples',label:'Examples'}, {id:'example-preview',label:page.example.title,icon:'arrowRight' as const}, {id:'usage',label:'Usage guidance'}, {id:'reference',label:'Reference'}])]
   const [query, setQuery] = useState('')
   const [mobileOpen, setMobileOpen] = useState(false)
   const [activeSection, setActiveSection] = useState('overview')
@@ -92,7 +95,7 @@ export function BasicsDocs() {
     window.setTimeout(() => { document.getElementById('docs-title')?.focus(); document.getElementById('overview')?.scrollIntoView() }, 0)
   }
   const groups = [
-    {title:'Getting Started', items:[{id:'intro',label:'Introduction',href:'/page-23.html'},{id:'install',label:'Installation',href:'#installation'}]},
+    {title:'Getting Started', items:[{id:'intro',label:'Introduction',href:'/page-23.html'},{id:'install',label:'Installation',href:'/page-23.html#installation'}]},
     {title:'Basics', items:basicsPages.map(item => ({id:item.id,label:item.title,href:`/page-20.html?basic=${item.id}`,current:item.id===page.id}))},
     ...componentGroups.map(group => ({title:group.title,items:group.items.map(item => ({id:item.id,label:item.label,href:item.href,status:item.availability === 'missing' ? 'Missing component' : item.availability === 'partial' ? 'Partial' : undefined}))})),
     {title:'UI Blocks',items:[{id:'sidebar',label:'Sidebar panel',href:'/page-22.html?block=sidebar'},{id:'prompt',label:'AI prompt input',href:'/page-22.html?block=prompt-input'},{id:'example',label:'Code example',href:'/page-22.html?block=code-example'}]},
@@ -100,8 +103,7 @@ export function BasicsDocs() {
   const navigation = (mobile = false) => <Stack gap={8} onClick={navigate}>
     {mobile && <SearchField autoFocus label="Search documentation" value={query} onChange={setQuery} onKeyDown={event => { if(event.key==='Escape') setQuery('') }} />}
       {groups.map(group => <Stack gap={1} key={group.title}>
-      <div className="docs-nav-group-heading" role="button" tabIndex={0} aria-expanded={Boolean(normalized) || !collapsed[group.title]} onClick={() => setCollapsed(old => ({...old,[group.title]:!old[group.title]}))} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setCollapsed(old => ({...old,[group.title]:!old[group.title]})) } }}><Text variant="h6">{group.title}</Text><Icon name={collapsed[group.title] && !normalized ? 'chevronRight':'chevronDown'} label="" /></div>
-      {(!collapsed[group.title] || normalized) && <NavigationList label={`${mobile?'Mobile ':''}${group.title}`} items={group.items} />}
+      <DocsNavGroup title={group.title} label={`${mobile?'Mobile ':''}${group.title}`} items={group.items} collapsed={Boolean(collapsed[group.title])} forceOpen={Boolean(normalized)} onToggle={() => setCollapsed(old => ({...old,[group.title]:!old[group.title]}))} />
     </Stack>)}
     {!groups.length && <Text role="status" variant="small">No matching pages. Try another search.</Text>}
     <Divider /><Text variant="small" tone="secondary">Basics has the new documentation. Components and UI Blocks open in the existing catalog.</Text>
@@ -109,11 +111,10 @@ export function BasicsDocs() {
   const indexItems = contents.map(item => ({...item,href:`#${item.id}`,current:activeSection===item.id}))
 
   const isColor = page.id === 'color'
-  const isTypography = page.id === 'typography'
   return <AtomsRoot className="docs-page">
     <a className="docs-skip" href="#docs-title">Skip to content</a>
     <header className="docs-header">
-      <Inline gap={3}><Icon name="Layers" /><Text variant="h6">Design System</Text></Inline>
+      <DocsBrand />
       <div className="docs-search" ref={searchRef}><SearchField label="Quick search" value={query} onChange={value => { setQuery(value); if (value.trim() && window.matchMedia?.('(max-width: 800px)').matches) setMobileOpen(true) }} placeholder="Find a page… /" onKeyDown={event => { if(event.key==='Escape') setQuery('') }} /></div>
       <div className="docs-catalog-link"><NavigationList label="Catalog" items={[{id:'catalog',label:'Component catalog',href:'/atomic.html',icon:'externalLink'}]} /></div>
       <div className="docs-mobile"><Drawer title="Documentation" trigger="Browse documentation" open={mobileOpen} onOpenChange={setMobileOpen}>{navigation(true)}</Drawer></div>
@@ -125,16 +126,15 @@ export function BasicsDocs() {
           <section id="overview"><Stack gap={6}>
             <Stack gap={3}><Text variant="small" tone="secondary">Basics / Foundations</Text><Heading level={1} variant="h1" id="docs-title" tabIndex={-1}>{page.title}</Heading><Text tone="secondary">{page.description}</Text></Stack>
             <div className="docs-inline-index"><Menu label="On this page" icon="chevronDown" items={contents} onSelect={id => { window.location.hash = id }} /></div>
-            {isColor ? <Panel title="Color overview" headingLevel={2} variant="split"><Color /></Panel> : <CodeExample copyable={false} title={`${page.title} overview`} headingLevel={2} filename={`${page.sourceFile}.tsx`} source={publicSource(page.sourceFile)} preview={page.preview} />}
+            {isColor ? <Color /> : <CodeExample copyable={false} title={`${page.title} overview`} headingLevel={2} filename={`${page.sourceFile}.tsx`} source={publicSource(page.sourceFile)} preview={page.preview} />}
           </Stack></section>
-          {!isColor && !isTypography && <section id="installation"><Stack gap={6}><Heading level={2} variant="h3">Installation</Heading><Text tone="secondary">Use the shared library and its stylesheet in your application.</Text><Installation /></Stack></section>}
           {!isColor && <section id="examples"><Stack gap={6}><Heading level={2} variant="h3">Examples</Heading><div id="example-preview"><CodeExample copyable={false} title={page.example.title} description={page.example.description} filename={`${page.sourceFile}.tsx · named example export`} source={publicSource(page.sourceFile)} preview={page.example.preview} /></div></Stack></section>}
           {!isColor && <section id="usage"><Panel title="Usage guidance" headingLevel={2} variant="split"><Stack gap={3}>{page.notes.map(note => <Text key={note}>{note}</Text>)}</Stack></Panel></section>}
-          {!isColor && <section id="reference"><Stack gap={6}><Heading level={2} variant="h3">Reference</Heading><Panel title={`${page.title} tokens and props`} description="Values come from our shared library. CSS variables are available within AtomsRoot." variant="split"><Table label={`${page.title} reference`} rows={page.reference} rowKey={row=>row.name} columns={[{id:'name',header:'Token / prop',render:row=><code>{row.name}</code>},{id:'value',header:'Value / type',render:row=><Text variant="small">{row.value}</Text>},{id:'purpose',header:'Reference',render:row=><Text variant="small" tone="secondary">{row.purpose}</Text>}]} /></Panel></Stack></section>}
+          {!isColor && <section id="reference"><Stack gap={6}><Heading level={2} variant="h3">Reference</Heading><Panel title={`${page.title} tokens and props`} description="Values come from our shared library. CSS variables are available within AtomsRoot." variant="split"><Table label={`${page.title} reference`} rows={page.reference} rowKey={row=>row.name} columns={[{id:'name',header:'Token / prop',render:row=><ReferenceName value={row.name} />},{id:'value',header:'Value / type',render:row=><Text variant="small">{row.value}</Text>},{id:'purpose',header:'Reference',render:row=><Text variant="small" tone="secondary">{row.purpose}</Text>}]} /></Panel></Stack></section>}
           <Divider /><footer><Text variant="small" tone="secondary">Documentation structure inspired by <a href="https://alignui.com/docs/v1.2/ui/button" target="_blank" rel="noreferrer">AlignUI</a>.</Text></footer>
         </Stack></Container>
       </main>
-      <aside className="docs-index" aria-label="On this page"><Stack gap={3}><NavigationList label="Article sections" items={indexItems} /></Stack></aside>
+      <aside className="docs-index" aria-label="On this page"><Stack gap={3}><Text className="docs-index__title" variant="small" tone="secondary">ON THIS PAGE</Text><NavigationList label="Article sections" items={indexItems} /></Stack></aside>
     </div>
   </AtomsRoot>
 }

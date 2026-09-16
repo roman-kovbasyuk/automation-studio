@@ -1,4 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import { Button, Panel, TextField, Checkbox, RadioGroup } from './index'
@@ -56,6 +58,14 @@ test('Checkbox exposes mixed state and uses a native labelled control', async ()
 })
 
 const options = [{ value: 'square', label: 'Square' }, { value: 'portrait', label: 'Portrait' }, { value: 'wide', label: 'Wide', disabled: true }]
+test('RadioGroup keeps four pixels of horizontal breathing room', () => {
+  render(<RadioGroup label="Export format" options={options} />)
+  const group = screen.getByRole('group', { name: 'Export format' })
+  expect(group).toHaveClass('c-radio-group')
+  const css = readFileSync(resolve(process.cwd(), 'src/atomic/components/forms.css'), 'utf8')
+  expect(css).toMatch(/\.c-radio-group\s*\{[^}]*padding:\s*0\s+var\(--a-space-1\)/)
+})
+
 test('RadioGroup respects controlled selection and reports the chosen value', async () => {
   const user = userEvent.setup(), change = vi.fn()
   const view = render(<RadioGroup label="Export format" options={options} value="square" onChange={change} instructions="Choose one" />)

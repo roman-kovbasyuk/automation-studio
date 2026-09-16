@@ -189,4 +189,13 @@ Use static group headings as in the reference and the user's earlier request. Re
 
 ## Acceptance boundaries
 
-This turn produces the complete structural audit and extends the plan; it does not implement the sidebar. Family-level examples were inspected for taxonomy; full functional parity is a larger implementation phase. Distinguish the mirrored reference core, our extensions, and omitted reference-specific products/helpers explicitly during review. Never describe a partial inventory as an exact completed mirror.
+The first implementation pass now covers the mirrored component family structure and first usable versions of previously missing families. Family-level parity remains intentionally scoped to the public APIs in this repository; AlignUI-only commercial products and utility helpers remain omitted. Distinguish the mirrored reference core, our extensions, and omitted reference-specific products/helpers explicitly during review.
+
+## Implementation status — v1
+
+Implemented on `codex/docs-basics`:
+
+- Added reusable lower-layer components for Button Group, Compact Button, Fancy Button, Avatar, Avatar Groups, Badge, Banner, Kbd, Notification, Color Picker, Digit Input, Hint, Label, Accordion, Vertical Tab Menu, Dot Stepper, Vertical Stepper and Command Menu.
+- Added shared styles, exports, catalog specimens, documentation records and AlignUI-style preview / code / installation / examples / reference sections.
+- Updated the component registry so every reference family has a working route or an explicitly documented partial mapping.
+- Verified with the live local documentation routes, 114 Vitest tests, typecheck, production build, atomic boundary checks and `git diff --check`.

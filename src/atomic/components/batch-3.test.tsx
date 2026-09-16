@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
@@ -14,6 +16,15 @@ test('Breadcrumbs exposes a named navigation and an unlinked current page', () =
   expect(screen.getByRole('link', { name: 'Workspace' })).toHaveAttribute('href', '/workspace')
   expect(screen.getByText('Nordic launch')).toHaveAttribute('aria-current', 'page')
   expect(screen.queryByRole('link', { name: 'Nordic launch' })).not.toBeInTheDocument()
+})
+
+test('Breadcrumb links use a one pixel underline with an animated hover line', () => {
+  render(<C.Breadcrumbs items={[{ label: 'Workspace', href: '/workspace' }, { label: 'Current' }]} />)
+  const link = screen.getByRole('link', { name: 'Workspace' })
+  expect(link).toHaveClass('c-breadcrumbs__link')
+  const css = readFileSync(resolve(process.cwd(), 'src/atomic/components/navigation.css'), 'utf8')
+  expect(css).toMatch(/\.c-breadcrumbs__link\s*\{[^}]*text-decoration-thickness:\s*var\(--a-border-width\)/)
+  expect(css).toMatch(/\.c-breadcrumbs__link::after\s*\{[^}]*transition:/)
 })
 
 test('Pagination bounds actions and uses a small window for large collections', async () => {
@@ -67,6 +78,11 @@ test('Slider exposes native bounds, label, value text and submission', () => {
   fireEvent.change(slider, { target: { value: '70' } }); expect(change).toHaveBeenCalledWith(70)
 })
 
+test('Slider uses the wider 16rem control width', () => {
+  const css = readFileSync(resolve(__dirname, 'value-controls.css'), 'utf8')
+  expect(css).toContain('.c-slider { width: min(100%, 16rem); }')
+})
+
 test('RangeSlider composes labelled non-crossing native sliders', () => {
   function Example() { const [value, setValue] = useState<[number, number]>([25, 55]); return <C.RangeSlider label="Age range" value={value} onChange={setValue} min={18} max={80} /> }
   render(<Example />)
@@ -118,4 +134,12 @@ test('Alert has a canonical header and description with opt-in announcements', (
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   view.rerender(<C.Alert title="Brief needs attention" description="Add a CTA before export." tone="danger" announce />)
   expect(screen.getByRole('alert')).toHaveTextContent('Add a CTA before export.')
+})
+
+test('Alert supports reference surface variants and a prominent danger icon', () => {
+  const { container } = render(<C.Alert title="Brief needs attention" description="Add a CTA before export." tone="danger" variant="filled" size="large" />)
+  const alert = container.querySelector('.c-alert')
+  expect(alert).toHaveAttribute('data-variant', 'filled')
+  expect(alert).toHaveAttribute('data-size', 'large')
+  expect(container.querySelector('[data-icon="TriangleAlert"]')).toBeInTheDocument()
 })

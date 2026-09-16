@@ -6,8 +6,9 @@
 .c-drawer { inset: 0 0 0 auto; transform: none; height: 100dvh; max-height: none; border-radius: 0; }
 .c-popup { z-index: var(--a-layer-popover); min-width: min(15rem, calc(100vw - var(--a-space-8))); max-width: min(28rem, calc(100vw - var(--a-space-8))); max-height: var(--radix-popover-content-available-height, 70vh); overflow: auto; padding: var(--a-space-4); background: var(--a-color-surface); border: var(--a-border-width) solid var(--a-color-ink); border-radius: var(--a-radius-small); box-shadow: var(--a-shadow-interactive); }
 .c-menu { padding: var(--a-space-1); }
-.c-menu__item { display: flex; align-items: center; gap: var(--a-space-2); min-height: var(--a-size-compact); padding: var(--a-space-2) var(--a-space-3); cursor: pointer; outline: none; }
+.c-menu__item { display: flex; align-items: center; gap: var(--a-space-2); width: 100%; min-height: var(--a-size-compact); margin: 0; padding: var(--a-space-2) var(--a-space-3); border: 0; border-radius: 0; background: transparent; box-shadow: none; cursor: pointer; outline: none; transform: none; }
 .c-menu__item[data-highlighted] { background: var(--a-color-accent); }
+.c-menu__item[data-highlighted]:hover, .c-menu__item[data-highlighted]:focus-visible { border: 0; box-shadow: none; transform: none; }
 .c-menu__item[data-danger] { color: var(--a-color-danger); }
 .c-menu__item[data-disabled] { opacity: var(--a-state-disabled); cursor: not-allowed; }
 .c-tooltip { max-width: min(20rem, calc(100vw - var(--a-space-8))); padding: var(--a-space-2) var(--a-space-3); background: var(--a-color-ink); color: var(--a-color-surface); border-radius: var(--a-radius-small); z-index: var(--a-layer-toast); }

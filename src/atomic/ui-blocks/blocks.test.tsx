@@ -35,3 +35,9 @@ test('prompt rejects unsupported dropped files and allows attachment removal',as
  await user.click(screen.getByRole('button',{name:'Remove brief.pdf'}))
  expect(screen.queryByText('brief.pdf')).not.toBeInTheDocument()
 })
+test('prompt keeps attachment chips in a content stack above the action toolbar',()=>{
+ render(<PromptInput value="Hello" onChange={()=>{}} onSubmit={()=>{}} files={[{id:'brief',name:'brief.pdf'}]} onRemove={()=>{}} onAttach={()=>{}} />)
+ const group=screen.getByRole('group',{name:'Prompt attachments'}), content=group.querySelector('.c-attachment-area__content'), toolbar=group.querySelector('.c-attachment-area__toolbar')
+ expect(content).not.toBeNull(); expect(toolbar).not.toBeNull(); expect(content!.compareDocumentPosition(toolbar!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING)
+ expect(content).toHaveTextContent('brief.pdf')
+})

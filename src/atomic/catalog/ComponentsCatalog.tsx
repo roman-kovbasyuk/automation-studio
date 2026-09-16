@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Heading, Inline, Stack, Text } from '../atoms'
-import { Button, Panel, TextField, Checkbox, RadioGroup } from '../components'
+import { Button, FeedbackButton, Panel, TextField, Checkbox, RadioGroup } from '../components'
 import { CatalogSection } from './CatalogSection'
 import { CatalogFilters } from './CatalogFilters'
 import { ComponentsBatchTwo } from './ComponentsBatchTwo'
 import { ComponentsBatchThree } from './ComponentsBatchThree'
 import { ComponentsFinal } from './ComponentsFinal'
+import { ComponentsReference } from './ComponentsReference'
 import { componentManifest } from './componentManifest'
 
 export const componentSections = componentManifest
@@ -37,6 +38,9 @@ export function ComponentsCatalog() {
         <Button iconOnly icon="search" aria-label="Search campaigns" disabled={buttonsDisabled} onClick={() => setAction('')} />
         <Button size="compact" onClick={() => setAction('Compact action activated.')}>Compact</Button>
       </Inline>
+    </CatalogSection>
+    <CatalogSection id="component-feedback-button" title="Feedback button">
+      <FeedbackButton label="Copy value" successLabel="Copied" icon="copy" successIcon="check" onAction={() => Promise.resolve()} />
     </CatalogSection>
     <CatalogSection id="component-panel" title="Panel" filters={<CatalogFilters label="Panel"><Checkbox label="Show subheader" checked={description} onChange={e => setDescription(e.target.checked)} /><Checkbox label="Show content" checked={content} onChange={e => setContent(e.target.checked)} /></CatalogFilters>}>
       <Panel title="Campaign brief" description={description ? 'Shared grouping structure for related controls and information.' : undefined}>
@@ -70,5 +74,6 @@ export function ComponentsCatalog() {
     <ComponentsBatchTwo />
     <ComponentsBatchThree />
     <ComponentsFinal />
+    <ComponentsReference />
   </>
 }

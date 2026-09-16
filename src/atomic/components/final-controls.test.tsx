@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import * as C from './index'
 
 test('Form and FormActions submit and cancel through shared controls', async () => {
@@ -53,16 +55,35 @@ test('FileDropzone accepts valid files and reports size rejections', async () =>
   expect(screen.getByRole('alert')).toHaveTextContent('large.txt')
   expect(change).toHaveBeenCalledTimes(1)
 })
+test('FileDropzone exposes a small container size', () => {
+  render(<C.FileDropzone label="Upload assets" onFiles={() => {}} size="small" />)
+  const dropzone = screen.getByText('Upload assets').closest('.c-file-dropzone')
+  expect(dropzone).toHaveAttribute('data-size', 'small')
+  expect(dropzone).toHaveAttribute('style', expect.stringContaining('padding: var(--a-space-4)'))
+})
 test('FileList removal identifies only the selected file', async () => {
   const remove = vi.fn(), user = userEvent.setup()
   render(<C.FileList files={[{ id: 'a', name: 'brief.pdf', size: 1024 }]} onRemove={remove} />)
   await user.click(screen.getByRole('button', { name: 'Remove brief.pdf' })); expect(remove).toHaveBeenCalledWith('a')
+})
+test('FileList file icon matches compact remove button height', () => {
+  const css = readFileSync(resolve(__dirname, 'files.css'), 'utf8')
+  expect(css).toContain('.c-file-list__icon { display: grid; place-items: center; width: var(--a-size-compact); height: var(--a-size-compact); border: var(--a-border-width) solid var(--a-color-ink); border-radius: var(--a-radius-pill); background: var(--a-color-accent); }')
+  render(<C.FileList files={[{ id: 'a', name: 'brief.pdf', size: 1024 }]} onRemove={() => {}} />)
+  expect(screen.getByRole('listitem').querySelector('.c-file-list__icon')).not.toBeNull()
+  expect(screen.getByRole('button', { name: 'Remove brief.pdf' })).toHaveAttribute('data-size', 'compact')
 })
 test('WorkflowSteps marks current step and disables unavailable destinations', async () => {
   const change = vi.fn(), user = userEvent.setup()
   render(<C.WorkflowSteps label="Campaign workflow" current="copy" onChange={change} steps={[{ id: 'brief', label: 'Brief', complete: true }, { id: 'copy', label: 'Copy' }, { id: 'export', label: 'Export', disabled: true }]} />)
   expect(screen.getByRole('button', { name: /Copy/ })).toHaveAttribute('aria-current', 'step')
   await user.click(screen.getByRole('button', { name: /Export/ })); expect(change).not.toHaveBeenCalled()
+})
+
+test('WorkflowSteps aligns circles to headers with 8px copy spacing', () => {
+  const css = readFileSync(resolve(__dirname, 'workflow.css'), 'utf8')
+  expect(css).toContain('.c-workflow__step { display: flex; align-items: flex-start;')
+  expect(css).toContain('.c-workflow__copy { display: grid; gap: var(--a-space-2); }')
 })
 test('Table sorting reports column and direction with semantic headers', async () => {
   const sort = vi.fn(), user = userEvent.setup()

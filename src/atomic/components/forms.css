@@ -24,7 +24,7 @@
 .c-checkbox:checked + .c-choice-mark > svg { visibility: visible; }
 .c-checkbox:indeterminate + .c-choice-mark > svg { visibility: hidden; }
 .c-checkbox:indeterminate + .c-choice-mark::after { content: ''; position: absolute; width: var(--a-size-marker); height: var(--a-border-width); background: var(--a-color-ink); }
-.c-radio-group { min-width: 0; margin: 0; padding: 0; border: 0; }
+.c-radio-group { min-width: 0; margin: 0; padding: 0 var(--a-space-1); border: 0; }
 .c-radio-group legend { padding: 0; margin-bottom: var(--a-space-2); }
 .c-radio { border-radius: var(--a-radius-pill); display: grid; place-items: center; }
 .c-radio:checked::before { content: ''; width: var(--a-size-marker); height: var(--a-size-marker); border-radius: var(--a-radius-pill); background: var(--a-color-surface); }

@@ -9,7 +9,7 @@ export function Breadcrumbs({ items, label = 'Breadcrumbs', className = '' }: Br
     const current = index === items.length - 1
     return <li key={index}>
       {index > 0 && <Icon name="chevronRight" size="small" />}
-      {!current && item.href ? <a href={item.href}><Text as="span" variant="small">{item.label}</Text></a> : <Text as="span" variant={current ? 'h7' : 'small'} aria-current={current ? 'page' : undefined}>{item.label}</Text>}
+      {!current && item.href ? <a className="c-breadcrumbs__link" href={item.href}><Text as="span" variant="small">{item.label}</Text></a> : <Text as="span" variant={current ? 'h7' : 'small'} aria-current={current ? 'page' : undefined}>{item.label}</Text>}
     </li>
   })}</ol></nav>
 }
