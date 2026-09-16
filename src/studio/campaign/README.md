@@ -1,6 +1,8 @@
 # Campaign modules
 
-Approved chain: **Brief → Copy → Visuals → Banners → Review → Distribute**.
+> **Current implementation.** This folder implements the banner-only campaign flow. The target product replaces it with the four-stage asset creation flow (Brief → Copy → Visuals → Assets) driven by recipe files, with designer review as escalation. Product behaviour is defined in [`docs/product/`](../../../docs/product/concept.md); this README describes the existing code only. Dated checkpoints below are historical.
+
+Current module chain: **Brief → Copy → Visuals → Banners → Review → Distribute**.
 
 The live campaign page uses this architecture. `CampaignPage` composes six stable module hosts; `ConnectedStudio` retains authentication, campaign navigation, sidebar actions and naming. Mutations publish refreshed module snapshots without replacing the page with a loading screen.
 
@@ -83,7 +85,7 @@ Page-adaptation verification on 6 September 2026: **281 tests passed across 33 f
 
 Final structural review additionally covered Brief locking through Copy generation, one-time automatic creation processing, Escape title cancellation and runtime disposal/re-entry (26 focused checks passed).
 
-Copy implementation checkpoint, 6 September 2026: cards replace the earlier comparison tabs. **179 focused checks pass across 17 files**, including real PostgreSQL approval, append/cap/replay/deletion tests. The full shared-checkout run passed **1195 tests**, with five new Visuals command tests failing during that parallel implementation. App and documentation builds pass. Browser verification covered saved cards, single-banner preview, Escape focus restoration and card fit at 390px. See [Copy implementation](../../../../docs/superpowers/plans/2026-09-06-copy-cards-implementation.md) for scope and the downstream integration checkpoint; this is not a claim that concurrent Visuals work is complete.
+Copy implementation checkpoint, 6 September 2026: cards replace the earlier comparison tabs. **179 focused checks pass across 17 files**, including real PostgreSQL approval, append/cap/replay/deletion tests. The full shared-checkout run passed **1195 tests**, with five new Visuals command tests failing during that parallel implementation. App and documentation builds pass. Browser verification covered saved cards, single-banner preview, Escape focus restoration and card fit at 390px. See [Copy implementation](../../../docs/archive/superpowers/plans/2026-09-06-copy-cards-implementation.md) for scope and the downstream integration checkpoint; this is not a claim that concurrent Visuals work is complete.
 
 ## Integration status
 
@@ -102,8 +104,8 @@ Copy implementation checkpoint, 6 September 2026: cards replace the earlier comp
 - [x] Scoped integration checkpoint commit: `f9282b7` (see integration handoff and git history).
 - [x] Complete physical-browser workflow, feedback/reopen/v2 delivery, responsive/keyboard checks and reload.
 
-All six headings/anchors render immediately. Allowed content activates on direct navigation or within a 400px viewport margin, then remains mounted. Without IntersectionObserver, accessible content mounts directly. The template route and AnimatedBanner now have separate production chunks; Copy's preview import is dynamic. Entry changed from 350,573 to 346,790 bytes (same-method gzip 107,628 to 106,263); emitted JS files increased from 22 to 26. This is build evidence, not a claim of faster browser rendering. See [measurement evidence](../../../../docs/superpowers/plans/2026-09-07-module-loading-measurements.md).
+All six headings/anchors render immediately. Allowed content activates on direct navigation or within a 400px viewport margin, then remains mounted. Without IntersectionObserver, accessible content mounts directly. The template route and AnimatedBanner now have separate production chunks; Copy's preview import is dynamic. Entry changed from 350,573 to 346,790 bytes (same-method gzip 107,628 to 106,263); emitted JS files increased from 22 to 26. This is build evidence, not a claim of faster browser rendering. See [measurement evidence](../../../docs/archive/superpowers/plans/2026-09-07-module-loading-measurements.md).
 
-Parent full-suite checkpoint on 7 September after the final production fixes: **136 files / 1,340 tests passed**, with no skipped tests reported. Physical-browser QA completed creation, feedback, reopening, independent version-2 approval and a verified 73,326-byte two-format ZIP download. All six modules were inspected at 2252/1440/390px; keyboard navigation, focus return, mobile timeline/drawer, error/retry and reload were verified. Intermittent role-switch browser-control stalls were recovered without changing application logic. See [final evidence](../../../../docs/superpowers/plans/2026-09-07-integration-verification.md) for exact artifact identity and remaining environment limits.
+Parent full-suite checkpoint on 7 September after the final production fixes: **136 files / 1,340 tests passed**, with no skipped tests reported. Physical-browser QA completed creation, feedback, reopening, independent version-2 approval and a verified 73,326-byte two-format ZIP download. All six modules were inspected at 2252/1440/390px; keyboard navigation, focus return, mobile timeline/drawer, error/retry and reload were verified. Intermittent role-switch browser-control stalls were recovered without changing application logic. See [final evidence](../../../docs/archive/superpowers/plans/2026-09-07-integration-verification.md) for exact artifact identity and remaining environment limits.
 
 No live demo records or settings were changed. Legacy Stage exports remain compatibility adapters. Shared working-tree changes are preserved; final commit/deploy status is tracked in the integration handoff.

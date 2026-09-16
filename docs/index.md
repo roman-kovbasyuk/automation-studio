@@ -1,56 +1,50 @@
-# Lingu Agents — Marketing Pipeline System
+# Automation Studio documentation
 
-**Lingu Agents** is a closed-loop [Claude Code](https://claude.com/product/claude-code) system that
-turns a social media account into researched, on-brand marketing creative — end to end, with a real
-**human review checkpoint in Figma** built into both of its pipelines. HyperFrames (motion) only
-ever runs at the very last video step, after a human has approved the static design.
+Automation Studio produces on-brand content automatically. A company's **brand** is the foundation; **templates** are built on it; **recipes** turn a brief into finished assets; **designers** are brought in when automatic quality is not good enough.
 
-You give it a handle (or a marketing brief) and it works through: a standardized brief, research,
-static design, a pause for you to review and edit in Figma, an optional resize/variant pass, and —
-for video — a final animation step. Nothing is treated as "final" until a human has actually looked
-at it in Figma.
+Start with the [product concept](product/concept.md).
 
-```
-Stage 0  Brief            standardized campaign request — human-approved before anything runs
-Stage 1  Research           marketing-analyst / static-creative-analyst (+ competitors, if listed)
-Stage 2  Design               design-strategist / static-banner-designer — STATIC output only
-Stage 3  Human Figma review     you import the draft into Figma, edit, share the link back
-Stage 4  Resize / variant         creative-resizer — OPTIONAL
-Stage 5  Animate (video only)       video-animator — the ONLY stage that touches HyperFrames
-```
+## Product
 
-The static-banner pipeline ends at Stage 4 (or 3) — there's no motion stage for a flat banner.
+| Page | What it answers |
+| --- | --- |
+| [Concept](product/concept.md) | What the product is, the asset creation flow and its principles |
+| [Glossary](product/glossary.md) | Terms to use, status labels, and old names still in the code |
+| [Decisions](product/decisions.md) | What has been decided, when, and what it replaced |
+| [Recipes](product/recipes.md) | What a recipe is and how recipe files are structured |
+| [Roadmap](product/roadmap.md) | Phases, proof-of-concept scope, milestones, measures and open questions |
 
-## Where to go from here
+## Engineering
 
-| Page | What's in it |
-|---|---|
-| [Architecture](architecture.md) | How every stage fits together, why design moved out of HyperFrames, and why Figma is read-only by design |
-| [Setup & Prerequisites](setup-and-prerequisites.md) | Everything you need installed and configured, including `FIGMA_TOKEN` |
-| [Running a Pipeline](running-a-pipeline.md) | How to kick off a new client, work through the Figma checkpoint, resume, or run a single stage standalone |
-| [Agents & Skills Reference](agents-and-skills-reference.md) | What each of the seven agents and their skills actually do |
-| [Project Folder Convention](project-folder-convention.md) | The `projects/<slug>/` layout, `STATUS.md`, and the new `00-brief/` / `resize-variants/` folders |
-| [Troubleshooting](troubleshooting.md) | Common failure points and how to unstick them |
+| Page | What it answers |
+| --- | --- |
+| [Architecture](engineering/architecture.md) | How the code is organised today and how it maps to the target model |
+| [Local development](engineering/local-development.md) | How to run, test and build, and what to be careful with |
+| [AI generation](engineering/ai-generation.md) | Which AI operations exist, their safeguards and job statuses |
+| [Known issues](engineering/known-issues.md) | Defects, product-model gaps and technical debt |
+| [Campaign modules](engineering/campaign-modules.md) | The current six-module banner flow |
+| [Briefing](engineering/briefing.md) | How uploaded materials are analysed today |
+| [Banner templates and brands](engineering/templates/banner-template-editor.md) | Template editor and brand resolution |
+| [MSD slide templates](engineering/templates/msd-presentation-templates.md) | Slide layouts and AI content contracts for decks |
+| [Admin area](engineering/admin.md) | Admin views and the frozen recipe editor |
+| [Admin and data model](engineering/proposals/admin-and-data-model.md) | Proposal for projects, runs, tasks and workers |
 
-## At a glance
+## Application design system
 
-- **Entry point:** the `orchestrator` agent — launch `claude` in the repo root and describe the
-  account. It walks you through Stage 0, infers the right pipeline, and genuinely pauses at Stage 3
-  rather than pretending to complete a Figma import it structurally cannot do.
-- **Stage 0 (Brief):** a standardized campaign request — marketing input, competitor analysis, and
-  the marketer's brief — confirmed by you before any agent starts.
-- **Stage 1 (Research):** `marketing-analyst` / `static-creative-analyst` scrape via Apify and
-  produce a self-contained HTML analytics report, plus one per competitor if the brief listed any.
-- **Stage 2 (Design):** `design-strategist` / `static-banner-designer` produce **static** creative
-  only — a storyboard of designed frames for video, draft banners for static ads — no HyperFrames
-  anywhere in this stage.
-- **Stage 3 (Human Figma review):** you import the draft into Figma (the html.to.design plugin is
-  the standard path), edit it, and share the link back. Nothing in this system can write to Figma —
-  the vendored `figma` skill is read-only by design, so this step is a genuine, unautomatable pause.
-- **Stage 4 (Resize/variant, optional):** `creative-resizer` expands your approved design into more
-  platform sizes and recombined "variable" variants, without changing what you approved.
-- **Stage 5 (Animate, video only):** `video-animator` — the only agent in the system with HyperFrames
-  access — turns your approved, adapted storyboard into the final rendered video.
-- **State:** every client/account lives in `projects/<slug>/`, tracked by a `STATUS.md` file — this
-  is the only durable memory between agent invocations. `waiting on human` at Stage 3 is a normal,
-  expected status, not a stall.
+| Page | What it answers |
+| --- | --- |
+| [Front-end contract](../FRONTEND.md) | Rules for every application page, component and flow |
+| [Visual guide](../DESIGN.md) | How to apply the Brutalist UI foundation |
+| [Design-system docs](design-system/index.md) | Consumer boundary, missing components, design briefs |
+
+## Operations
+
+| Page | What it answers |
+| --- | --- |
+| [Hosting options](operations/hosting.md) | Open comparison of hosting approaches |
+| [Infrastructure](operations/infrastructure.md) | Proposed Terraform and CLI setup |
+
+## About these docs
+
+- [How documentation is maintained](documentation.md)
+- [Archive](archive/README.md) of superseded documents, never an authority

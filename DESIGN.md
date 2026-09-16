@@ -92,4 +92,4 @@ Never target private component classes, pass local `className`/`style` skins to 
 - Add decoration that obscures task priority or implies an unavailable interaction.
 - Place named screens, brand examples, fixed flow sequences or implementation inventories in this general guide.
 
-Earlier guidance is retained in [the historical archive](DESIGN.history.md). It is not current implementation authority.
+Earlier guidance is retained in [the historical archive](docs/archive/product-v1/DESIGN.history.md). It is not current implementation authority.

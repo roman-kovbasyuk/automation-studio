@@ -4,10 +4,9 @@
 .claude
 .impeccable
 .openai
-.superpowers
 coverage
 dist
-docs
+docs/archive
 node_modules
 *.log
 **/*.test.js

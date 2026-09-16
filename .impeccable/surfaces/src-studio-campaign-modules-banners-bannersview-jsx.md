@@ -11,7 +11,7 @@ related_targets: ["src/studio/campaign/modules/banners/banners.css", "src/studio
 
 Banners is an Operate surface in the six-module campaign workflow. A marketer combines existing copy and visuals with published templates, selects output dimensions, and verifies the resulting banner count before preparing review. This extension inherits [DESIGN.md](../../DESIGN.md), the current Avenir-family typography, cyan controls, offwhite application canvas, black rules, and enclosing rounded module cards. It introduces no replacement visual world, global tokens, or generated imagery.
 
-The implemented surface follows the [approved selection workflow](../../docs/superpowers/specs/2026-09-06-banner-selection.md). The Design panel shows all available templates for the current copy, visual, and preview proportion. A template without a matching proportion displays an unavailable-preview message. A requested library template moves to the front without changing the saved selection. Artwork comes from existing template manifests and stored visuals; previews render with playback stopped.
+The implemented surface follows the [approved selection workflow](../../docs/archive/superpowers/specs/2026-09-06-banner-selection.md). The Design panel shows all available templates for the current copy, visual, and preview proportion. A template without a matching proportion displays an unavailable-preview message. A requested library template moves to the front without changing the saved selection. Artwork comes from existing template manifests and stored visuals; previews render with playback stopped.
 
 ## Colors
 
