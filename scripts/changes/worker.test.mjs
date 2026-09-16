@@ -467,6 +467,28 @@ test('pending adoption uses its immutable ready package after main advances', as
   } finally { await rm(fixture.root, { recursive: true, force: true }) }
 })
 
+test('drainQueue durably fails a ready record whose immutable package is missing', async () => {
+  const fixture = await fakeFixture()
+  const git = fakeGit()
+  const release = await successfulRelease({ dataDir: fixture.dataDir, sourceCommit: 'candidate-commit', summary: 'Button changed.' })
+  try {
+    await fixture.store.update('r1', { status: 'ready', release, candidateCommit: 'candidate-commit', adoption: { status: 'pending' } })
+    await rm(release.packagePath)
+    let calls = 0
+    const results = await drainQueue({
+      ...fixture,
+      run: git.run,
+      adopt: async () => ({ status: 'installed' }),
+      process: async (options) => { calls += 1; return processRequest(options) },
+    })
+    assert.equal(results.length, 1)
+    assert.equal(calls, 1)
+    assert.equal(results[0].status, 'failed')
+    assert.equal((await fixture.store.get('r1')).status, 'failed')
+    assert.equal((await fixture.store.listWorking()).length, 0)
+  } finally { await rm(fixture.root, { recursive: true, force: true }) }
+})
+
 test('drainQueue recovers an unfinished journal before claiming new work', async () => {
   const fixture = await fakeFixture()
   try {
@@ -583,6 +605,93 @@ test('a disposable Git repository is verified and fast-forwarded to the candidat
     assert.equal(await readFile(join(fixture.repositoryDir, 'src', 'atomic', 'Button.js'), 'utf8'), 'export const label = "Busy button"\n')
     const journal = JSON.parse(await readFile(join(fixture.dataDir, 'journals', 'git-ff.json'), 'utf8'))
     assert.equal((await runCommand('git', ['rev-parse', 'HEAD'], { cwd: fixture.repositoryDir })).stdout.trim(), journal.candidateCommit)
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('released-journal recovery finalizes when main advanced beyond the promoted candidate', async () => {
+  const fixture = await realRepositoryFixture('git-released-descendant')
+  let failReadyOnce = true
+  let implementations = 0
+  let releases = 0
+  const store = {
+    ...fixture.store,
+    update: async (id, patch) => {
+      if (patch.status === 'ready' && failReadyOnce) {
+        failReadyOnce = false
+        throw new Error('simulated result publication failure')
+      }
+      return fixture.store.update(id, patch)
+    },
+  }
+  const options = {
+    ...fixture,
+    store,
+    requestId: 'git-released-descendant',
+    run: runCommand,
+    adopt: async () => ({ status: 'installed' }),
+    implement: async ({ candidateDir }) => {
+      implementations += 1
+      await writeFile(join(candidateDir, 'src', 'atomic', 'Button.js'), 'export const label = "Busy button"\n')
+      return { outcome: 'implemented', summary: 'Button supports a busy label.', error: null }
+    },
+    release: async (releaseOptions) => { releases += 1; return successfulRelease(releaseOptions) },
+  }
+  try {
+    const interrupted = await processRequest(options)
+    assert.equal(interrupted.status, 'failed')
+    assert.match(interrupted.error, /publication requires recovery/i)
+    await writeFile(join(fixture.repositoryDir, 'README.md'), 'later main work\n')
+    await runCommand('git', ['add', 'README.md'], { cwd: fixture.repositoryDir })
+    await runCommand('git', ['commit', '-m', 'later main work'], { cwd: fixture.repositoryDir })
+
+    const recovered = await processRequest(options)
+    assert.equal(recovered.status, 'ready')
+    assert.equal(implementations, 1)
+    assert.equal(releases, 1)
+    assert.equal((await fixture.store.listWorking()).length, 0)
+  } finally {
+    await rm(fixture.root, { recursive: true, force: true })
+  }
+})
+
+test('released-journal recovery durably fails when main no longer contains the candidate', async () => {
+  const fixture = await realRepositoryFixture('git-released-diverged')
+  let failReadyOnce = true
+  const store = {
+    ...fixture.store,
+    update: async (id, patch) => {
+      if (patch.status === 'ready' && failReadyOnce) {
+        failReadyOnce = false
+        throw new Error('simulated result publication failure')
+      }
+      return fixture.store.update(id, patch)
+    },
+  }
+  const options = {
+    ...fixture,
+    store,
+    requestId: 'git-released-diverged',
+    run: runCommand,
+    adopt: async () => ({ status: 'installed' }),
+    implement: async ({ candidateDir }) => {
+      await writeFile(join(candidateDir, 'src', 'atomic', 'Button.js'), 'export const label = "Busy button"\n')
+      return { outcome: 'implemented', summary: 'Button supports a busy label.', error: null }
+    },
+    release: successfulRelease,
+  }
+  try {
+    const interrupted = await processRequest(options)
+    assert.equal(interrupted.status, 'failed')
+    await runCommand('git', ['checkout', '--orphan', 'diverged'], { cwd: fixture.repositoryDir })
+    await runCommand('git', ['commit', '--allow-empty', '-m', 'diverged root'], { cwd: fixture.repositoryDir })
+
+    const recovered = await processRequest(options)
+    assert.equal(recovered.status, 'failed')
+    assert.match(recovered.error, /no longer contain|ancestor|diverg/i)
+    assert.equal((await fixture.store.get('git-released-diverged')).status, 'failed')
+    assert.equal((await fixture.store.listWorking()).length, 0)
   } finally {
     await rm(fixture.root, { recursive: true, force: true })
   }

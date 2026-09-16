@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, open, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, open, unlink, link, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { validateConfig, validateRequest, canonicalRequest, publicResult } from './protocol.mjs'
@@ -10,6 +10,7 @@ export function openStore(dataDir) {
   const requestsDir = join(root, 'requests')
   const configPath = join(root, 'config.json')
   const workerLock = join(root, 'worker.lock')
+  const reclaimLock = join(root, 'worker.reclaim.lock')
   const versionsPath = join(root, 'versions.json')
   let lockQueue = Promise.resolve()
 
@@ -22,6 +23,35 @@ export function openStore(dataDir) {
     } finally { await unlink(temp).catch((error) => { if (error.code !== 'ENOENT') throw error }) }
   }
   async function readJson(path, fallback = null) { try { return JSON.parse(await readFile(path, 'utf8')) } catch (error) { if (error.code === 'ENOENT') return fallback; throw error } }
+  async function createExclusiveJson(path, value) {
+    // Publish the complete owner record with a no-replace hard link. Creating
+    // the target first and writing into it would expose a partially written
+    // record to a competing process.
+    const temp = `${path}.${process.pid}.${randomUUID()}.tmp`
+    try {
+      await writeFile(temp, `${JSON.stringify(value)}\n`, { encoding: 'utf8', mode: 0o600 })
+      try { await link(temp, path); return true } catch (error) {
+        if (error.code === 'EEXIST') return false
+        throw error
+      }
+    } finally { await unlink(temp).catch((error) => { if (error.code !== 'ENOENT') throw error }) }
+  }
+  async function withReclaimGuard(fn) {
+    for (;;) {
+      const owner = { pid: process.pid, token: randomUUID() }
+      if (await createExclusiveJson(reclaimLock, owner)) {
+        try { return await fn() } finally { await unlink(reclaimLock).catch((error) => { if (error.code !== 'ENOENT') throw error }) }
+      }
+      let existing
+      try { existing = await readJson(reclaimLock) } catch { await sleep(5); continue }
+      if (!existing) { await sleep(5); continue }
+      if (!Number.isInteger(existing.pid)) throw new Error('worker reclamation lock has ambiguous ownership')
+      try { process.kill(existing.pid, 0); await sleep(10) } catch (probe) {
+        if (probe.code === 'ESRCH') throw new Error('worker reclamation lock has ambiguous ownership')
+        throw new Error('worker reclamation lock has ambiguous ownership')
+      }
+    }
+  }
   async function acquire() {
     await init()
     let ambiguousAttempts = 0
@@ -43,8 +73,16 @@ export function openStore(dataDir) {
         let alive = true
         try { process.kill(existing.pid, 0) } catch (probe) { if (probe.code === 'ESRCH') alive = false; else throw new Error('worker lock has ambiguous ownership') }
         if (alive) { await sleep(20); continue }
-        const reclaimed = `${workerLock}.reclaim.${process.pid}.${randomUUID()}`
-        try { await rename(workerLock, reclaimed); await unlink(reclaimed); } catch (race) { if (race.code !== 'ENOENT') continue }
+        await withReclaimGuard(async () => {
+          let current
+          try { current = await readJson(workerLock) } catch { return }
+          if (!current || current.pid !== existing.pid || current.token !== existing.token) return
+          let currentAlive = true
+          try { process.kill(current.pid, 0) } catch (probe) { if (probe.code === 'ESRCH') currentAlive = false; else throw new Error('worker lock has ambiguous ownership') }
+          if (currentAlive) return
+          const reclaimed = `${workerLock}.reclaim.${process.pid}.${randomUUID()}`
+          try { await rename(workerLock, reclaimed); await unlink(reclaimed) } catch (race) { if (race.code !== 'ENOENT') throw race }
+        })
       }
     }
   }
