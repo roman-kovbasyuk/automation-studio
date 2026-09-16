@@ -3,10 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="refresh" content="0;url=/components.html" />
     <title>Components · Brutalist Design System</title>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/atomic/screens/docs/component-main.tsx"></script>
+    <p>This documentation URL moved to <a id="redirect-link" href="/components.html">Components</a>.</p>
+    <script>
+      const destination = new URL('/components.html', window.location.origin)
+      destination.search = window.location.search
+      destination.hash = window.location.hash
+      document.getElementById('redirect-link').href = destination.pathname + destination.search + destination.hash
+      window.location.replace(destination.pathname + destination.search + destination.hash)
+    </script>
   </body>
 </html>

@@ -84,8 +84,9 @@
 Маршруты:
 
 - `/` — Getting Started с установкой и явными ссылками на Basics, Components и UI Blocks. Сейчас таких ссылок на главной странице нет.
-- `page-20.html?basic=…`, `page-21.html?component=…`, `page-22.html?block=…` — сохранить текущие документированные адреса.
-- `page-23.html` — совместимый адрес Getting Started.
+- `/basics.html?basic=…`, `/components.html?component=…`, `/ui-blocks.html?block=…` — canonical documentation routes.
+- `/getting-started.html` — canonical Getting Started route.
+- `/page-20.html` through `/page-23.html` — compatibility redirects for previously documented addresses.
 - `atomic.html` — небольшой переход: известные старые якоря ведут на соответствующую новую страницу; неизвестные — на Getting Started. Таблица соответствий строится из существующих якорей каталога до удаления.
 
 Алиасы компонентов должны разрешаться в реальную страницу. Записи `aliases` в навигации сами по себе не обеспечивают обработку URL. Публичный API компонента и алиас страницы — разные сущности.

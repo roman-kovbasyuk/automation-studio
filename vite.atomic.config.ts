@@ -29,5 +29,21 @@ export default defineConfig({
     setupFiles: './src/test/setup.js',
     include: ['src/atomic/**/*.test.{ts,tsx}'],
   },
-  build: { outDir: 'dist', rollupOptions: { input: { index: resolve(import.meta.dirname, 'index.html'), atomic: resolve(import.meta.dirname, 'atomic.html'), docs: resolve(import.meta.dirname, 'page-20.html'), components: resolve(import.meta.dirname, 'page-21.html'), blocks: resolve(import.meta.dirname, 'page-22.html'), docsIndex: resolve(import.meta.dirname, 'page-23.html') } } },
+  build: {
+    outDir: 'dist',
+    rollupOptions: {
+      input: {
+        index: resolve(import.meta.dirname, 'index.html'),
+        atomic: resolve(import.meta.dirname, 'atomic.html'),
+        basics: resolve(import.meta.dirname, 'basics.html'),
+        components: resolve(import.meta.dirname, 'components.html'),
+        uiBlocks: resolve(import.meta.dirname, 'ui-blocks.html'),
+        gettingStarted: resolve(import.meta.dirname, 'getting-started.html'),
+        page20: resolve(import.meta.dirname, 'page-20.html'),
+        page21: resolve(import.meta.dirname, 'page-21.html'),
+        page22: resolve(import.meta.dirname, 'page-22.html'),
+        page23: resolve(import.meta.dirname, 'page-23.html'),
+      },
+    },
+  },
 })

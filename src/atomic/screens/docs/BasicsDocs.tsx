@@ -95,10 +95,10 @@ export function BasicsDocs() {
     window.setTimeout(() => { document.getElementById('docs-title')?.focus(); document.getElementById('overview')?.scrollIntoView() }, 0)
   }
   const groups = [
-    {title:'Getting Started', items:[{id:'intro',label:'Introduction',href:'/page-23.html'},{id:'install',label:'Installation',href:'/page-23.html#installation'}]},
-    {title:'Basics', items:basicsPages.map(item => ({id:item.id,label:item.title,href:`/page-20.html?basic=${item.id}`,current:item.id===page.id}))},
+    {title:'Getting Started', items:[{id:'intro',label:'Introduction',href:'/getting-started.html'},{id:'install',label:'Installation',href:'/getting-started.html#installation'}]},
+    {title:'Basics', items:basicsPages.map(item => ({id:item.id,label:item.title,href:`/basics.html?basic=${item.id}`,current:item.id===page.id}))},
     ...componentGroups.map(group => ({title:group.title,items:group.items.map(item => ({id:item.id,label:item.label,href:item.href,status:item.availability === 'missing' ? 'Missing component' : item.availability === 'partial' ? 'Partial' : undefined}))})),
-    {title:'UI Blocks',items:[{id:'sidebar',label:'Sidebar panel',href:'/page-22.html?block=sidebar'},{id:'prompt',label:'AI prompt input',href:'/page-22.html?block=prompt-input'},{id:'example',label:'Code example',href:'/page-22.html?block=code-example'}]},
+    {title:'UI Blocks',items:[{id:'sidebar',label:'Sidebar panel',href:'/ui-blocks.html?block=sidebar'},{id:'prompt',label:'AI prompt input',href:'/ui-blocks.html?block=prompt-input'},{id:'example',label:'Code example',href:'/ui-blocks.html?block=code-example'}]},
   ].map(group => ({...group, items:group.items.filter(item => item.label.toLowerCase().includes(normalized) || group.title.toLowerCase().includes(normalized))})).filter(group => group.items.length)
   const navigation = (mobile = false) => <Stack gap={8} onClick={navigate}>
     {mobile && <SearchField autoFocus label="Search documentation" value={query} onChange={setQuery} onKeyDown={event => { if(event.key==='Escape') setQuery('') }} />}
@@ -116,7 +116,7 @@ export function BasicsDocs() {
     <header className="docs-header">
       <DocsBrand />
       <div className="docs-search" ref={searchRef}><SearchField label="Quick search" value={query} onChange={value => { setQuery(value); if (value.trim() && window.matchMedia?.('(max-width: 800px)').matches) setMobileOpen(true) }} placeholder="Find a page… /" onKeyDown={event => { if(event.key==='Escape') setQuery('') }} /></div>
-      <div className="docs-catalog-link"><NavigationList label="Documentation" items={[{id:'components',label:'Components',href:'/page-21.html?component=button'},{id:'blocks',label:'UI Blocks',href:'/page-22.html?block=sidebar'}]} /></div>
+      <div className="docs-catalog-link"><NavigationList label="Documentation" items={[{id:'components',label:'Components',href:'/components.html?component=button'},{id:'blocks',label:'UI Blocks',href:'/ui-blocks.html?block=sidebar'}]} /></div>
       <div className="docs-mobile"><Drawer title="Documentation" trigger="Browse documentation" open={mobileOpen} onOpenChange={setMobileOpen}>{navigation(true)}</Drawer></div>
     </header>
     <div className="docs-shell">

@@ -9,7 +9,7 @@ import { blockPageMap } from './blockContent'
 import { componentGroups } from './docsNavigation'
 
 test('component routes render real grouped pages and references', async () => {
-  window.history.replaceState({}, '', '/page-21.html?component=button#reference')
+  window.history.replaceState({}, '', '/components.html?component=button#reference')
   const user = userEvent.setup()
   render(<ComponentDocs />)
   expect(screen.getByRole('heading', { name: 'Button', level: 1 })).toBeVisible()
@@ -20,49 +20,49 @@ test('component routes render real grouped pages and references', async () => {
 })
 
 test('detailed usage guidance remains visible on pages with examples', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=button#usage')
+  window.history.replaceState({}, '', '/components.html?component=button#usage')
   render(<ComponentDocs />)
   expect(screen.getByRole('heading', { name: 'Usage guidance', level: 2 })).toBeVisible()
   expect(screen.getByText(/The user explicitly initiates an operation/)).toBeVisible()
 })
 
 test('UI block usage guidance uses the shared guidance document', () => {
-  window.history.replaceState({}, '', '/page-22.html?block=sidebar#usage')
+  window.history.replaceState({}, '', '/ui-blocks.html?block=sidebar#usage')
   render(<UIBlockDocs />)
   expect(screen.getByRole('heading', { name: 'Usage guidance', level: 2 })).toBeVisible()
   expect(screen.getByText(/A workspace needs a persistent navigation structure/)).toBeVisible()
 })
 
 test('component previews use the shared centered preview layout', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=date-picker#overview')
+  window.history.replaceState({}, '', '/components.html?component=date-picker#overview')
   render(<ComponentDocs />)
   const preview = screen.getByRole('tabpanel', { name: 'Date picker overview preview' })
   expect(preview.closest('.docs-component-example')).not.toBeNull()
 })
 
 test('inline text editing is documented in the Form group and reuses the shared editor', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=inline-text#overview')
+  window.history.replaceState({}, '', '/components.html?component=inline-text#overview')
   render(<ComponentDocs />)
   expect(screen.getByRole('heading', { name: 'Inline text editing', level: 1 })).toBeVisible()
   const sidebar = within(screen.getByRole('complementary', { name: 'Documentation' }))
-  expect(sidebar.getByRole('link', { name: 'Inline text editing' })).toHaveAttribute('href', '/page-21.html?component=inline-text')
+  expect(sidebar.getByRole('link', { name: 'Inline text editing' })).toHaveAttribute('href', '/components.html?component=inline-text')
   const preview = screen.getByRole('tabpanel', { name: 'Inline text editing overview preview' })
   expect(preview.querySelector('.c-inline-text')).not.toBeNull()
   expect(within(preview).getByRole('button', { name: 'Edit Campaign title' })).toBeInTheDocument()
 })
 
 test('progress bar and progress circle docs keep their previews separate', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=progress-bar#overview')
+  window.history.replaceState({}, '', '/components.html?component=progress-bar#overview')
   const bar = render(<ComponentDocs />)
   const barPreview = screen.getByRole('tabpanel', { name: 'Progress bar overview preview' })
   expect(barPreview.querySelector('.c-progress-bar')).not.toBeNull()
   expect(barPreview.querySelector('.c-progress-ring')).toBeNull()
   const sidebar = within(screen.getByRole('complementary', { name: 'Documentation' }))
-  expect(sidebar.getByRole('link', { name: 'Progress Bar' })).toHaveAttribute('href', '/page-21.html?component=progress-bar')
-  expect(sidebar.getByRole('link', { name: 'Progress Circle' })).toHaveAttribute('href', '/page-21.html?component=progress-ring')
+  expect(sidebar.getByRole('link', { name: 'Progress Bar' })).toHaveAttribute('href', '/components.html?component=progress-bar')
+  expect(sidebar.getByRole('link', { name: 'Progress Circle' })).toHaveAttribute('href', '/components.html?component=progress-ring')
   bar.unmount()
 
-  window.history.replaceState({}, '', '/page-21.html?component=progress-ring#overview')
+  window.history.replaceState({}, '', '/components.html?component=progress-ring#overview')
   render(<ComponentDocs />)
   const ringPreview = screen.getByRole('tabpanel', { name: 'Progress ring overview preview' })
   expect(ringPreview.querySelector('.c-progress-ring')).not.toBeNull()
@@ -70,7 +70,7 @@ test('progress bar and progress circle docs keep their previews separate', () =>
 })
 
 test('tabs and segmented control docs keep their controls and sizes separate', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=tabs#overview')
+  window.history.replaceState({}, '', '/components.html?component=tabs#overview')
   const tabs = render(<ComponentDocs />)
   const tabsPreview = screen.getByRole('tabpanel', { name: 'Tabs overview preview' })
   expect(tabsPreview.querySelector('.c-tabs')).not.toBeNull()
@@ -78,7 +78,7 @@ test('tabs and segmented control docs keep their controls and sizes separate', (
   expect(tabsPreview.querySelectorAll('.c-segmented[data-size]')).toHaveLength(2)
   tabs.unmount()
 
-  window.history.replaceState({}, '', '/page-21.html?component=segmented-control#overview')
+  window.history.replaceState({}, '', '/components.html?component=segmented-control#overview')
   render(<ComponentDocs />)
   const segmentedPreview = screen.getByRole('tabpanel', { name: 'Segmented Control overview preview' })
   expect(segmentedPreview.querySelector('.c-tabs')).toBeNull()
@@ -88,7 +88,7 @@ test('tabs and segmented control docs keep their controls and sizes separate', (
 })
 
 test('vertical stepper documents header-only and descriptive modes', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=vertical-stepper#overview')
+  window.history.replaceState({}, '', '/components.html?component=vertical-stepper#overview')
   render(<ComponentDocs />)
   const preview = screen.getByRole('tabpanel', { name: 'Vertical Stepper overview preview' })
   expect(preview.querySelectorAll('.c-vertical-stepper')).toHaveLength(1)
@@ -112,7 +112,7 @@ test('vertical stepper installation snippet shows the descriptive variant', () =
 })
 
 test('Kbd overview uses a descriptive keyboard shortcut label', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=kbd#overview')
+  window.history.replaceState({}, '', '/components.html?component=kbd#overview')
   render(<ComponentDocs />)
   expect(screen.getByRole('heading', { name: 'Keyboard Shortcut', level: 1 })).toBeVisible()
   expect(screen.queryByRole('heading', { name: 'Kbd', level: 1 })).not.toBeInTheDocument()
@@ -124,7 +124,7 @@ test('Kbd overview uses a descriptive keyboard shortcut label', () => {
 })
 
 test('Button Group preview uses white buttons with black strokes', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=button-group#overview')
+  window.history.replaceState({}, '', '/components.html?component=button-group#overview')
   render(<ComponentDocs />)
   const preview = screen.getByRole('tabpanel', { name: 'Button Group overview preview' })
   const buttons = Array.from(preview.querySelectorAll('.c-button'))
@@ -133,7 +133,7 @@ test('Button Group preview uses white buttons with black strokes', () => {
 })
 
 test('File dropzone overview uses the compact upload surface and matched file actions', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=file-dropzone#overview')
+  window.history.replaceState({}, '', '/components.html?component=file-dropzone#overview')
   render(<ComponentDocs />)
   const preview = screen.getByRole('tabpanel', { name: 'File dropzone overview preview' })
   expect(preview.querySelector('.c-file-dropzone')).toHaveAttribute('data-size', 'small')
@@ -143,7 +143,7 @@ test('File dropzone overview uses the compact upload surface and matched file ac
 })
 
 test('reference prop codes use the global docs code treatment', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=button-group#reference')
+  window.history.replaceState({}, '', '/components.html?component=button-group#reference')
   render(<ComponentDocs />)
   const prop = screen.getByText('children')
   expect(prop.tagName).toBe('CODE')
@@ -152,14 +152,14 @@ test('reference prop codes use the global docs code treatment', () => {
 })
 
 test('Kbd preview keeps a 4px gap between shortcut keys', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=kbd#overview')
+  window.history.replaceState({}, '', '/components.html?component=kbd#overview')
   render(<ComponentDocs />)
   const preview = screen.getByRole('tabpanel', { name: 'Keyboard Shortcut overview preview' })
   expect(preview.querySelector('.a-inline')).toHaveStyle({ '--layout-gap': 'var(--a-space-1)' })
 })
 
 test('component navigation groups use link-style accordion controls', async () => {
-  window.history.replaceState({}, '', '/page-21.html?component=progress-ring#overview')
+  window.history.replaceState({}, '', '/components.html?component=progress-ring#overview')
   const user = userEvent.setup()
   render(<ComponentDocs />)
   const sidebar = within(screen.getByRole('complementary', { name: 'Documentation' }))
@@ -180,7 +180,7 @@ test('component navigation items are alphabetized within each group', () => {
 })
 
 test('Button documentation follows the reference example hierarchy', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=button#overview')
+  window.history.replaceState({}, '', '/components.html?component=button#overview')
   render(<ComponentDocs />)
   expect(screen.getByRole('heading', { name: 'Examples', level: 2 })).toBeVisible()
   for (const title of ['Primary (Default)', 'Neutral', 'Error', 'Size', 'Disabled', 'With Icon', 'Full Width', 'Custom color', 'asChild']) {
@@ -198,15 +198,15 @@ test('Button documentation follows the reference example hierarchy', () => {
 })
 
 test('Badge navigation combines category and status badge destinations', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=badge#overview')
+  window.history.replaceState({}, '', '/components.html?component=badge#overview')
   render(<ComponentDocs />)
   const sidebar = within(screen.getByRole('complementary', { name: 'Documentation' }))
-  expect(sidebar.getByRole('link', { name: 'Badge' })).toHaveAttribute('href', '/page-21.html?component=badge')
+  expect(sidebar.getByRole('link', { name: 'Badge' })).toHaveAttribute('href', '/components.html?component=badge')
   expect(sidebar.queryByRole('link', { name: 'Status Badge' })).not.toBeInTheDocument()
 })
 
 test('Tag overview is plain and status treatments live in examples', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=tag#overview')
+  window.history.replaceState({}, '', '/components.html?component=tag#overview')
   render(<ComponentDocs />)
   expect(screen.getByRole('heading', { name: 'Tag', level: 1 })).toBeVisible()
   const preview = screen.getByRole('tabpanel', { name: 'Tag overview preview' })
@@ -227,7 +227,7 @@ test('Tag overview is plain and status treatments live in examples', () => {
 })
 
 test('Alert documentation exposes reference-style variants', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=alert#overview')
+  window.history.replaceState({}, '', '/components.html?component=alert#overview')
   render(<ComponentDocs />)
   expect(screen.getByRole('heading', { name: 'Alert', level: 1 })).toBeVisible()
   for (const title of ['Filled', 'Light', 'Lighter', 'Stroke', 'Size']) {
@@ -237,7 +237,7 @@ test('Alert documentation exposes reference-style variants', () => {
 })
 
 test('Tooltip documentation keeps unrelated feedback primitives out of its preview', () => {
-  window.history.replaceState({}, '', '/page-21.html?component=tooltip#overview')
+  window.history.replaceState({}, '', '/components.html?component=tooltip#overview')
   render(<ComponentDocs />)
   const preview = screen.getByRole('tabpanel', { name: 'Tooltip overview preview' })
   expect(preview.querySelector('.c-tooltip-trigger')).not.toBeNull()
@@ -252,7 +252,7 @@ test('every exported component name is represented by a documentation destinatio
 })
 
 test('UI block routes use the same documentation structure', () => {
-  window.history.replaceState({}, '', '/page-22.html?block=prompt-input#overview')
+  window.history.replaceState({}, '', '/ui-blocks.html?block=prompt-input#overview')
   render(<UIBlockDocs />)
   expect(screen.getByRole('heading', { name: 'AI prompt input', level: 1 })).toBeVisible()
   expect(screen.getByRole('region', { name: 'AI prompt input overview' })).toBeVisible()

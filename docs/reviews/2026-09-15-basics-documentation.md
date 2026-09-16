@@ -4,7 +4,7 @@
 
 Branch: `codex/docs-basics` (base `c79b01fbd83ca3d2b8cf6604b88d48e9149773d3`).
 
-Preview: http://127.0.0.1:5212/page-20.html?basic=color
+Preview: http://127.0.0.1:5212/basics.html?basic=color
 
 The eight Basics pages are ready for user review: Color, Typography, Spacing, Shape & sizing, Elevation, Motion, Icons and Layout. Component and UI block documentation follows only after approval of this template. Their current sidebar links open the existing catalog.
 

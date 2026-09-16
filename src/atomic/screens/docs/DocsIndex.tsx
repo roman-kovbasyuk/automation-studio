@@ -10,9 +10,9 @@ export function DocsIndex() {
     <header className="docs-header docs-index-header">
       <DocsBrand />
       <NavigationList label="Documentation" items={[
-        { id: 'basics', label: 'Basics', href: '/page-20.html?basic=color' },
-        { id: 'components', label: 'Components', href: '/page-21.html?component=button' },
-        { id: 'blocks', label: 'UI Blocks', href: '/page-22.html?block=sidebar' },
+        { id: 'basics', label: 'Basics', href: '/basics.html?basic=color' },
+        { id: 'components', label: 'Components', href: '/components.html?component=button' },
+        { id: 'blocks', label: 'UI Blocks', href: '/ui-blocks.html?block=sidebar' },
       ]} />
     </header>
     <main className="docs-article docs-index-main" id="docs-title" tabIndex={-1}>

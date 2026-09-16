@@ -3,24 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="refresh" content="0;url=/page-23.html" />
+    <meta http-equiv="refresh" content="0;url=/getting-started.html" />
     <title>Documentation · Brutalist Design System</title>
   </head>
   <body>
-    <p>This reference URL moved to the current documentation. <a id="redirect-link" href="/page-23.html">Open documentation</a>.</p>
+    <p>This reference URL moved to the current documentation. <a id="redirect-link" href="/getting-started.html">Open documentation</a>.</p>
     <script>
       const hash = window.location.hash.slice(1)
-      const destination = new URL('/page-23.html', window.location.origin)
+      const destination = new URL('/getting-started.html', window.location.origin)
       if (/^(?:color|typography|spacing|shape|elevation|motion|layout)$/.test(hash)) {
-        destination.pathname = '/page-20.html'
+        destination.pathname = '/basics.html'
         destination.searchParams.set('basic', hash)
         destination.hash = 'overview'
       } else if (hash.startsWith('component-')) {
-        destination.pathname = '/page-21.html'
+        destination.pathname = '/components.html'
         destination.searchParams.set('component', hash.slice('component-'.length))
         destination.hash = 'overview'
       } else if (hash.startsWith('block-')) {
-        destination.pathname = '/page-22.html'
+        destination.pathname = '/ui-blocks.html'
         destination.searchParams.set('block', hash.slice('block-'.length))
         destination.hash = 'overview'
       }

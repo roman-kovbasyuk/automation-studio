@@ -1,7 +1,7 @@
 export type ComponentAvailability = 'available' | 'partial' | 'missing'
 export type ComponentFamily = { label: string; id: string; availability: ComponentAvailability; href?: string; aliases?: readonly string[] }
 export type ComponentGroup = { title: string; items: readonly ComponentFamily[] }
-const family = (label: string, id: string, availability: ComponentAvailability, aliases: readonly string[] = []): ComponentFamily => ({ label, id, availability, aliases, ...(availability === 'missing' ? {} : { href: `/page-21.html?component=${id}` }) })
+const family = (label: string, id: string, availability: ComponentAvailability, aliases: readonly string[] = []): ComponentFamily => ({ label, id, availability, aliases, ...(availability === 'missing' ? {} : { href: `/components.html?component=${id}` }) })
 /** AlignUI's component taxonomy, mapped to our existing exports where they exist. */
 export const componentGroups: readonly ComponentGroup[] = [
   { title: 'Actions', items: [family('Button', 'button', 'available'), family('Feedback Button', 'feedback-button', 'available'), family('Button Group', 'button-group', 'available'), family('Compact Button', 'compact-button', 'available'), family('Fancy Button', 'fancy-button', 'available'), family('Link Button', 'text-action', 'available', ['link-button'])] },

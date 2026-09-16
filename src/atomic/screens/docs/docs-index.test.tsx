@@ -21,9 +21,9 @@ test('documentation index keeps the title, horizontal navigation, and installati
   expect(screen.queryByRole('heading', { name: 'Basics', level: 3 })).not.toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: 'Components', level: 3 })).not.toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: 'UI Blocks', level: 3 })).not.toBeInTheDocument()
-  expect(screen.getByRole('link', { name: 'Basics' })).toHaveAttribute('href', '/page-20.html?basic=color')
-  expect(screen.getByRole('link', { name: 'Components' })).toHaveAttribute('href', '/page-21.html?component=button')
-  expect(screen.getByRole('link', { name: 'UI Blocks' })).toHaveAttribute('href', '/page-22.html?block=sidebar')
+  expect(screen.getByRole('link', { name: 'Basics' })).toHaveAttribute('href', '/basics.html?basic=color')
+  expect(screen.getByRole('link', { name: 'Components' })).toHaveAttribute('href', '/components.html?component=button')
+  expect(screen.getByRole('link', { name: 'UI Blocks' })).toHaveAttribute('href', '/ui-blocks.html?block=sidebar')
 })
 
 test('installation steps retain the canonical Panel styling', () => {
