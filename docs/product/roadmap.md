@@ -19,13 +19,13 @@ Details and evidence: [architecture](../engineering/architecture.md) and [known 
 
 ## Phases
 
-### Phase 1 — Documentation cleanup ✔ in review
+### Phase 1 — Documentation cleanup ✔ done
 
 Remove the legacy pipeline, archive superseded specs, make `docs/` the single source, rewrite agent instructions around the product concept. No application code changes.
 
-### Phase 2 — Product requirements and specifications (next)
+### Phase 2 — Product requirements and specifications ✔ drafted, in owner review
 
-Write before any implementation:
+Drafted on 17 September 2026: the [PRD](prd.md) and the [specifications](../specs/index.md). FigJam boards wait for the Figma connector to be authorised. Written before any implementation:
 
 1. **PRD** for Automation Studio and the proof of concept: users, jobs to be done, flows, requirements, non-goals, measures, risks.
 2. **Specifications**:

@@ -23,6 +23,11 @@ Use these terms in product documents, specifications and the user interface. The
 | **Repair** | An automatic correction tried before escalation, such as shortening copy that overflows. |
 | **Escalation** | A design task opened from a flow when quality is not acceptable or the user asks for design help. The designer elevates the work and returns it. |
 | **Accepted** | The requester has approved an asset for delivery. |
+| **Output** | One composed asset: a banner (copy × visual × template × format) or a slide. Every change creates a new revision. |
+| **Package** | The immutable download of accepted outputs with a manifest. |
+| **Template set** | Layouts used together, such as the slide layouts of one deck style. |
+| **Automation-ready** | A brand version with everything flows need: confirmed colours, fonts, logo, voice, image style, wording rules and formats. |
+| **Legacy flow** | A campaign created before recipes; it keeps the old six-module behaviour until converted. |
 
 ## Status labels in documentation
 

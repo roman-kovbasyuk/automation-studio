@@ -13,7 +13,7 @@ The code is behind this model. It still implements a banner-only "campaign" flow
 | Task | Read |
 | --- | --- |
 | Anything | [Product concept](docs/product/concept.md), [glossary](docs/product/glossary.md), [decision log](docs/product/decisions.md) |
-| Planning or specifying features | [Roadmap](docs/product/roadmap.md), [recipes](docs/product/recipes.md) |
+| Planning or specifying features | [PRD](docs/product/prd.md), [specifications](docs/specs/index.md), [roadmap](docs/product/roadmap.md), [recipes](docs/product/recipes.md) |
 | Changing code | [Architecture](docs/engineering/architecture.md), [local development](docs/engineering/local-development.md), [known issues](docs/engineering/known-issues.md) |
 | AI generation | [AI generation](docs/engineering/ai-generation.md) |
 | Application UI, pages, styling, interaction | [FRONTEND.md](FRONTEND.md) (required), [DESIGN.md](DESIGN.md) |
@@ -25,7 +25,7 @@ When sources disagree, use this order:
 
 1. The latest explicit decision from the user in the current task.
 2. The [decision log](docs/product/decisions.md).
-3. Current product and specification pages in `docs/product/` (and `docs/specs/` once written) for what to build.
+3. Current product and specification pages in `docs/product/` and `docs/specs/` for what to build.
 4. Code, schemas and fresh test results for what exists today, described in `docs/engineering/`.
 
 Never treat `docs/archive/` as an authority. Never infer intended product behaviour from old names in the code ("campaign", "Banner Studio", six modules, review statuses). Record unresolved conflicts and ask; do not resolve them by picking the newest file.

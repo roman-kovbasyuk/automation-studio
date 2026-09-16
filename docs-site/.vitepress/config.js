@@ -37,12 +37,22 @@ export default withMermaid({
       { text: 'Start', items: [{ text: 'Overview', link: '/' }] },
       { text: 'Product', items: [
         { text: 'Concept', link: '/product/concept' },
+        { text: 'PRD', link: '/product/prd' },
         { text: 'Glossary', link: '/product/glossary' },
         { text: 'Decisions', link: '/product/decisions' },
         { text: 'Recipes', link: '/product/recipes' },
         { text: 'Roadmap', link: '/product/roadmap' },
       ] },
       { text: 'Specifications', items: [
+        { text: 'Overview', link: '/specs/' },
+        { text: 'Domain model', link: '/specs/domain-model' },
+        { text: 'Recipes', link: '/specs/recipes' },
+        { text: 'Brand model', link: '/specs/brand-model' },
+        { text: 'Template model', link: '/specs/template-model' },
+        { text: 'Quality and escalation', link: '/specs/quality-and-escalation' },
+        { text: 'Asset creation flow UX', link: '/specs/asset-creation-flow-ux' },
+        { text: 'Deck generation', link: '/specs/deck-generation' },
+        { text: 'Migration from campaigns', link: '/specs/campaign-migration' },
         { text: 'Design system integration', link: '/specs/design-system-integration' },
       ] },
       { text: 'Engineering', items: [

@@ -6,7 +6,7 @@ A recipe is the production spec for one asset type. It tells the system how to t
 
 A recipe is configuration, not code. It only arranges [capabilities](glossary.md) that engineers have built and tested.
 
-The formal schema and the first two recipes are defined in the upcoming specifications. This page records the agreed model.
+The formal schema, capability catalog and the complete `banner-set` and `deck` recipes are in the [recipes specification](../specs/recipes.md). This page records the agreed model.
 
 ## Source of truth
 
