@@ -49,6 +49,16 @@ Write before any implementation:
 | **M3 Deck recipe** | Slide templates in the template model; outline and slide-fill capabilities; artwork; server-side text fit; PDF and PNG output. | A deck brief reaches a downloaded PDF with no designer. |
 | **M4 Pilot** | Real briefs for both asset types with live AI. | Measures recorded; go/no-go decision written. |
 
+**Design-system track (runs alongside M0–M2).** Defined in [design system integration](../specs/design-system-integration.md#rollout):
+
+| Step | Work | Needed before |
+| --- | --- | --- |
+| DS1 | Adopt available components (audit items A1–A7) | M2 |
+| DS2 | App artifact install mode; pipeline uses it; releases pushed to GitHub | First change request |
+| DS3 | Protocol v2: shared allowed paths, pull mode, adapters, `CLAUDE.md` in Brutalist | First change request |
+| DS4 | Checkable gap list; breaking-change gate | M2 |
+| DS5 | First requests: routed steps (R1), autosave inline text (R2), controlled dialogs (R3) | M2 flow interface |
+
 ### Later
 
 Carried forward from the [delivery stages proposal](../archive/docs-site-2026-09/decisions/delivery.md); to be re-planned after the pilot.
@@ -94,10 +104,12 @@ Targets are set before the pilot starts.
 
 ## Open questions
 
-| Question | Needed for |
+Provisionally answered on 17 September 2026 ([decision log](decisions.md#provisional-decisions)); confirm before build.
+
+| Question | Provisional answer |
 | --- | --- |
-| Is PDF enough for pilot decks, or is an editable format required? | Deck specification |
-| Deck visuals: AI-generated artwork, a brand image library, or both? | Deck specification |
-| Which brand runs the pilot? MSD is the only brand with both banner and deck templates. | Pilot plan |
-| Who is the pilot designer, and what escalation turnaround is expected? | Escalation specification |
-| Is an asset creation flow the top-level record, or does a project hold several flows? | Domain model specification |
+| Is PDF enough for pilot decks, or is an editable format required? | PDF plus PNG per slide; PPTX only if the pilot requires it (P6) |
+| Deck visuals: AI-generated artwork, a brand image library, or both? | AI-generated artwork or user uploads; brand library later (P7) |
+| Which brand runs the pilot? | MSD (P8) |
+| Is an asset creation flow the top-level record, or does a project hold several flows? | The flow is top-level for the proof of concept (P9) |
+| Who is the pilot designer, and what escalation turnaround is expected? | **Still open:** needs a named person. Specifications assume a target of one business day. |

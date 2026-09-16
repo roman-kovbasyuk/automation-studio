@@ -15,7 +15,9 @@ Start with the root contracts:
 | Page | Purpose |
 | --- | --- |
 | [Consumer boundary](migration.md) | How the application consumes the package; history of the migration |
-| [Missing components](missing-components.md) | Native fallbacks used where the package lacks a behaviour |
+| [Gap list](missing-components.md) | Patterns the package lacks, their fallbacks and change requests |
+| [Adoption audit](adoption-audit.md) | Where Brutalist is used, local UI that could be replaced, unreachable code |
+| [Design system integration](../specs/design-system-integration.md) | How the app uses, extends and updates Brutalist |
 | [Design brief template](page-brief-template.md) | Template for component, surface and flow briefs |
 | [Brand library and overview](brand-overviews.md) | Brand library layout notes |
 | [Brand system reference page](brand-system-page-brief.md) | Design brief for the brand detail page |

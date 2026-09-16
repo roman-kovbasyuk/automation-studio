@@ -74,7 +74,7 @@ Reuse public components directly and compose through supported props, variants a
 - Keep accessible labels and keyboard behavior intact. Decorative icons must not replace necessary information.
 - Use upstream motion for shared interactions. Application-owned motion should explain a state or spatial change, use available motion tokens and respect reduced motion. Routine work must remain immediately accessible.
 
-Never target private component classes, pass local `className`/`style` skins to upstream roots or reproduce the skin through ancestor selectors. When the required interaction is unavailable, follow the native-fallback policy and record it in [component gaps](docs/design-system/missing-components.md).
+Never target private component classes, pass local `className`/`style` skins to upstream roots or reproduce the skin through ancestor selectors. When the required interaction is unavailable, follow the native-fallback policy, record it in [component gaps](docs/design-system/missing-components.md) and request generic capabilities upstream through the change protocol.
 
 ## Do's and Don'ts
 

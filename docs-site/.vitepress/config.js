@@ -42,6 +42,9 @@ export default withMermaid({
         { text: 'Recipes', link: '/product/recipes' },
         { text: 'Roadmap', link: '/product/roadmap' },
       ] },
+      { text: 'Specifications', items: [
+        { text: 'Design system integration', link: '/specs/design-system-integration' },
+      ] },
       { text: 'Engineering', items: [
         { text: 'Architecture', link: '/engineering/architecture' },
         { text: 'Local development', link: '/engineering/local-development' },
@@ -57,7 +60,8 @@ export default withMermaid({
       { text: 'Application design system', collapsed: true, items: [
         { text: 'Overview', link: '/design-system/' },
         { text: 'Consumer boundary', link: '/design-system/migration' },
-        { text: 'Missing components', link: '/design-system/missing-components' },
+        { text: 'Gap list', link: '/design-system/missing-components' },
+        { text: 'Adoption audit', link: '/design-system/adoption-audit' },
         { text: 'Design brief template', link: '/design-system/page-brief-template' },
         { text: 'Brief: banner creation rebuild', link: '/design-system/pages/banner-creation-rebuild' },
         { text: 'Brief: templates catalog', link: '/design-system/pages/templates' },

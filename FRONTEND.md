@@ -298,7 +298,7 @@ Keep new code near the owning feature; extract a shared **application compositio
 
 Scope artwork CSS and resource lifecycle. Release object URLs, observers and subscriptions. Load heavy editors/renderers when needed; measure representative bundle and runtime impact before claiming an optimization. Do not animate or remount large result lists on routine updates.
 
-Refresh the external package only with `npm run design-system:update` from the application checkout. Review breaking public APIs and migrate consumers explicitly. Do not edit the external repository, vendored archive or `node_modules`. Existing compatible imports update after rebuild; no additional binding step exists.
+Refresh the external package only with `npm run design-system:update` from the application checkout. Review breaking public APIs and migrate consumers explicitly. Do not edit the external repository, vendored archive or `node_modules`; request changes through the Brutalist change protocol described in [design system integration](docs/specs/design-system-integration.md). Existing compatible imports update after rebuild; no additional binding step exists.
 
 ## 10. Design and development workflow
 
@@ -374,7 +374,7 @@ A skill may help apply the process, but must link to this file rather than dupli
 
 ### Decision and exception record
 
-Record an exception in the affected design brief or feature spec with: rule, concrete user need, evidence, chosen alternative, approving decision where required, affected routes, verification and removal/review condition. Routine use of an existing pattern is not an exception. External-package changes still require explicit authorization. Do not weaken this contract silently to make a local patch pass.
+Record an exception in the affected design brief or feature spec with: rule, concrete user need, evidence, chosen alternative, approving decision where required, affected routes, verification and removal/review condition. Routine use of an existing pattern is not an exception. External-package changes go through the change protocol: additive requests from this application are pre-approved, breaking changes require the owner's approval (decision D14). Do not weaken this contract silently to make a local patch pass.
 
 Change global principles only when a recorded product decision or repeated evidence justifies it. Update the contract and affected briefs together; identify which earlier rule is superseded. Review reusable patterns for demonstrated need, usability, consistency and applicability across real uses, following the reasoning behind [GOV.UK’s contribution criteria](https://design-system.service.gov.uk/community/contribution-criteria/), while retaining Brutalist as the visual authority.
 

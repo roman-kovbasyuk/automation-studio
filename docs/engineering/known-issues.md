@@ -41,7 +41,7 @@ These are expected gaps between the current code and the [target model](../produ
 
 | Issue | Evidence | When |
 | --- | --- | --- |
-| About 3,000 lines of unused frontend code from earlier prototypes | `src/mvp/`, `src/domain/`, `src/data/`, `src/components/ui/`, `src/hooks/`, `src/lib/`, and `src/screens/` except `ApplicationDesignSystemPage.jsx` | Before build |
+| 73 source files (about 6,400 lines) are not reachable from the application entry point | Listed in the [adoption audit](../design-system/adoption-audit.md#unreachable-code): `src/mvp/`, `src/domain/`, `src/data/`, `src/components/ui/`, most of `src/components/` and `src/screens/`, unused design-system adapters and several `src/studio/` stage files | Before build |
 | A development script tag is committed in the production HTML | `index.html` loads `http://localhost:8400/live.js` | Before build |
 | Product name is inconsistent in code | "Banner Studio" in `index.html`, Dockerfile labels, Firebase app name; `lingu-studio` in `package.json` | Before build |
 | A third, outdated stage list exists | `stages` in `src/studio/workflow.js` (eight stages) | Before build |
@@ -51,6 +51,19 @@ These are expected gaps between the current code and the [target model](../produ
 | Design tool records point at unused code | `.impeccable/surfaces/src-mvp-mvpapp-jsx.md` | With dead code removal |
 | Full test suite is not green | 16 historical migration-fixture failures reported in [briefing](briefing.md) | Before build |
 | Dependency audit warnings | `npm install` reports 20 vulnerabilities (17 moderate, 3 high) | Review in M0 |
+
+## Design-system integration
+
+Found on 17 September 2026. The target fixes are specified in [design system integration](../specs/design-system-integration.md) and Brutalist's change protocol v2.
+
+| Issue | Evidence | When |
+| --- | --- | --- |
+| The change pipeline only runs Codex and assumes Observatory | Brutalist `scripts/changes/agent.mjs` builds `codex exec` arguments | Rollout step 3 |
+| Pipeline installs are rejected by the app | Brutalist `scripts/changes/app-update.mjs` installs `file:<absolute path>`; the app's `scripts/design-system-check.mjs` requires `file:vendor/<artifact>` and provenance | Rollout step 2 |
+| Pipeline releases are not pushed to GitHub | Brutalist worker promotes to local `main` only; the app's updater builds from GitHub `main` | Rollout step 2 |
+| Pipeline prompt and file check allow different paths | Prompt allows fixtures and the usage guide; `allowedPath()` in Brutalist `scripts/changes/worker.mjs` allows only `src/atomic/` | Rollout step 3 |
+| Local UI that published components could replace | Seven items A1–A7 in the [adoption audit](../design-system/adoption-audit.md#adopt-now) | Rollout step 1 |
+| Brutalist has no `CLAUDE.md` | Claude Code does not load Brutalist's `AGENTS.md` automatically | Rollout step 3 |
 
 ## Documentation
 

@@ -14,6 +14,12 @@ Start with the [product concept](product/concept.md).
 | [Recipes](product/recipes.md) | What a recipe is and how recipe files are structured |
 | [Roadmap](product/roadmap.md) | Phases, proof-of-concept scope, milestones, measures and open questions |
 
+## Specifications
+
+| Page | What it answers |
+| --- | --- |
+| [Design system integration](specs/design-system-integration.md) | How the app uses, extends and updates Brutalist |
+
 ## Engineering
 
 | Page | What it answers |
@@ -35,7 +41,7 @@ Start with the [product concept](product/concept.md).
 | --- | --- |
 | [Front-end contract](../FRONTEND.md) | Rules for every application page, component and flow |
 | [Visual guide](../DESIGN.md) | How to apply the Brutalist UI foundation |
-| [Design-system docs](design-system/index.md) | Consumer boundary, missing components, design briefs |
+| [Design-system docs](design-system/index.md) | Consumer boundary, gap list, adoption audit, design briefs |
 
 ## Operations
 
