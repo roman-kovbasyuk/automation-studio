@@ -26,7 +26,7 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D16 | **One install path, owned by the app.** Releases are installed only through the app's updater (vendored artifact plus provenance). Brutalist releases are pushed to GitHub (`main` and a version tag) before any app installs them. | 17 Sep 2026 | Direct installation of local absolute package paths by the v1 pipeline |
 | D17 | **Decks are delivered as editable PPTX only.** No PDF or slide PNG downloads. | 17 Sep 2026 | Provisional P6 (PDF plus PNG per slide) |
 | D18 | **Escalated decks are improved in the PPTX itself.** The designer downloads the generated PPTX, edits it in PowerPoint or Keynote and uploads it back; the requester accepts it. Banners keep the Figma route. | 17 Sep 2026 | Figma round trip for decks |
-| D19 | **Deck image slots are placeholders for now:** a labelled grey box ("Replace image") in the generated PPTX. No image generation or upload for decks in the proof of concept. | 17 Sep 2026 | Provisional P7 (AI-generated artwork or uploads) |
+| D19 | **Deck image slots use the placeholder defined in the template.** Each slide template declares what its image slots show until an image is inserted (for example a labelled grey box). No image generation or upload for decks in the proof of concept. | 17 Sep 2026 | Provisional P7 (AI-generated artwork or uploads) |
 
 ## Provisional decisions
 
