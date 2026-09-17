@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { PromptComposer } from '../../../../components/design-system/organisms/PromptComposer.jsx'
 import { AsyncStatus } from '../../../../components/design-system/molecules/AsyncStatus.jsx'
+import { AnalysisProgress } from './AnalysisProgress.jsx'
 import { Button, SectionHeading } from '../../../primitives.jsx'
 import {
   briefTitle,
@@ -156,7 +157,8 @@ export function BriefView({
   return (
     <section className="bs-brief" data-analyzed={analyzed ? 'true' : 'false'}>
       {heading && <SectionHeading as={campaign ? 'h2' : 'h1'} title={campaign ? 'Brief' : 'Describe your task...'} />}
-      {(pending || submitting) && <AsyncStatus>{pending === 'save' ? 'Saving your brief…' : collectSources ? 'Analyzing campaign materials…' : 'Analyzing your brief and preparing the first drafts…'}</AsyncStatus>}
+      {(pending || submitting) && (collectSources && pending !== 'save' ? <AnalysisProgress />
+        : <AsyncStatus>{pending === 'save' ? 'Saving your brief…' : 'Analyzing your brief and preparing the first drafts…'}</AsyncStatus>)}
       {showSubmitBlockedReason && submitBlockedReason && <p className="bs-info" role="alert">{submitBlockedReason}</p>}
       <Composer
         value={message}
