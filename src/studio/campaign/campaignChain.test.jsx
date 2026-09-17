@@ -2,16 +2,25 @@ import { expect, it, vi } from 'vitest'
 import { createCampaignRuntime } from './campaignRuntime.js'
 import { createWorkflowCoordinator } from './workflowCoordinator.js'
 import { makeScenario } from './testing/workspaceFixtures.js'
+import { emptyBriefAnswers } from '../../../shared/briefingContracts.js'
 
 // In-memory API boundary: exercises the actual coordinator/runtime/factories.
 // Backend permission/hash enforcement has its own service tests; this writes no DB.
-it('connects all six modules, a feedback round, and exact-version delivery', async () => {
+it('connects all modules from brief confirmation through a feedback round to exact-version delivery', async () => {
   let state = makeScenario('draft')
+  state.workspace.campaign.brief.briefing = { schemaVersion: 2, sourceKey: 'a'.repeat(64), sourceIds: [], analysisJobId: null, answers: emptyBriefAnswers(), confirmation: null }
+  const answers = { ...emptyBriefAnswers(), summary: 'Headphones for a quieter commute', audience: 'Commuters', copyMode: 'create_new', reach: 'local', goal: 'sales' }
   let round = 1
+  const updateCampaign = changes => {
+    const campaign = state.workspace.campaign
+    state.workspace = { ...state.workspace, campaign: { ...campaign, ...changes(campaign), revision: campaign.revision + 1 } }
+  }
   const transition = name => {
     const revision = state.workspace.campaign.revision + 1
+    const { briefing } = state.workspace.campaign.brief
     state = makeScenario(name)
     state.workspace.campaign.revision = revision
+    state.workspace.campaign.brief.briefing = briefing
     const version = state.workspace.versions[0]
     if (version && round === 2) {
       version.id = 'version-2'; version.versionNumber = 2
@@ -27,8 +36,19 @@ it('connects all six modules, a feedback round, and exact-version delivery', asy
   }
   const api = {
     getWorkspace: vi.fn(async () => state.workspace), getReview: vi.fn(async () => state.reviewHistory),
+    confirmBrief: vi.fn(async (id, input, revision) => {
+      expect(revision).toBe(state.workspace.campaign.revision)
+      updateCampaign(({ brief }) => ({ brief: { ...brief, briefing: { ...brief.briefing, answers: input.answers, confirmation: { id: 'confirmation-1' } } } }))
+      return { confirmationId: 'confirmation-1', campaignRevision: state.workspace.campaign.revision, initialCopy: 'offer_generation', importedCopySetId: null }
+    }),
     generate: vi.fn(async (id, step, input) => {
-      if (step === 'brief' || step === 'copy') transition('copy-ready')
+      if (step === 'brief') {
+        const [analysisJob] = makeScenario('copy-ready').workspace.jobs
+        updateCampaign(({ brief }) => ({ brief: { ...brief, analysis: analysisJob.result.analysis,
+          briefing: { ...brief.briefing, analysisJobId: analysisJob.id, answers } } }))
+        state.workspace.jobs = [analysisJob]
+      }
+      if (step === 'copy') transition('copy-ready')
       if (step === 'directions') {
         expect(input).toEqual({ mode: 'campaign' })
         const directions = Array.from({ length: 3 }, (_, index) => ({
@@ -65,6 +85,9 @@ it('connects all six modules, a feedback round, and exact-version delivery', asy
   }
   const editor = connect('marketer')
   expect((await editor.brief.submit()).ok).toBe(true)
+  expect(api.generate.mock.calls.map(call => call[1])).toEqual(['brief'])
+  expect((await editor.brief.confirm({ sourceKey: 'a'.repeat(64), analysisJobId: 'analysis-job-1', answers })).ok).toBe(true)
+  expect(api.generate.mock.calls.map(call => call[1])).toEqual(['brief', 'copy'])
   expect((await editor.copy.select('copy-1')).ok).toBe(true)
   expect((await editor.visuals.generate('campaign')).ok).toBe(true)
   expect(api.generate.mock.calls.filter(call => call[1] === 'image')).toHaveLength(3)

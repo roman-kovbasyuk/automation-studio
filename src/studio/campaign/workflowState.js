@@ -1,6 +1,7 @@
 import { deriveReviewStatus } from '../../../shared/reviewHistory.js'
 import { MODULE_IDS, MODULE_LABELS, getSelectedCopy, getSelectedDirection,
   getCurrentVersion, getCurrentReviewHistory, getReviewPhase, projectModuleInput } from './moduleContracts.js'
+import { generationBlockFor } from './generationStatus.js'
 
 const editableStatuses = new Set(['draft', 'copy_ready', 'direction_selected', 'composed'])
 const editorRoles = new Set(['marketer', 'admin'])
@@ -75,8 +76,8 @@ export function deriveWorkflowState(workspace, actor, reviewHistory = null, figm
     else if (needsBriefConfirmation && id!=='brief') reason='Review and confirm your brief first.'
     else if (!canVisit) reason = 'Complete the preceding module first.'
     else if (unresolvedJob) {
-      reason = 'A generation is pending or needs reconciliation.'
-      generationBlock = { status: unresolvedJob.status, step: unresolvedJob.step }
+      reason = unresolvedJob.status === 'unknown' ? 'A generation result needs checking.' : 'A generation is still running.'
+      generationBlock = generationBlockFor(unresolvedJob)
     }
     else if (id === 'review') reason = reviewGuard(workspace, actor, reviewHistory, validComposition)
     else if (id === 'distribute') {

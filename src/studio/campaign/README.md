@@ -73,7 +73,7 @@ From the application repository, run:
 
 ```sh
 npm test -- --run src/studio/campaign
-npm test -- --run src/studio/CopyStage.test.jsx src/studio/StudioApp.test.jsx
+npm test -- --run src/studio/StudioApp.test.jsx
 npm run build
 ```
 

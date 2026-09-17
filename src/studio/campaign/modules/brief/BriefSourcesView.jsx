@@ -1,5 +1,6 @@
 import { AppButton, Dialog } from "../../../../components/design-system/compatibility.jsx"
 import { forwardRef, useImperativeHandle, useState } from 'react'
+import { sourceErrorMessage } from './sourceErrors.js'
 
 const statusLabel = {
   processing: 'Processing',
@@ -52,7 +53,7 @@ export const BriefSourcesView = forwardRef(function BriefSourcesView({ sources, 
     {sources.length === 0 ? <p>No campaign sources attached.</p> : <ul>
       {sources.map(source => <li key={source.id}>
         <p>{source.name} — {statusLabel[source.status] || source.status}</p>
-        {source.errorCode && <p>{source.errorCode}</p>}
+        {source.errorCode && <p>{sourceErrorMessage(source.errorCode)}</p>}
         <AppButton type="button" disabled={previewLoading} onClick={() => openSource(source.id)}>Preview {source.name}</AppButton>
         {(source.status === 'failed' || source.status === 'processing') && <AppButton type="button" disabled={disabled || writePending} onClick={() => write('retrySource', source.id)}>Retry {source.name}</AppButton>}
         <AppButton type="button" disabled={disabled || writePending} onClick={() => write('removeSource', source.id)}>Remove {source.name}</AppButton>

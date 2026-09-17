@@ -5,8 +5,6 @@ import sampleImage from './assets/headphones.png'
 import './banner-templates.css'
 import '../../shared/fonts/arimo.css'
 
-export const studioSampleImage = sampleImage
-
 // The canvas is also the export coordinate space: responsive scaling never changes composition.
 // Expressive artwork is isolated from the application's operational motion and type tokens.
 export function AnimatedBanner({
@@ -62,7 +60,7 @@ export function AnimatedBanner({
 
 // CanvasText is no longer exported upstream. Keep editing outside the art so
 // browser controls cannot alter exported typography or image-action geometry.
-export function BannerTextFields({ manifest, values, readOnly, onChange }) {
+function BannerTextFields({ manifest, values, readOnly, onChange }) {
   return <Grid minItemWidth="12rem">{manifest.slots.filter(slot => slot.type !== 'image').map(slot => <TextArea key={slot.id}
     label={{ tag: 'Caption', headline: 'Headline', body: 'Body text', cta: 'CTA' }[slot.id] ?? slot.id}
     value={values[slot.id] ?? ''} rows={2} required={slot.required} readOnly={readOnly}

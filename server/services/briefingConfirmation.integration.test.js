@@ -12,7 +12,7 @@ import {verifyCopyLineage} from './versionService.js'
 test('confirmation imports exact original copy once, preserves deletion on reconfirm, and gates generation',async()=>{
   const studio=await createIsolatedStudio()
   try {
-    const actor=studio.actor('marketer'),workflow=createWorkflowService({pool:studio.pool,briefingEnabled:true})
+    const actor=studio.actor('marketer'),workflow=createWorkflowService({pool:studio.pool})
     let campaign=await workflow.createCampaign({actor,input:{title:'Synthetic',brief:{notes:'Headline: Learn Norwegian — together.',briefing:{schemaVersion:2}}}})
     const generation=createGenerationService({pool:studio.pool,controlPlane:createGenerationControlPlane({pool:studio.pool}),providers:{mock:createMockProvider()}})
     await generation.analyseBrief({actor,campaignId:campaign.id,idempotencyKey:'analyze',input:{expectedRevision:campaign.revision}})

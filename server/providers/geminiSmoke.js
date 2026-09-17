@@ -21,7 +21,7 @@ export async function runGeminiSmoke({
   try {
     const result = await provider.analyseBrief({
       brief: {
-        product: 'Banner Studio smoke check',
+        product: 'Automation Studio smoke check',
         audience: 'Internal operators',
         objective: 'Verify configured generation',
         offer: '',

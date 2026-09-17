@@ -37,7 +37,7 @@ No upstream change needed. Each item needs a focused change and browser verifica
 
 ## Unreachable code
 
-Not reachable from the application entry point. Candidates for removal in roadmap milestone M0.
+Not reachable from the application entry point when audited. **Removed in M0** ([plan](../plans/2026-09-17-m0-stabilise.md), task T2), together with orphan stylesheets, legacy token entries, the presentation library and the banner template editor ([D38](../product/decisions.md)). The list is kept as the record of what was removed.
 
 | Area | Files |
 | --- | --- |

@@ -18,7 +18,7 @@ function ReadinessPanel({ readiness }) {
   return <section aria-label="AI generation readiness">
     <Alert tone={tone} title={title}>
       <p>{readiness.message}</p>
-      {readiness.spendingControl === 'external' && <p>Spending control is managed outside Banner Studio.</p>}
+      {readiness.spendingControl === 'external' && <p>Spending control is managed outside Automation Studio.</p>}
     </Alert>
   </section>
 }

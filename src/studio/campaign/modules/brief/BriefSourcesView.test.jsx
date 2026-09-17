@@ -34,6 +34,16 @@ test('retries only a failed source and disables writes while read-only', async (
   expect(screen.getByRole('button', { name: 'Remove ready.pdf' })).toBeDisabled()
 })
 
+test('explains why a source failed without showing its code', () => {
+  render(<BriefSourcesView sources={[
+    { id: 'too-much', name: 'notes.pdf', status: 'failed', errorCode: 'brief_collection_text_too_large' },
+    { id: 'strange', name: 'other.pdf', status: 'failed', errorCode: 'extract_failed' },
+  ]} disabled={false} actions={{ getSource: vi.fn(), retrySource: vi.fn(), removeSource: vi.fn() }} />)
+  expect(screen.getByText('Together, the attached files have more text than a brief can use. Remove a file or attach shorter documents.')).toBeVisible()
+  expect(screen.getByText('This file could not be read.')).toBeVisible()
+  expect(screen.queryByText(/brief_collection_text_too_large|extract_failed/)).not.toBeInTheDocument()
+})
+
 test('shows source preview failures and does not mutate sources from mount', async () => {
   const getSource = vi.fn(async () => { throw new Error('Preview unavailable.') })
   const retrySource = vi.fn()

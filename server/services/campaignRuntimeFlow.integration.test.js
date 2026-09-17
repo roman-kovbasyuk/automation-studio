@@ -38,6 +38,17 @@ async function connect(studio, templates, campaignId, role = 'marketer', api = s
 
 const workspace = runtime => runtime.read(({ workspace: value }) => value)
 const expectOk = result => expect(result).toEqual({ ok: true })
+// Analysis proposes answers; confirming them (as the Brief review does) starts the first copy drafts.
+async function confirmBrief(session, answers = {}) {
+  const { briefing } = (await workspace(session.runtime)).campaign.brief
+  const proposed = briefing.answers
+  return session.actions.brief.confirm({ analysisJobId: briefing.analysisJobId, sourceKey: briefing.sourceKey,
+    answers: { ...proposed, copyMode: proposed.copyMode ?? 'create_new', reach: proposed.reach ?? 'local', goal: proposed.goal ?? 'sales', ...answers } })
+}
+async function analyzeAndConfirm(session, submit = () => session.coordinator.analyzeAndGenerate()) {
+  expectOk(await submit())
+  expectOk(await confirmBrief(session))
+}
 const blobBytes = blob => new Promise((resolve, reject) => {
   const reader = new FileReader()
   reader.onload = () => resolve(Buffer.from(reader.result))
@@ -67,7 +78,7 @@ describe('campaign runtime through real HTTP and PostgreSQL', () => {
       notes: 'QA autumn headphones launch. Promote Studio wireless headphones to urban commuters aged 25–40. Offer 20% off until September 30. Drive online purchases. Use English, a calm editorial tone, and square and portrait social banners.',
     } })
     const session = await connect(studio, templates, campaign.id)
-    expectOk(await session.coordinator.analyzeAndGenerate())
+    await analyzeAndConfirm(session)
     let state = await workspace(session.runtime)
     const copies = state.copies[0].candidates.slice(0, 2)
     for (const copy of copies) expectOk(await session.actions.copy.approve(copy.id))
@@ -112,11 +123,10 @@ describe('campaign runtime through real HTTP and PostgreSQL', () => {
   test('complete six-module flow preserves v1, scopes review history, and delivers v2', async () => {
     const { studio, api, templates, campaign } = await setup()
     let session = await connect(studio, templates, campaign.id)
-    expectOk(await session.coordinator.analyzeAndGenerate())
+    await analyzeAndConfirm(session)
     let state = await workspace(session.runtime)
     expect(state.copies[0].candidates).toHaveLength(5)
-    expect(state.directions).toHaveLength(5)
-    expect(state.directions.every(item => item.status === 'pending' && !item.previewAssetId)).toBe(true)
+    expect(state.directions).toHaveLength(0)
     expect(state.jobs.filter(item => item.step === 'image')).toHaveLength(0)
     expect((await studio.pool.query('SELECT count(*)::int n FROM assets')).rows[0].n).toBe(0)
     const initialJobIds = state.jobs.map(item => item.id)
@@ -227,7 +237,7 @@ describe('campaign runtime through real HTTP and PostgreSQL', () => {
   test('brief refinement rejects captured stale lineage and can rebuild current sources', async () => {
     const { studio, templates, campaign } = await setup()
     const session = await connect(studio, templates, campaign.id)
-    expectOk(await session.coordinator.analyzeAndGenerate())
+    await analyzeAndConfirm(session)
     let state = await workspace(session.runtime)
     const copy = state.copies[0].candidates[0]
     expectOk(await session.actions.copy.approve(copy.id))
@@ -248,9 +258,10 @@ describe('campaign runtime through real HTTP and PostgreSQL', () => {
     expect(state.directions.filter(item => !item.stale)).toHaveLength(0)
     expect(state.composition).toBeNull()
     expect(await session.actions.banners.saveBatch({ designs: [oldDesign], ratioIds: ['square'] }, { expectedInputKey: oldBannerKey }))
-      .toMatchObject({ ok: false, code: 'not_allowed', message: 'Complete the preceding module first.' })
+      .toMatchObject({ ok: false, code: 'not_allowed', message: 'Review and confirm your brief first.' })
     expect(await session.actions.review.createVersion({ expectedInputKey: oldReviewKey }))
-      .toMatchObject({ ok: false, code: 'not_allowed', message: 'Complete the preceding module first.' })
+      .toMatchObject({ ok: false, code: 'not_allowed', message: 'Review and confirm your brief first.' })
+    expectOk(await confirmBrief(session))
     expectOk(await session.actions.copy.generate())
     state = await workspace(session.runtime)
     const currentCopy = state.copies.find(item => !item.stale).candidates[0]
@@ -270,7 +281,7 @@ describe('campaign runtime through real HTTP and PostgreSQL', () => {
   test('batch dependencies invalidate only used secondary copy and image sources and remain rebuildable', async () => {
     const { studio, templates, campaign } = await setup()
     let session = await connect(studio, templates, campaign.id)
-    expectOk(await session.coordinator.analyzeAndGenerate())
+    await analyzeAndConfirm(session)
     let state = await workspace(session.runtime)
     const copies = state.copies[0].candidates.slice(0, 3)
     for (const copy of copies) expectOk(await session.actions.copy.approve(copy.id))
@@ -348,28 +359,30 @@ describe('campaign runtime through real HTTP and PostgreSQL', () => {
   test('an analyzed campaign duplicates to a raw brief and submits normally with fresh provenance', async () => {
     const { studio, api, templates, campaign } = await setup()
     const sourceSession = await connect(studio, templates, campaign.id)
-    expectOk(await sourceSession.coordinator.analyzeAndGenerate())
+    await analyzeAndConfirm(sourceSession)
     const sourceBefore = structuredClone(await workspace(sourceSession.runtime))
     sourceSession.runtime.dispose()
 
     const duplicated = await api.duplicateCampaign(campaign.id)
     const duplicateBefore = await api.getWorkspace(duplicated.id)
     expect(duplicateBefore.campaign).toMatchObject({ status: 'draft', revision: 0 })
-    expect(duplicateBefore.campaign.brief).toEqual({ ...brief, analysis: null })
-    expect((await studio.pool.query('SELECT brief FROM campaigns WHERE id=$1', [duplicated.id])).rows[0].brief).toEqual(brief)
+    const { briefing: duplicateBriefing, ...duplicateBrief } = duplicateBefore.campaign.brief
+    expect(duplicateBrief).toEqual({ ...brief, analysis: null })
+    expect(duplicateBriefing).toMatchObject({ analysisJobId: null, confirmation: null })
+    const { briefing: _storedBriefing, ...storedBrief } = (await studio.pool.query('SELECT brief FROM campaigns WHERE id=$1', [duplicated.id])).rows[0].brief
+    expect(storedBrief).toEqual(brief)
     expect(duplicateBefore.jobs).toEqual([])
     expect(duplicateBefore.copies).toEqual([])
     expect(duplicateBefore.directions).toEqual([])
 
     const duplicateSession = await connect(studio, templates, duplicated.id)
-    expectOk(await duplicateSession.actions.brief.submit())
+    await analyzeAndConfirm(duplicateSession, () => duplicateSession.actions.brief.submit())
     const duplicateAfter = await workspace(duplicateSession.runtime)
     const analysisJobs = duplicateAfter.jobs.filter(job => job.step === 'brief_analysis' && job.status === 'succeeded')
     expect(analysisJobs).toHaveLength(1)
     expect(duplicateAfter.campaign.brief.analysis).toEqual(analysisJobs[0].result.analysis)
     expect(duplicateAfter.copies.flatMap(set => set.candidates)).toHaveLength(5)
-    expect(duplicateAfter.directions).toHaveLength(5)
-    expect(duplicateAfter.directions.every(item => item.status === 'pending' && !item.previewAssetId)).toBe(true)
+    expect(duplicateAfter.directions).toHaveLength(0)
     expect(duplicateAfter.jobs.filter(job => job.step === 'image')).toHaveLength(0)
     expect((await studio.pool.query('SELECT count(*)::int n FROM assets WHERE campaign_id=$1', [duplicated.id])).rows[0].n).toBe(0)
 
@@ -382,12 +395,14 @@ describe('campaign runtime through real HTTP and PostgreSQL', () => {
   }, 30_000)
 
   test('lost HTTP response after a real image mutation reconciles without duplicate output', async () => {
-    const { studio, templates, campaign } = await setup()
+    const { studio, api, templates, campaign } = await setup()
     let session = await connect(studio, templates, campaign.id)
-    expectOk(await session.coordinator.analyzeAndGenerate())
-    let state = await workspace(session.runtime)
-    const direction = state.directions[0]
+    await analyzeAndConfirm(session)
     session.runtime.dispose()
+    // Visual prompts without images; generating one image is the mutation under test.
+    await api.generate(campaign.id, 'directions', { mode: 'campaign' }, 'lost-response-prompts')
+    const direction = (await api.getWorkspace(campaign.id)).directions[0]
+    expect(direction).toMatchObject({ status: 'pending', previewAssetId: null })
     let lose = true
     const fetchImpl = async (...args) => {
       const response = await fetch(...args)

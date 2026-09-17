@@ -8,7 +8,7 @@ test('smokes the built app and docs over an ephemeral HTTP listener and closes i
   const root = await mkdtemp(join(tmpdir(), 'banner-studio-production-smoke-'))
   await mkdir(join(root, 'assets'), { recursive: true })
   await mkdir(join(root, 'docs', 'assets'), { recursive: true })
-  await writeFile(join(root, 'index.html'), '<title>Banner Studio smoke</title><script src="/assets/app-a1b2c3d4.js"></script>')
+  await writeFile(join(root, 'index.html'), '<title>Automation Studio smoke</title><script src="/assets/app-a1b2c3d4.js"></script>')
   await writeFile(join(root, 'assets', 'app-a1b2c3d4.js'), 'export {}')
   await writeFile(join(root, 'docs', 'index.html'), '<title>Docs smoke</title><script src="/docs/assets/docs-a1b2c3d4.js"></script>')
   await writeFile(join(root, 'docs', 'workflow.html'), '<title>Workflow smoke</title>')

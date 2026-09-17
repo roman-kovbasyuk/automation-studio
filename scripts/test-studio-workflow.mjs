@@ -37,6 +37,13 @@ export async function verifyStudioWorkflow(baseUrl, { templateId = 'product-spot
   const analysis = await marketer.generate(id, 'brief', {}, briefKey)
   assert.equal(analysis.job.status, 'succeeded')
   assert.equal((await marketer.generate(id, 'brief', {}, briefKey)).job.id, analysis.job.id)
+  // Copy is generated only after the proposed brief answers are confirmed.
+  const analysed = await marketer.getWorkspace(id)
+  const { briefing } = analysed.campaign.brief
+  await assert.rejects(() => marketer.generate(id, 'copy', {}, key()), { status: 409, code: 'brief_confirmation_required' })
+  await marketer.confirmBrief(id, { analysisJobId: briefing.analysisJobId, sourceKey: briefing.sourceKey, answers: {
+    ...briefing.answers, copyMode: briefing.answers.copyMode ?? 'create_new', reach: briefing.answers.reach ?? 'local', goal: briefing.answers.goal ?? 'signups',
+  } }, analysed.campaign.revision, key())
   const copies = await marketer.generate(id, 'copy', {}, key())
   assert.equal(copies.job.status, 'succeeded')
   let workspace = await marketer.getWorkspace(id)

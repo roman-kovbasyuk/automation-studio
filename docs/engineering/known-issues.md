@@ -1,25 +1,17 @@
 # Known issues and technical debt
 
-**Status:** Current · **Updated:** 16 September 2026
+**Status:** Current · **Updated:** 17 September 2026
 
 Issues found in the codebase review of 16 September 2026. **Before build** means the issue should be fixed in milestone M0 of the [roadmap](../product/roadmap.md), before proof-of-concept work starts. Each entry names its evidence so it can be verified.
 
 ## Reliability
 
-### Generation jobs can lock a project
+Both issues found on 16 September 2026 were resolved in milestone M0 ([plan](../plans/2026-09-17-m0-stabilise.md)).
 
-**Before build.** Any error thrown during a provider call is recorded as `unknown` with reason `provider_call_ambiguous`, including errors whose outcome is certain, such as missing credentials or an invalid response. `unknown` jobs block copy edits, keeping supplied copy and visual uploads for the campaign, and no code path resolves them. The interface says "Check its status before trying again" but offers no way to do so.
-
-- Evidence: `server/services/generationService.js` (provider call error handling), `server/repositories/generationJobRepository.js` (`status IN ('pending','unknown')` checks), `src/studio/campaign/campaignRuntime.js`.
-- The local demo database contained six such jobs on 16 September 2026.
-- Fix direction: classify known errors as `failed`; add a user-facing resolve or retry action; check capability readiness before dispatch.
-
-### Project creation can leave an orphan
-
-**Before build.** On Home, the campaign is created before analysis runs. If analysis fails, the user stays on Home, the new campaign is not added to the sidebar and submitting again creates a duplicate.
-
-- Evidence: `create()` in `src/studio/StudioApp.jsx`.
-- Fix direction: open the project immediately and show analysis progress in the Brief stage.
+| Issue | Resolution |
+| --- | --- |
+| Generation jobs could lock a project: any provider error became `unknown`, with no way out | Known failures are classified as `failed`; reasons are shown in plain language; unknown outcomes can be marked as failed 40 seconds after their timeout; generation is refused before a job is created when AI is unavailable (T4–T6, D33, D37). See [AI generation](ai-generation.md#job-statuses) |
+| Project creation could leave an orphan on Home when analysis failed | Home creates the project and opens it at once; uploads and analysis run in the Brief stage, and interrupted uploads are listed after a reload (T6) |
 
 ## Product model gaps
 
@@ -41,16 +33,25 @@ These are expected gaps between the current code and the [target model](../produ
 
 | Issue | Evidence | When |
 | --- | --- | --- |
-| 73 source files (about 6,400 lines) are not reachable from the application entry point | Listed in the [adoption audit](../design-system/adoption-audit.md#unreachable-code): `src/mvp/`, `src/domain/`, `src/data/`, `src/components/ui/`, most of `src/components/` and `src/screens/`, unused design-system adapters and several `src/studio/` stage files | Before build |
-| A development script tag is committed in the production HTML | `index.html` loads `http://localhost:8400/live.js` | Before build |
-| Product name is inconsistent in code | "Banner Studio" in `index.html`, Dockerfile labels, Firebase app name; `lingu-studio` in `package.json` | Before build |
-| A third, outdated stage list exists | `stages` in `src/studio/workflow.js` (eight stages) | Before build |
 | Client brands are hard-coded alongside the brand database | `shared/msdBrand.js`, `shared/novartisBrand.js`, `shared/folkeuniversitetetBrand.js` | With M1 |
-| Diagram script reads an archived document | `scripts/render-campaign-logic.mjs` reads `docs-site/recipes/campaign-flow.md`, now archived | Remove or replace in M0 |
-| GitHub Pages workflow targets a branch that does not exist | `.github/workflows/deploy-pages.yml` runs on `main`; the default branch is `v3` | Remove in M0 (D32) |
-| Design tool records point at unused code | `.impeccable/surfaces/src-mvp-mvpapp-jsx.md` | With dead code removal |
-| Full test suite is not green | 84 failing tests in 22 files on 17 September 2026, mostly fixtures that predate the canonical briefing cutover; grouped in task T1 of the [M0 plan](../plans/2026-09-17-m0-stabilise.md) | Before build |
-| Dependency audit warnings | `npm install` reports 20 vulnerabilities (17 moderate, 3 high) | Review in M0 |
+| Design tool records describe components removed in M0 | `.impeccable/surfaces` records for the Banners, Brief and Visuals modules reference `SelectionTile`, `MediaWorkflowCard`, `TextAction`, `FactGrid` and removed stylesheets | Refresh with the design tool during DS1 |
+| Personal AI providers are wired but cannot run project generation | Project briefs accept only Vertex AI EU or the mock provider (D37); `personalProviderFactory` in `server/bootstrap.js` and `scripts/dev-studio.mjs` | Decide with M1: remove, or keep for brand tools only |
+| After approving a version, the review step offers no action to continue to delivery | The workflow step navigation is the only way to Distribute | With the project page shell (M2) |
+| Dependency audit warnings | 12 remaining after M0: the `firebase-admin` chain (8 moderate, production) needs `firebase-admin` 14; `vite`, `esbuild` and VitePress are development-only with no fix yet | `firebase-admin` 14 follow-up (D34) |
+
+Resolved in M0: unreachable source files, the development script tags in `index.html`, inconsistent product naming, the outdated eight-stage list, the diagram script reading an archived document, the GitHub Pages workflow, the design tool record for the removed MVP, the failing test suite and the high-severity `postcss` and `lodash-es` findings.
+
+### Intentional legacy identifiers
+
+These identifiers keep the old product name because data, integrations or deployments depend on them. Do not rename them without a migration.
+
+| Identifier | Where | Why it stays |
+| --- | --- | --- |
+| `banner-studio-output`, `banner-studio-version` | Figma plugin data keys (`figma-plugin/src/importScene.js`) | Stored on imported Figma frames and pages |
+| `banner-studio-delivery` | Delivery digest salt (`server/services/deliveryService.js`) | Changing it changes every delivery digest |
+| `banner-studio-postgres` | Docker Compose volume (`docker-compose.yml`) | Renaming detaches existing local databases |
+| `banner-studio-prototype-v1` | Prototype IndexedDB name (`src/prototype/store.js`) | Renaming loses saved prototype data |
+| `banner-studio-auth` | Firebase Admin app instance name (`server/auth/verifyToken.js`) | Internal to the running process; renaming has no benefit |
 
 ## Design-system integration
 

@@ -9,6 +9,7 @@ import { runMigrations } from '../../server/db/migrate.js'
 import { createPool } from '../../server/db/pool.js'
 import { createMockProvider } from '../../server/providers/mockProvider.js'
 import { createGenerationControlPlane } from '../../server/repositories/generationJobRepository.js'
+import { createGenerationReadinessService } from '../../server/services/generationReadinessService.js'
 import { createAssetService } from '../../server/services/assetService.js'
 import { createDeliveryService } from '../../server/services/deliveryService.js'
 import { createGenerationService } from '../../server/services/generationService.js'
@@ -68,7 +69,7 @@ function assertOwnedAssetDirectory(directory) {
   }
 }
 
-export async function startIsolatedStudio({ connectionString = process.env.TEST_DATABASE_URL ?? defaultConnectionString,briefingEnabled=false } = {}) {
+export async function startIsolatedStudio({ connectionString = process.env.TEST_DATABASE_URL ?? defaultConnectionString } = {}) {
   if (process.env.NODE_ENV === 'production' || process.env.K_SERVICE) throw new Error('The isolated studio cannot run in production')
   validateConnectionString(connectionString)
   const id = randomUUID().replaceAll('-', '')
@@ -119,7 +120,7 @@ export async function startIsolatedStudio({ connectionString = process.env.TEST_
         [actor.id, actor.email, actor.role, actor.displayName])
     }
     await seedAssetWorkflows({ pool, actor: actors.admin })
-    const workflowService = createWorkflowService({ pool,briefingEnabled })
+    const workflowService = createWorkflowService({ pool })
     const settings = await workflowService.getSettings({ actor: actors.admin })
     await workflowService.updateSettings({ actor: actors.admin, expectedRevision: settings.revision, patch: {
       provider: 'mock', model: 'mock-v1', region: 'europe-west6', dailyBudgetMicrounits: 1_000_000_000,
@@ -141,13 +142,14 @@ export async function startIsolatedStudio({ connectionString = process.env.TEST_
       const user = result.rows[0]
       return user && { id: user.id, email: user.email, role: user.role, workspaceId: 'default', displayName: user.display_name, disabled: user.disabled, disabledAt: user.disabled_at }
     }
+    const generationReadinessService = createGenerationReadinessService({ workflowService })
     app = buildApp({
-      runtimeConfig:{firebase:{},capabilities:{sourceBriefing:briefingEnabled}},
-      ...(briefingEnabled?{briefSourceService:createBriefSourceService({pool,assetStore}),briefingService:createBriefingService({pool})}:{}),
-      resolveActor, workflowService, workspaceService: createWorkspaceService({ pool }),
+      runtimeConfig:{firebase:{}},
+      briefSourceService:createBriefSourceService({pool,assetStore}),briefingService:createBriefingService({pool}),
+      resolveActor, workflowService, workspaceService: createWorkspaceService({ pool }), generationReadinessService,
       readiness: async () => { await pool.query('SELECT 1'); return true },
       generationService: createGenerationService({
-        pool, assetStore, controlPlane: createGenerationControlPlane({ pool }), providers: { mock: createMockProvider() },
+        pool, assetStore, controlPlane: createGenerationControlPlane({ pool }), providers: { mock: createMockProvider() }, readinessService: generationReadinessService,
       }),
       assetService: createAssetService({ pool, assetStore }),
       visualUploadService: createVisualUploadService({ pool, assetStore }),

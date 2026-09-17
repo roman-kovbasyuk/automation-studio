@@ -1,18 +1,17 @@
 import {expect,test} from 'vitest'
 import {createIsolatedStudio} from '../testing/isolatedStudio.js'
-import {createSourceCampaignSubmission} from '../../src/studio/campaign/sourceCampaign.js'
 import {createCampaignRuntime} from '../../src/studio/campaign/campaignRuntime.js'
 import {createWorkflowCoordinator} from '../../src/studio/campaign/workflowCoordinator.js'
 import {extractSource,briefSourceError} from '../briefSources/sourceExtractor.js'
 
 test.each(['retry','remove'])('partial upload keeps remaining files after source %s',async action=>{
   let reject=true
-  const studio=await createIsolatedStudio({briefingEnabled:true,sourceExtractor:async input=>{
+  const studio=await createIsolatedStudio({sourceExtractor:async input=>{
     if(input.bytes.toString()==='Source b' && reject){reject=false;throw briefSourceError('source_processing_failed','Synthetic temporary failure')}
     return extractSource(input)
   }});let runtime
   try {
-    const api=studio.api('marketer'),campaign=await createSourceCampaignSubmission({api})({title:'Recovery',brief:{notes:''},sources:[]})
+    const api=studio.api('marketer'),campaign=await api.createCampaign({projectType:'banners',title:'Recovery',brief:{notes:'',briefing:{schemaVersion:2}}})
     runtime=createCampaignRuntime({api,actor:studio.actor('marketer'),templates:[],workspace:await api.getWorkspace(campaign.id)})
     const coordinator=createWorkflowCoordinator({runtime}),patch={brief:{notes:''},sources:['a','b','c'].map(id=>({id,kind:'text',text:`Source ${id}`}))}
     expect(await coordinator.actions.brief.submit(patch)).toMatchObject({ok:false,code:'brief_sources_not_ready'})
@@ -26,9 +25,9 @@ test.each(['retry','remove'])('partial upload keeps remaining files after source
 },30000)
 
 test('lost partial upload cannot attach remaining files after another brief edit',async()=>{
-  const studio=await createIsolatedStudio({briefingEnabled:true});let runtime
+  const studio=await createIsolatedStudio();let runtime
   try {
-    const api=studio.api('marketer'),campaign=await createSourceCampaignSubmission({api})({title:'Upload recovery',brief:{notes:''},sources:[]})
+    const api=studio.api('marketer'),campaign=await api.createCampaign({projectType:'banners',title:'Upload recovery',brief:{notes:'',briefing:{schemaVersion:2}}})
     let lost=true
     const calls=[]
     const wrapped={...api,putBriefSource:async(...args)=>{
@@ -48,14 +47,14 @@ test('lost partial upload cannot attach remaining files after another brief edit
 },30000)
 
 test('existing campaign starts question review only on explicit action',async()=>{
-  const studio=await createIsolatedStudio({briefingEnabled:true});let runtime
+  const studio=await createIsolatedStudio();let runtime
   try {
     const api=studio.api('marketer')
     const campaign=await api.createCampaign({title:'Existing school',brief:{notes:'Oslo school. Headline: Learn together.'}})
     runtime=createCampaignRuntime({api,actor:studio.actor('marketer'),templates:[],workspace:await api.getWorkspace(campaign.id)})
     const coordinator=createWorkflowCoordinator({runtime})
     expect((await api.getWorkspace(campaign.id)).jobs).toHaveLength(0)
-    expect(await coordinator.actions.brief.startReview()).toEqual({ok:true})
+    expect(await coordinator.actions.brief.submit()).toEqual({ok:true})
     const saved=await api.getWorkspace(campaign.id)
     expect(saved.campaign.brief.briefing.analysisJobId).toBeTruthy()
     expect(saved.campaign.brief.briefing.confirmation).toBeNull()
@@ -64,10 +63,10 @@ test('existing campaign starts question review only on explicit action',async()=
 },30000)
 
 test('source files submitted inside Brief are uploaded before analysis',async()=>{
-  const studio=await createIsolatedStudio({briefingEnabled:true});let runtime
+  const studio=await createIsolatedStudio();let runtime
   try {
     const api=studio.api('marketer')
-    const campaign=await createSourceCampaignSubmission({api})({title:'Draft',brief:{notes:''},sources:[]})
+    const campaign=await api.createCampaign({projectType:'banners',title:'Draft',brief:{notes:'',briefing:{schemaVersion:2}}})
     runtime=createCampaignRuntime({api,actor:studio.actor('marketer'),templates:[],workspace:await api.getWorkspace(campaign.id)})
     const result=await createWorkflowCoordinator({runtime}).actions.brief.submit({brief:{...campaign.brief,notes:''},sources:[{id:'new-file',kind:'file',name:'school.txt',mimeType:'text/plain',data:Buffer.from('Oslo school. Headline: Learn here.').toString('base64')}]})
     expect(result).toEqual({ok:true})
@@ -78,15 +77,16 @@ test('source files submitted inside Brief are uploaded before analysis',async()=
 },30000)
 
 test('Home file submission reaches questions and supplied Copy through the real API and runtime',async()=>{
-  const studio=await createIsolatedStudio({briefingEnabled:true});let runtime
+  const studio=await createIsolatedStudio();let runtime
   try {
     const api=studio.api('marketer'),actor=studio.actor('marketer')
-    const campaign=await createSourceCampaignSubmission({api})({title:'School campaign',brief:{notes:''},sources:[{id:'source-1',kind:'file',name:'brief.anything',mimeType:'application/octet-stream',data:Buffer.from('Language school in Oslo.\nHeadline: Learn together.').toString('base64')}]})
-    const workspace=await api.getWorkspace(campaign.id)
-    expect(workspace.sources).toEqual([expect.objectContaining({id:'source-1',name:'brief.anything',status:'ready'})])
-    runtime=createCampaignRuntime({api,actor,templates:[],workspace})
+    // Home creates the project and opens it; the Brief stage uploads the files and analyses them.
+    const campaign=await api.createCampaign({projectType:'banners',title:'School campaign',brief:{notes:'',briefing:{schemaVersion:2}}})
+    runtime=createCampaignRuntime({api,actor,templates:[],workspace:await api.getWorkspace(campaign.id)})
     const coordinator=createWorkflowCoordinator({runtime})
-    expect(await coordinator.actions.brief.submit()).toEqual({ok:true})
+    const sources=[{id:'source-1',kind:'file',name:'brief.anything',mimeType:'application/octet-stream',data:Buffer.from('Language school in Oslo.\nHeadline: Learn together.').toString('base64')}]
+    expect(await coordinator.analyzeAndGenerate({sources})).toEqual({ok:true})
+    expect((await api.getWorkspace(campaign.id)).sources).toEqual([expect.objectContaining({id:'source-1',name:'brief.anything',status:'ready'})])
     const state=runtime.getSnapshot('brief').input.brief.briefing
     expect(state.confirmation).toBeNull()
     expect((await api.getWorkspace(campaign.id)).jobs.map(job=>job.step)).toEqual(['brief_analysis'])

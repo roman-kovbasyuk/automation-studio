@@ -48,6 +48,6 @@ describe('server startup', () => {
 
     await shutdown()
     expect(processLike.exitCode).toBe(1)
-    expect(logger.error).toHaveBeenCalledWith('Banner Studio shutdown failed', expect.any(Error))
+    expect(logger.error).toHaveBeenCalledWith('Automation Studio shutdown failed', expect.any(Error))
   })
 })

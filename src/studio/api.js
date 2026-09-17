@@ -22,10 +22,17 @@ export function createStudioApi({ getToken, getHeaders, fetchImpl = globalThis.f
       headers.set('If-Match', `"${revision}"`)
     }
     if (idempotencyKey !== undefined) headers.set('Idempotency-Key', idempotencyKey)
-    const response = await fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, {
-      method, headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal,
-      credentials: 'same-origin', cache: 'no-store',
-    })
+    let response
+    try {
+      response = await fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, {
+        method, headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal,
+        credentials: 'same-origin', cache: 'no-store',
+      })
+    } catch (error) {
+      if (error?.name === 'AbortError') throw error
+      // Browsers report transport failures with inconsistent raw text; the request may have reached the server.
+      throw new StudioApiError('The connection was interrupted. Check the latest state before trying again.', { status: 0, code: 'network_error' })
+    }
     if (!response.ok) {
       let error
       try { error = await response.json() } catch { /* Some proxies return HTML errors. */ }
@@ -82,6 +89,7 @@ export function createStudioApi({ getToken, getHeaders, fetchImpl = globalThis.f
       return request('POST', `${campaignPath(id)}/${generationPaths[step]}`, { body: input, idempotencyKey: key })
     },
     getJob: (id, { signal } = {}) => request('GET', `/api/v1/generation-jobs/${segment(id)}`, { signal }),
+    resolveJob: id => request('POST', `/api/v1/generation-jobs/${segment(id)}/resolve`, { body: { resolution: 'marked_failed' } }),
     selectCopy: (id, input, revision) => request('PUT', `${campaignPath(id)}/copy-selection`, { body: input, revision }),
     deselectCopy: (id, revision) => request('DELETE', `${campaignPath(id)}/copy-selection`, { revision }),
     retainCopy: (id, revision) => request('PUT', `${campaignPath(id)}/copy-retention`, { body: {}, revision }),
@@ -91,9 +99,6 @@ export function createStudioApi({ getToken, getHeaders, fetchImpl = globalThis.f
     selectDirection: (id, input, revision) => request('PUT', `${campaignPath(id)}/direction-selection`, { body: input, revision }),
     uploadVisual: (id, input, revision, key) => request('POST', `${campaignPath(id)}/visual-uploads`, { body: input, revision, idempotencyKey: key }),
     listTemplates: () => request('GET', '/api/v1/templates'),
-    exportBannerDraft: input => request('POST', '/api/v1/banner-template-editor/exports', { body: input, blob: true }),
-    getBannerDraftCapabilities: () => request('GET', '/api/v1/banner-template-editor/capabilities'),
-    requestBannerDraftAction: input => request('POST', '/api/v1/banner-template-editor/actions', { body: input }),
     getTemplateVersion: (id, version, { signal } = {}) => request('GET', `/api/v1/templates/${encodeURIComponent(id)}/versions/${encodeURIComponent(version)}`, { signal }),
     saveComposition: (id, input, revision) => request('PUT', `${campaignPath(id)}/composition`, { body: input, revision }),
     saveBannerBatch: (id, input, revision) => request('PUT', `${campaignPath(id)}/banner-batch`, { body: input, revision }),

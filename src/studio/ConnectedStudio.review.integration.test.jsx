@@ -79,6 +79,10 @@ async function seedReview() {
   const campaign = await api.createCampaign({ title: 'Connected review regression', brief })
   const session = await connect(studio, campaign.id)
   ok(await session.coordinator.analyzeAndGenerate())
+  // Confirming the proposed answers, as the Brief review does, starts the first copy drafts.
+  const { briefing } = (await workspace(session.runtime)).campaign.brief
+  ok(await session.actions.brief.confirm({ analysisJobId: briefing.analysisJobId, sourceKey: briefing.sourceKey,
+    answers: { ...briefing.answers, copyMode: briefing.answers.copyMode ?? 'create_new', reach: briefing.answers.reach ?? 'local', goal: briefing.answers.goal ?? 'sales' } }))
   let state = await workspace(session.runtime)
   const copy = state.copies[0].candidates.reduce((shortest, item) =>
     item.headline.length < shortest.headline.length ? item : shortest)
@@ -188,12 +192,16 @@ describe('ConnectedStudio review flow through real HTTP and isolated services', 
     unmount = mount(studio, campaignId, 'marketer', requests)
     const approve = await screen.findByRole('button', { name: 'Approve version 2' })
     await user.click(approve)
+    // Approval stays on the review step; delivery is the next step in the workflow navigation.
+    const distribute = within(screen.getByRole('navigation', { name: 'Campaign workflow' })).getByRole('button', { name: /Distribute/ })
+    await waitFor(() => expect(distribute).toBeEnabled())
+    await user.click(distribute)
     await screen.findByText('Approved and ready to export')
     await user.click(screen.getByRole('button', { name: 'Build delivery' }))
     const download = await screen.findByRole('button', { name: 'Download package' })
     await waitFor(() => expect(download).toBeEnabled())
     await user.click(download)
-    await waitFor(() => expect(downloads.clicks).toContainEqual(expect.objectContaining({ filename: 'banner-studio-v2.zip' })))
+    await waitFor(() => expect(downloads.clicks).toContainEqual(expect.objectContaining({ filename: 'automation-studio-v2.zip' })))
 
     persisted = await studio.api('marketer').getWorkspace(campaignId)
     expect(persisted.delivery.versionId).toBe(v2.id)

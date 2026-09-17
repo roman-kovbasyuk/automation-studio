@@ -6,7 +6,7 @@ import { createEmptyBrandDraft } from '../../shared/brandDesignSystem.js'
 import { makeScenario } from './campaign/testing/workspaceFixtures.js'
 
 vi.mock('./auth.js', () => ({ useStudioAuth: vi.fn() }))
-vi.mock('./AnimatedBanner.jsx', () => ({ AnimatedBanner: () => <div aria-label="Banner preview" /> }))
+vi.mock('./AnimatedBanner.jsx', async importOriginal => ({ ...await importOriginal(), AnimatedBanner: () => <div aria-label="Banner preview" /> }))
 
 const brief = { product: 'Studio', audience: 'Designers', objective: 'Trial', offer: '', locale: 'en', notes: '' }
 function fixture({ role = 'marketer', status = 'draft' } = {}) {
@@ -227,16 +227,15 @@ describe('connected studio workflow', () => {
     const { api } = fixture()
     render(<ConnectedStudio api={api} />)
     await screen.findByLabelText('Campaign description')
-    const workflow = screen.getByRole('list', { name: 'Campaign workflow' })
-    const steps = within(workflow).getAllByRole('link')
-    const items = within(workflow).getAllByRole('listitem')
-    expect(items.map(item => item.querySelector('strong')?.textContent)).toEqual(['Brief', 'Copy', 'Visuals', 'Banners', 'Distribute'])
-    expect(items[0]).toHaveAttribute('aria-current', 'step')
+    const workflow = screen.getByRole('navigation', { name: 'Campaign workflow' })
+    const steps = within(workflow).getAllByRole('button')
+    expect(steps.map(step => step.textContent.replace(/^\d+/, ''))).toEqual(['Brief', 'Copy', 'Visuals', 'Banners', 'Distribute'])
+    expect(steps[0]).toHaveAttribute('aria-current', 'step')
     for (const step of steps.slice(1)) {
-      expect(step).toHaveAttribute('aria-disabled', 'true')
-      expect(fireEvent.click(step)).toBe(false)
+      expect(step).toBeDisabled()
+      fireEvent.click(step)
     }
-    expect(items[0]).toHaveAttribute('aria-current', 'step')
+    expect(steps[0]).toHaveAttribute('aria-current', 'step')
     expect(screen.getByLabelText('Campaign description')).toBeVisible()
     expect(api.getWorkspace).toHaveBeenCalledWith('campaign-1')
   })
@@ -296,7 +295,7 @@ describe('connected studio workflow', () => {
     const { api } = fixture()
     render(<ConnectedStudio api={api} />)
     await screen.findByRole('heading', { name: 'What would you like to create?' })
-    expect(screen.getAllByText('Studio')[0]).toBeVisible()
+    expect(screen.getAllByText('Automation Studio')[0]).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Search projects' }))
     expect(screen.getByRole('searchbox', { name: 'Search projects' })).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Submit search' })).not.toBeInTheDocument()
@@ -382,7 +381,7 @@ describe('connected studio workflow', () => {
     api.generate.mockResolvedValue({ job: { id: 'job-unknown', status: 'unknown' } })
     render(<ConnectedStudio api={api} />)
     fireEvent.click(await screen.findByRole('button', { name: 'Analyze brief' }))
-    await screen.findAllByText(/Generation unknown/i)
+    await screen.findAllByText(/We could not confirm the result/i)
     expect(api.generate).toHaveBeenCalledTimes(1)
     expect(api.generate.mock.calls[0][1]).toBe('brief')
     expect(location.search).toBe('?step=0')
@@ -403,38 +402,39 @@ describe('connected studio workflow', () => {
   test('reuses the command identity after a transport error instead of making a duplicate paid request', async () => {
     history.replaceState({}, '', '/mvp/campaign/campaign-1?step=0')
     const { api } = fixture()
-    api.generate.mockRejectedValueOnce(new Error('Connection lost')).mockResolvedValueOnce({ job: { id: 'job-unknown', status: 'unknown' } })
+    api.generate.mockRejectedValueOnce(Object.assign(new Error('The connection was interrupted. Check the latest state before trying again.'), { status: 0, code: 'network_error' }))
+      .mockResolvedValueOnce({ job: { id: 'job-unknown', status: 'unknown' } })
     render(<ConnectedStudio api={api} />)
     fireEvent.click(await screen.findByRole('button', { name: 'Analyze brief' }))
-    await screen.findByText('Connection lost')
+    await screen.findByText('The connection was interrupted. Check the latest state before trying again.')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Analyze brief' })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: 'Analyze brief' }))
-    await screen.findAllByText(/Generation unknown/i)
+    await screen.findAllByText(/We could not confirm the result/i)
     expect(api.generate).toHaveBeenCalledTimes(2)
     expect(api.generate.mock.calls[0][3]).toBe(api.generate.mock.calls[1][3])
     expect(api.generate.mock.calls[0][3]).toEqual(expect.any(String))
   })
-  test('saves a freeform campaign then generates its analysis and copy without another click', async () => {
+  test('saves a freeform campaign, analyses it and waits for brief review before generating copy', async () => {
     const { api, workspace } = fixture()
     api.generate.mockImplementation(async (id, step) => {
       if (step === 'brief') workspace.jobs = makeScenario('copy-ready').workspace.jobs
-      if (step === 'copy') { workspace.campaign.status = 'copy_ready'; workspace.copies = [{ id: 'new-set', stale: false, selectedCandidateId: null, candidates: [{ id: 'c1', headline: 'Autumn sound', body: 'Find your rhythm.', cta: 'Shop now', offer: '' }] }] }
-      if (step === 'directions') workspace.jobs.push({ ...makeScenario('copy-ready').workspace.jobs[0], id: 'prompt-job', step: 'directions', result: { directions: [] } })
       return { job: { id: `job-${step}`, status: 'succeeded' } }
     })
     render(<ConnectedStudio api={api} />)
     await screen.findByRole('heading', { name: 'What would you like to create?' })
     fireEvent.change(screen.getByLabelText('Prompt'), { target: { value: 'Autumn sound. Headphones for commuters.' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send prompt' }))
-    await screen.findByRole('button', { name: 'Select option 1' })
-    expect(api.createCampaign).toHaveBeenCalledWith({ projectType: 'banners', title: 'Autumn sound', brief: { notes: 'Autumn sound. Headphones for commuters.' } })
-    expect(api.generate.mock.calls.map(call => call.slice(0, 2))).toEqual([['campaign-1', 'brief'], ['campaign-1', 'copy'], ['campaign-1', 'directions']])
+    await screen.findByText('Promote headphones for a quieter commute.')
+    expect(api.createCampaign).toHaveBeenCalledWith({ projectType: 'banners', title: 'Autumn sound', brief: { notes: 'Autumn sound. Headphones for commuters.', briefing: { schemaVersion: 2 } } })
+    // Copy is drafted only after the brief answers are confirmed.
+    expect(api.generate.mock.calls.map(call => call.slice(0, 2))).toEqual([['campaign-1', 'brief']])
     expect(location.search).toBe('?module=brief')
     fireEvent.click(screen.getByRole('link', { name: 'Templates', exact: true }))
     await screen.findByRole('heading', { name: 'Templates' })
     fireEvent.click(screen.getByRole('link', { name: 'Autumn launch' }))
-    await screen.findByRole('button', { name: 'Preview option 1' })
+    // Reopening the project must not start generation.
+    await screen.findByRole('navigation', { name: 'Campaign workflow' })
     await act(async () => {})
-    expect(api.generate).toHaveBeenCalledTimes(3)
+    expect(api.generate).toHaveBeenCalledTimes(1)
   })
 })

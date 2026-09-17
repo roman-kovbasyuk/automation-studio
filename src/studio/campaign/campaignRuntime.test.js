@@ -225,6 +225,28 @@ describe('campaign runtime isolation', () => {
     expect(runtime.getSnapshot('review').operation).toMatchObject({ kind: 'failed', actionId: 'history' })
     runtime.dispose()
   })
+  test('an unknown job explains its reason and can be marked as failed through the API', async () => {
+    const { runtime, workspace, api } = setup('copy-ready', { resolveJob: vi.fn() })
+    workspace.jobs.push({ id: 'copy-unknown', step: 'copy', status: 'unknown', unknownReason: 'provider_timeout', errorCode: null, timeoutAt: '2026-09-17T10:00:00.000Z' })
+    await runtime.refresh()
+    expect(runtime.getSnapshot('copy').access).toMatchObject({ canEdit: false, reason: 'A generation result needs checking.',
+      generationBlock: { jobId: 'copy-unknown', name: 'Copy generation', resolvableAt: Date.parse('2026-09-17T10:00:40.000Z'),
+        reason: 'The AI service did not answer within the time limit, so we cannot tell whether it finished.' } })
+    api.resolveJob.mockImplementation(async () => { Object.assign(workspace.jobs.at(-1), { status: 'failed', resolution: 'marked_failed' }) })
+    expect(await runtime.resolveGeneration('copy-unknown')).toEqual({ ok: true })
+    expect(api.resolveJob).toHaveBeenCalledExactlyOnceWith('copy-unknown')
+    expect(runtime.getSnapshot('copy').access.generationBlock).toBeUndefined()
+    api.resolveJob.mockRejectedValueOnce(Object.assign(new Error('The outcome may still arrive. Check again shortly.'), { status: 409, code: 'generation_resolution_too_early' }))
+    expect(await runtime.resolveGeneration('copy-unknown')).toMatchObject({ ok: false, code: 'generation_resolution_too_early' })
+    runtime.dispose()
+  })
+  test('a failed generation reports its plain-language reason with the job', async () => {
+    const { runtime } = setup('copy-ready', { getJob: vi.fn() })
+    const result = await runtime.execute('copy', 'generate', async ({ waitForJob }) => waitForJob({ job: { id: 'job-9', step: 'copy', status: 'failed', errorCode: 'provider_rejected' } }))
+    expect(result).toMatchObject({ ok: false, code: 'generation_failed', message: 'Copy generation failed. The AI service rejected the request.' })
+    expect(runtime.getSnapshot('copy').operation).toMatchObject({ jobId: 'job-9', error: { reasonCode: 'provider_rejected' } })
+    runtime.dispose()
+  })
   test('workspace completion settles an observed job even before its poll returns', async () => {
     const pending = deferred()
     const { runtime, workspace } = setup('draft', { getJob: () => pending.promise })

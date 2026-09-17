@@ -14,6 +14,7 @@ import { createMockProvider } from '../providers/mockProvider.js'
 import { createMemoryAssetStore } from '../storage/memoryAssetStore.js'
 import { pilotTemplateFixture } from '../../shared/fixtures/pilotTemplate.js'
 import { hashCanonical } from '../../shared/canonicalJson.js'
+import { briefWithBriefing, confirmBriefing } from '../testing/briefingFixtures.js'
 
 test.each(['campaign', 'selected_copy', 'ready_upload', 'prompt_upload', 'partial_copy', 'legacy_selection'])(
   '%s visuals remain verifiable through Banners and immutable review', async mode => {
@@ -28,7 +29,7 @@ test.each(['campaign', 'selected_copy', 'ready_upload', 'prompt_upload', 'partia
       const actor = { id: 'marketer', role: 'marketer' }
       await pool.query("INSERT INTO users (id,email,role,display_name) VALUES ('marketer','visual@example.test','marketer','Visual test')")
       await createCampaignRepository(pool).create({ id: 'campaign', title: 'Launch', createdBy: actor.id,
-        brief: { product: 'Headphones', audience: 'Commuters', objective: 'Shop', offer: '', locale: 'en', notes: '' } })
+        brief: briefWithBriefing({ product: 'Headphones', audience: 'Commuters', objective: 'Shop', offer: '', locale: 'en', notes: '' }) })
       await createTemplateRepository(pool).createVersion({ ...pilotTemplateFixture, manifest: pilotTemplateFixture,
         manifestHash: hashCanonical(pilotTemplateFixture), createdBy: actor.id })
       const assetStore = createMemoryAssetStore()
@@ -38,6 +39,7 @@ test.each(['campaign', 'selected_copy', 'ready_upload', 'prompt_upload', 'partia
       const read = () => createWorkspaceService({ pool }).getWorkspace({ actor, campaignId: 'campaign' })
       const common = { actor, campaignId: 'campaign' }
       await generation.analyseBrief({ ...common, input: {}, idempotencyKey: 'brief' })
+      await confirmBriefing({ pool, ...common })
       await generation.generateCopy({ ...common, input: {}, idempotencyKey: 'copy' })
       if (mode === 'partial_copy') {
         for (let batch = 1; batch < 6; batch++) await generation.generateCopy({ ...common, input: {}, idempotencyKey: `copy-${batch}` })

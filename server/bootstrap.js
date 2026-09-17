@@ -61,7 +61,7 @@ async function testPersonalIntegration({ platform, webhookUrl, secret, eventType
     ? eventType.replaceAll('_', ' ')
     : 'test notification'
   const campaignLabel = payload?.campaignId ? ` · campaign ${payload.campaignId}` : ''
-  const message = `Banner Studio: ${eventLabel}${campaignLabel}`
+  const message = `Automation Studio: ${eventLabel}${campaignLabel}`
   const response = await fetch(webhookUrl, {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` },
@@ -112,8 +112,6 @@ const productionDependencies = {
 export async function createServerRuntime({ environment = process.env, dependencies = {} } = {}) {
   const resolved = { ...productionDependencies, ...dependencies }
   const config = loadConfig(environment)
-  const briefingEnabled=environment.BRIEFING_ENABLED==='true'
-  if(briefingEnabled && (config.generation.provider!=='gemini' || config.generation.location!=='eu')) throw new Error('Source briefing requires managed Vertex AI EU')
   const staticRoot = config.staticServing.enabled ? config.staticServing.root : undefined
   let app
   let pool
@@ -180,8 +178,8 @@ export async function createServerRuntime({ environment = process.env, dependenc
       }, 30_000)
       notificationTimer.unref?.()
     }
-    const workflowService = resolved.createWorkflowService({ pool, providerRegistry, ...(briefingEnabled?{briefingEnabled:true}:{}), ...(personalAiService ? { personalAiService } : {}), ...(personalSettingsService ? { personalSettingsService } : {}) })
-    const generationReadinessService = resolved.createGenerationReadinessService({ workflowService, ...(personalAiService ? { personalAiService } : {}), sourceBriefing: briefingEnabled })
+    const workflowService = resolved.createWorkflowService({ pool, providerRegistry, ...(personalAiService ? { personalAiService } : {}), ...(personalSettingsService ? { personalSettingsService } : {}) })
+    const generationReadinessService = resolved.createGenerationReadinessService({ workflowService, ...(personalAiService ? { personalAiService } : {}) })
     generationProvider = config.generation.provider === 'gemini'
       ? resolved.createGeminiProvider({
           project: config.generation.projectId,
@@ -220,6 +218,7 @@ export async function createServerRuntime({ environment = process.env, dependenc
       controlPlane: generationControlPlane,
       providers: { [config.generation.provider]: generationProvider },
       assetStore,
+      readinessService: generationReadinessService,
       ...(personalSettingsService ? { notificationService: personalSettingsService } : {}),
       ...(personalAiService ? {
         personalProviderFactory: async ({ actor, provider, model, region, step, credentialVersion }) => {
@@ -240,8 +239,9 @@ export async function createServerRuntime({ environment = process.env, dependenc
     tokenVerifier = resolved.createFirebaseTokenVerifier({ projectId: config.firebaseProjectId })
     const resolveActor = resolved.createAuthenticator({ pool, tokenVerifier })
     app = resolved.buildApp({
-      runtimeConfig: { firebase: config.firebaseWeb,capabilities:{sourceBriefing:briefingEnabled} },
-      ...(briefingEnabled?{briefSourceService:createBriefSourceService({pool,assetStore}),briefingService:createBriefingService({pool})}:{}),
+      runtimeConfig: { firebase: config.firebaseWeb },
+      briefSourceService: createBriefSourceService({ pool, assetStore }),
+      briefingService: createBriefingService({ pool }),
       logger: {
         level: config.logLevel,
         redact: {

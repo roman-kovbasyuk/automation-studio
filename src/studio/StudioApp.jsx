@@ -34,12 +34,8 @@ import {
 import { createStudioApi } from './api.js'
 import { useStudioAuth } from './auth.js'
 import { HomeScreen } from './HomeScreen.jsx'
-import { useBriefingCapability } from './useBriefingCapability.js'
 import { CampaignPage } from './campaign/CampaignPage.jsx'
 import { useCampaignRuntime } from './campaign/useCampaignRuntime.js'
-import {createSourceCampaignSubmission} from './campaign/sourceCampaign.js'
-import {createCampaignRuntime} from './campaign/campaignRuntime.js'
-import {createWorkflowCoordinator} from './campaign/workflowCoordinator.js'
 import { campaignModuleUrl, parseCampaignModule } from './campaign/campaignRoutes.js'
 import { SettingsScreen } from './SettingsScreen.jsx'
 import { AssetComingSoon, NewAssetScreen, ProjectTypeIcon, getProjectType } from './NewAssetScreen.jsx'
@@ -55,6 +51,7 @@ import {
 } from './workflow.js'
 import './studio.css'
 import './campaign-layout.css'
+import { forgetPendingUploads, readPendingUploads, rememberPendingUploads } from './campaign/pendingUploads.js'
 
 const TemplateLibrary = lazy(() => import('./TemplateLibrary.jsx')
   .then(module => ({ default: module.TemplateLibrary })))
@@ -74,7 +71,7 @@ export function StudioApp() {
   if (auth.loading)
     return (
       <div className="bs-auth" role="status">
-        <span className="bs-wordmark">Banner Studio</span>
+        <span className="bs-wordmark">Automation Studio</span>
         <p>Opening your workspace…</p>
       </div>
     )
@@ -83,7 +80,7 @@ export function StudioApp() {
       <DesignSystemRoot><div className="bs-auth">
         <span className="bs-wordmark">
           <Shapes size={24} />
-          Banner Studio
+          Automation Studio
         </span>
         <h1>
           Good ideas deserve
@@ -155,10 +152,9 @@ export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, pro
   const loadId = useRef(0)
   const mainRef = useRef(null)
   const deleteTriggerRef = useRef(null)
-  const analyzeOnOpen = useRef(null)
-  const sourceBriefingEnabled=useBriefingCapability(api)
-  const sourceSubmission=useMemo(()=>createSourceCampaignSubmission({api}),[api,route.view])
-  const sourceAnalysis=useRef(null)
+  const pendingSubmissions = useRef(new Map())
+  // Re-renders after an interrupted-upload notice is dismissed.
+  const [, setInterruptedUploadsVersion] = useState(0)
   const runtime = useCampaignRuntime({ api, actor, templates,
     workspace: route.view === 'campaign' && workspace?.campaign.id === route.id ? workspace : null,
     onCampaignChange: campaign => {
@@ -449,34 +445,26 @@ export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, pro
     setPending('Create campaign')
     setError(null)
     try {
-      const sourceBacked=Object.hasOwn(input,'sources')
-      let campaign=sourceBacked?await sourceSubmission({...input,projectType:input.projectType??'banners'}):await api.createCampaign({ ...input, projectType: input.projectType ?? 'banners' })
-      if(sourceBacked) {
-        if(sourceAnalysis.current?.id!==campaign.id) {
-          sourceAnalysis.current?.runtime.dispose()
-          const initialRuntime=createCampaignRuntime({api,actor,templates,workspace:await api.getWorkspace(campaign.id)})
-          sourceAnalysis.current={id:campaign.id,runtime:initialRuntime,coordinator:createWorkflowCoordinator({runtime:initialRuntime})}
-        }
-        setPending('Analyzing campaign materials')
-        const result=await sourceAnalysis.current.coordinator.analyzeAndGenerate()
-        if(!result.ok) {setError(new Error(result.message));return result}
-        campaign=(await api.getWorkspace(campaign.id)).campaign
-        sourceAnalysis.current.runtime.dispose();sourceAnalysis.current=null
-      }
+      const { sources = [], ...campaignInput } = input
+      // Every project starts with the canonical AI briefing (D37); the marker lets a files-only brief be created.
+      const campaign = await api.createCampaign({ ...campaignInput, projectType: campaignInput.projectType ?? 'banners',
+        brief: { ...campaignInput.brief, briefing: { schemaVersion: 2 } } })
       markDirty(false)
-      analyzeOnOpen.current = sourceBacked?null:campaign.id
+      // The project opens at once; its files upload and its analysis runs in the Brief stage.
+      pendingSubmissions.current.set(campaign.id, { sources })
+      rememberPendingUploads(campaign.id, sources)
       setCampaigns(items => [campaign, ...items.filter(item => item.id !== campaign.id)])
       history.pushState({}, '', campaignModuleUrl(campaign.id, 'brief'))
       setRoute(readRoute())
       return { ok: true }
     } catch (failure) {
-      const uncertain = !failure.campaignId && (failure.status === undefined || failure.status === 0 || failure.status >= 500)
+      const uncertain = failure.status === undefined || failure.status === 0 || failure.status >= 500
       const value = uncertain ? new Error('Creation may have completed. Check the campaign list before creating another campaign.') : failure
       // A transport failure leaves creation uncertain, so reconcile the list in
       // the background without adding a blocking notice below the new-brief form.
       // Known validation failures remain visible to the user.
       if (!uncertain) setError(value)
-      if (uncertain || failure.campaignId) await loadLists().catch(() => {})
+      if (uncertain) await loadLists().catch(() => {})
       return { ok: false, message: value.message, silent: uncertain }
     } finally {
       inFlight.current = false
@@ -582,7 +570,7 @@ export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, pro
     if (action === 'signout' && !campaignBusy() && (!hasUnsavedChanges() || window.confirm('Discard your unsaved changes?'))) onSignOut?.()
   } } : undefined
   const sidebar = <div className="bs-sidebar-shell"><SidebarPanel
-    brand={{ label: 'Studio', href: '/' }}
+    brand={{ label: 'Automation Studio', href: '/' }}
     primaryAction={{ label: 'Create new', icon: <Plus size={18} />, onClick: () => { if (editor && !pending) navigate('/mvp/new') } }}
     navigation={navItems.map(([id, label, Icon, href]) => ({ id, label, href, icon: <Icon size={18} />, current: route.view === id }))}
     projects={campaigns.map(campaign => ({ id: campaign.id, title: campaign.title,
@@ -694,8 +682,6 @@ export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, pro
             <Suspense fallback={<div className="bs-loading" role="status" aria-label="Loading templates"><Skeleton lines={3} /></div>}>
               <TemplateLibrary
                 templates={templates}
-                api={api}
-                onCreateCampaign={() => navigate('/')}
                 canChoose={editor && !pending}
                 onChoose={(id) => {
                   setRequestedTemplate(id)
@@ -717,8 +703,11 @@ export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, pro
             <CampaignPage key={workspace.campaign.id} runtime={runtime} activeModule={route.module}
               onNavigate={goModule} requestedTemplate={requestedTemplate}
               prototypeMode={prototypeMode}
-              analyzeOnOpen={analyzeOnOpen.current === workspace.campaign.id}
-              onAnalysisStarted={() => { analyzeOnOpen.current = null }}
+              pendingSubmission={pendingSubmissions.current.get(workspace.campaign.id) ?? null}
+              onSubmissionStarted={() => { pendingSubmissions.current.delete(workspace.campaign.id) }}
+              onSubmissionSettled={() => { forgetPendingUploads(workspace.campaign.id) }}
+              interruptedUploads={pendingSubmissions.current.has(workspace.campaign.id) ? [] : readPendingUploads(workspace.campaign.id)}
+              onDismissInterruptedUploads={() => { forgetPendingUploads(workspace.campaign.id); setInterruptedUploadsVersion(value => value + 1) }}
               heading={<Heading level={1} variant="h3"
                     ref={titleRef}
                     contentEditable={editingTitle}
@@ -751,7 +740,6 @@ export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, pro
             <HomeScreen
               key="new-campaign"
               api={api}
-              collectSources={sourceBriefingEnabled}
               readiness={generationReadiness}
               pending={pending}
               onSave={create}

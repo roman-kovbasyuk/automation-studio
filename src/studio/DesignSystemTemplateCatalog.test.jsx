@@ -87,10 +87,4 @@ describe('Templates card catalog', () => {
     expect(screen.queryByRole('region', { name: 'Banners' })).not.toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Slides' })).toBeVisible()
   })
-
-  test('keeps direct banner editor links addressable', () => {
-    window.history.replaceState({}, '', '/mvp/templates?category=ads&banner=bold-announcement#banner-editor-heading')
-    render(<TemplateLibrary templates={[]} />)
-    expect(screen.getByRole('heading', { name: 'Bold announcement' })).toBeVisible()
-  })
 })

@@ -15,6 +15,7 @@ import { createMockProvider } from '../providers/mockProvider.js'
 import { createMemoryAssetStore } from '../storage/memoryAssetStore.js'
 import { hashCanonical } from '../../shared/canonicalJson.js'
 import { studioTemplates } from '../../shared/studioTemplates.js'
+import { briefWithBriefing, confirmBriefing } from '../testing/briefingFixtures.js'
 
 test.each(['campaign', 'selected_copy'])('copy edits preserve approvals and invalidate the right artifacts (%s)', async mode => {
   const schema = `copy_edit_${randomUUID().replaceAll('-', '')}`
@@ -30,13 +31,14 @@ test.each(['campaign', 'selected_copy'])('copy edits preserve approvals and inva
     const actor = { id: 'editor', role: 'marketer' }
     const common = { actor, campaignId: 'campaign' }
     await createCampaignRepository(pool).create({ id: 'campaign', title: 'Copy editing', createdBy: actor.id,
-      brief: { product: 'Course', audience: 'Learners', objective: 'Signups', offer: '', locale: 'en', notes: '' } })
+      brief: briefWithBriefing({ product: 'Course', audience: 'Learners', objective: 'Signups', offer: '', locale: 'en', notes: '' }) })
     for (const manifest of studioTemplates) await createTemplateRepository(pool).createVersion({ ...manifest, manifest, manifestHash: hashCanonical(manifest), createdBy: actor.id })
     const assetStore = createMemoryAssetStore()
     const generation = createGenerationService({ pool, assetStore, controlPlane: createGenerationControlPlane({ pool }), providers: { mock: createMockProvider() } })
     const versions = createVersionService({ pool, assetStore })
     const read = () => createWorkspaceService({ pool }).getWorkspace(common)
     await generation.analyseBrief({ ...common, input: {}, idempotencyKey: 'brief' })
+    await confirmBriefing({ pool, ...common })
     await generation.generateCopy({ ...common, input: {}, idempotencyKey: 'copy' })
     const set = (await read()).copies[0], copy = set.candidates[0]
     await generation.approveCopy({ ...common, expectedRevision: (await read()).campaign.revision, input: { copyId: copy.id } })

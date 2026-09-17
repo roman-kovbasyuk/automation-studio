@@ -7,7 +7,7 @@ import { createWorkflowCoordinator } from './workflowCoordinator.js'
 import './creation-flow.css'
 
 /** Presentation of runtime permissions; navigation never dispatches work. */
-export function CampaignPage({ runtime, activeModule, onNavigate, heading, requestedTemplate, analyzeOnOpen = false, onAnalysisStarted, prototypeMode = false }) {
+export function CampaignPage({ runtime, activeModule, onNavigate, heading, requestedTemplate, pendingSubmission = null, onSubmissionStarted, onSubmissionSettled, interruptedUploads = [], onDismissInterruptedUploads, prototypeMode = false }) {
   const navigation = useRef(onNavigate)
   navigation.current = onNavigate
   const navigate = useCallback(id => navigation.current?.(id), [])
@@ -35,14 +35,17 @@ export function CampaignPage({ runtime, activeModule, onNavigate, heading, reque
       panel.current?.scrollIntoView?.({ block: 'start', behavior: 'instant' })
     }
   }, [active])
+  // A project created on Home opens at once; its files upload and its analysis runs here, in Brief.
   const started = useRef(false)
   useEffect(() => {
-    if (analyzeOnOpen && !started.current) {
-      started.current = true
-      onAnalysisStarted?.()
-      void coordinator.analyzeAndGenerate()
-    }
-  }, [analyzeOnOpen, coordinator, onAnalysisStarted])
+    if (!pendingSubmission || started.current) return
+    started.current = true
+    onSubmissionStarted?.()
+    void coordinator.analyzeAndGenerate({ sources: pendingSubmission.sources ?? [] })
+      .then(result => onSubmissionSettled?.(result), () => onSubmissionSettled?.({ ok: false }))
+  }, [pendingSubmission, coordinator, onSubmissionStarted, onSubmissionSettled])
+  const uploadedNames = new Set((brief.input.sources ?? []).map(source => source.name))
+  const missingUploads = interruptedUploads.filter(name => !uploadedNames.has(name))
   const activeIndex = VISIBLE_MODULE_IDS.indexOf(active)
   const steps = ports.map(({ access }) => ({ id: access.id, label: access.label,
     description: access.stale ? 'Needs updating' : undefined,
@@ -52,6 +55,9 @@ export function CampaignPage({ runtime, activeModule, onNavigate, heading, reque
     <div id="campaign-timeline" className="bs-creation-navigation">
       <WorkflowSteps label="Campaign workflow" steps={steps} current={active} onChange={navigate} />
     </div>
+    {missingUploads.length > 0 && <Alert tone="warning" title="Upload interrupted — add your files again"
+      description={`These files were not uploaded: ${missingUploads.join(', ')}.`}
+      action={onDismissInterruptedUploads && <Button onClick={onDismissInterruptedUploads}>Dismiss</Button>} />}
     {requested && requested !== active && <Alert title={`Complete ${ports.find(port => port.access.id === active)?.access.label ?? 'Brief'} before opening this step.`} />}
     <div className="bs-creation-workspace" ref={panel} tabIndex={-1} aria-label={`${ports.find(port => port.access.id === active)?.access.label} workspace`}>
       {VISIBLE_MODULE_IDS.filter(id => visited.has(id) || id === active).map(id => <div key={id} hidden={id !== active}>

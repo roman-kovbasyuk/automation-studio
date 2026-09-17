@@ -3,6 +3,7 @@ import { WorkflowModuleFrame } from '../../components/design-system/organisms/Wo
 import { AppButton } from "../../components/design-system/compatibility.jsx"
 import { AsyncStatus } from '../../components/design-system/molecules/AsyncStatus.jsx'
 import { ErrorNotice } from '../primitives.jsx'
+import { GenerationBlockNotice } from './GenerationBlockNotice.jsx'
 import { useCampaignModule } from './useCampaignModule.js'
 import { moduleRegistry } from './moduleRegistry.js'
 import { MODULE_LABELS } from './moduleContracts.js'
@@ -53,13 +54,16 @@ export function ModuleHost({ runtime, moduleId, actions, onNavigate, requestedTe
   const moduleOwnsError = moduleId === 'visuals'
   return <WorkflowModuleFrame id={`campaign-module-${moduleId}`} title={MODULE_LABELS[moduleId]} busy={port.operation.kind === 'running'}>
     {port.operation.kind === 'running' && !moduleOwnsProgress && <AsyncStatus>Working on {MODULE_LABELS[moduleId].toLowerCase()}…</AsyncStatus>}
+    {/* Copy places this notice beside its options; Visuals explains image jobs on each tile. */}
+    {moduleId !== 'copy' && !(moduleId === 'visuals' && port.access.generationBlock?.step === 'image') && <GenerationBlockNotice
+      block={port.access.generationBlock} onCheck={() => runtime.refresh()} onResolve={jobId => runtime.resolveGeneration(jobId)} />}
     <ErrorNotice error={['visuals', 'banners'].includes(moduleId) && !moduleOwnsError ? port.operation.error ?? actionError : null} />
     {!['copy', 'visuals'].includes(moduleId) && (port.operation.error || actionError) && <AppButton onClick={async () => {
       try { await runtime.refresh(); setActionError(null) } catch (error) { setActionError(error) }
     }}>Check latest state</AppButton>}
     {!port.access.canVisit && !['copy', 'visuals'].includes(moduleId) && <p className="bs-note">Complete the preceding module first.</p>}
     {activated && <ModuleBoundary><Suspense fallback={<p role="status">Loading {MODULE_LABELS[moduleId]}…</p>}>
-      <View port={{ ...port, prototypeMode, operation: { ...port.operation, error: port.operation.error ?? (moduleId === 'visuals' ? null : actionError) },
+      <View port={{ ...port, prototypeMode, resolveGeneration: jobId => runtime.resolveGeneration(jobId), operation: { ...port.operation, error: port.operation.error ?? (moduleId === 'visuals' ? null : actionError) },
         ...(moduleId === 'banners' ? { reviewPort } : {}),
         reconcile: ['copy', 'visuals'].includes(moduleId) ? async () => {
           await runtime.refresh(); setActionError(null)

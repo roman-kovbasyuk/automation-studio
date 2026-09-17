@@ -7,6 +7,7 @@ import {
   directionGenerationRequestSchema,
   directionSelectionRequestSchema,
   generationCommandResponseSchema,
+  generationJobResolutionRequestSchema,
   generationJobResponseSchema,
   imageGenerationRequestSchema,
 } from '../../shared/contracts.js'
@@ -38,6 +39,13 @@ export function registerGenerationRoutes(app, { requireRole, generationService }
     const { jobId } = parse(jobParamsSchema, request.params)
     const job = await generationService.getJob({ actor: request.actor, jobId })
     if (!job) return notFound('Generation job')
+    return strictResponse(generationJobResponseSchema, request, job)
+  })
+
+  app.post('/api/v1/generation-jobs/:jobId/resolve', { preHandler: requireRole(...editors) }, async (request) => {
+    const { jobId } = parse(jobParamsSchema, request.params)
+    const input = parse(generationJobResolutionRequestSchema, request.body ?? {})
+    const job = await generationService.resolveJob({ actor: request.actor, jobId, input })
     return strictResponse(generationJobResponseSchema, request, job)
   })
 

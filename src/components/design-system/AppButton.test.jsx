@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
-import { AppButton } from './AppButton.jsx'
+import { AppButton } from './atoms/AppButton.jsx'
 
 test('blocks duplicate actions while busy and restores the action when idle', () => {
   const onClick = vi.fn()

@@ -11,6 +11,7 @@ import { createWorkspaceService } from './workspaceService.js'
 import { createAssetService } from './assetService.js'
 import { createMockProvider } from '../providers/mockProvider.js'
 import { createMemoryAssetStore } from '../storage/memoryAssetStore.js'
+import { briefWithBriefing, confirmBriefing } from '../testing/briefingFixtures.js'
 
 test.each([`${'x'.repeat(180)}.png`, `${'x'.repeat(159)} trailing.png`, `${'x'.repeat(159)}🎨.png`])('uploads persist private images and replay safely with filename case %#', async name => {
   const schema = `visual_upload_test_${randomUUID().replaceAll('-', '')}`
@@ -24,7 +25,7 @@ test.each([`${'x'.repeat(180)}.png`, `${'x'.repeat(159)} trailing.png`, `${'x'.r
     const actor = { id: 'uploader', role: 'marketer' }
     await pool.query("INSERT INTO users (id,email,role,display_name) VALUES ($1,'upload@example.test','marketer','Uploader')", [actor.id])
     await createCampaignRepository(pool).create({ id: 'campaign', title: 'Campaign', createdBy: actor.id,
-      brief: { product: 'Headphones', audience: 'Commuters', objective: 'Shop', offer: '', locale: 'en', notes: '' } })
+      brief: briefWithBriefing({ product: 'Headphones', audience: 'Commuters', objective: 'Shop', offer: '', locale: 'en', notes: '' }) })
     const assetStore = createMemoryAssetStore()
     const generation = createGenerationService({ pool, assetStore, controlPlane: createGenerationControlPlane({ pool }), providers: { mock: createMockProvider() } })
     const service = createVisualUploadService({ pool, assetStore })
@@ -32,9 +33,9 @@ test.each([`${'x'.repeat(180)}.png`, `${'x'.repeat(159)} trailing.png`, `${'x'.r
     const input = { target: { mode: 'campaign' }, name, mimeType: 'image/png', data: bytes.toString('base64') }
     let initialRevision = 0
     const upload = (patch = {}) => service.uploadVisual({ actor, campaignId: 'campaign', expectedRevision: initialRevision, idempotencyKey: 'upload-1', input, ...patch })
-    await expect(upload()).rejects.toMatchObject({ code: 'visual_input_required' })
+    await expect(upload()).rejects.toMatchObject({ code: 'brief_confirmation_required' })
     await generation.analyseBrief({ actor, campaignId: 'campaign', input: {}, idempotencyKey: 'brief' })
-    initialRevision = 1
+    initialRevision = (await confirmBriefing({ pool, actor, campaignId: 'campaign' })).campaignRevision
     await generation.generateCopy({ actor, campaignId: 'campaign', input: {}, idempotencyKey: 'copy' })
     await expect(upload({ actor: { ...actor, role: 'designer' } })).rejects.toMatchObject({ code: 'forbidden' })
     await expect(upload({ input: { ...input, data: Buffer.from('<svg/>').toString('base64') } })).rejects.toMatchObject({ code: 'invalid_image' })
@@ -43,7 +44,7 @@ test.each([`${'x'.repeat(180)}.png`, `${'x'.repeat(159)} trailing.png`, `${'x'.r
     expect(await upload()).toEqual(saved)
     await expect(upload({ input: { ...input, name: 'changed.png' } })).rejects.toMatchObject({ code: 'idempotency_conflict' })
     const workspace = await createWorkspaceService({ pool }).getWorkspace({ actor, campaignId: 'campaign' })
-    expect(workspace.campaign.revision).toBe(2)
+    expect(workspace.campaign.revision).toBe(initialRevision + 1)
     expect(workspace.directions).toHaveLength(1)
     expect(workspace.directions[0].title.length).toBeLessThanOrEqual(160)
     expect(workspace.directions[0].prompt).toBe('')
@@ -54,13 +55,13 @@ test.each([`${'x'.repeat(180)}.png`, `${'x'.repeat(159)} trailing.png`, `${'x'.r
     const asset = await createAssetService({ pool, assetStore }).readAsset({ actor, assetId: saved.assetId })
     expect(asset.bytes).toEqual(bytes)
     expect(asset).toMatchObject({ width: 64, height: 48, mimeType: 'image/png' })
-    const replacement = await upload({ expectedRevision: 2, idempotencyKey: 'replace', input: { ...input, target: { directionId: saved.directionId } } })
+    const replacement = await upload({ expectedRevision: initialRevision + 1, idempotencyKey: 'replace', input: { ...input, target: { directionId: saved.directionId } } })
     expect(replacement.directionId).toBe(saved.directionId)
     expect(replacement.assetId).not.toBe(saved.assetId)
     expect((await createAssetService({ pool, assetStore }).readAsset({ actor, assetId: saved.assetId })).bytes).toEqual(bytes)
     const copy = workspace.copies[0].candidates[0]
-    await generation.approveCopy({ actor, campaignId: 'campaign', expectedRevision: 3, input: { copyId: copy.id } })
-    const linked = await upload({ expectedRevision: 4, idempotencyKey: 'linked', input: { ...input, target: { mode: 'selected_copy', copyId: copy.id } } })
+    await generation.approveCopy({ actor, campaignId: 'campaign', expectedRevision: initialRevision + 2, input: { copyId: copy.id } })
+    const linked = await upload({ expectedRevision: initialRevision + 3, idempotencyKey: 'linked', input: { ...input, target: { mode: 'selected_copy', copyId: copy.id } } })
     const final = await createWorkspaceService({ pool }).getWorkspace({ actor, campaignId: 'campaign' })
     expect(final.directions.find(item => item.id === linked.directionId).copy.id).toBe(copy.id)
     expect(final.directions.every(item => !item.stale)).toBe(true)

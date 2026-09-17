@@ -3,9 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { expect, test, vi } from 'vitest'
-import { PromptComposer } from './PromptComposer.jsx'
+import { PromptComposer } from './organisms/PromptComposer.jsx'
 import { SelectMenu } from './molecules/SelectMenu.jsx'
-import { TemplateLibrary } from '../../studio/TemplateLibrary.jsx'
 
 test('the status selector uses upstream popup selection and forwards its value', async () => {
   const user = userEvent.setup()
@@ -45,25 +44,4 @@ test('the shared composer can describe a domain-specific mixed-file intake', () 
   expect(screen.getByLabelText('Brand files')).toHaveAttribute('accept', '.pdf,.svg,.woff2')
   expect(screen.getByRole('button', { name: 'Attach brand materials' })).toBeVisible()
   expect(screen.getByText('PDF, SVG, WOFF2')).toBeVisible()
-})
-
-test('every template category controls a labelled panel and keyboard focus follows the selection', async () => {
-  const user = userEvent.setup()
-  render(<TemplateLibrary templates={[]} onChoose={vi.fn()} />)
-  expect(document.getElementById('template-categories')).toBeInTheDocument()
-  const tabs = screen.getAllByRole('tab')
-  expect(tabs.map(tab => tab.textContent)).toEqual(['Ads', 'Web', 'Presentations', 'Other'])
-  for (const tab of tabs) {
-    const panel = document.getElementById(tab.getAttribute('aria-controls'))
-    expect(panel).not.toBeNull()
-    expect(panel).toHaveAttribute('role', 'tabpanel')
-    expect(panel).toHaveAttribute('aria-labelledby', tab.id)
-  }
-  await user.click(tabs[0])
-  await user.keyboard('{ArrowRight}')
-  expect(tabs[1]).toHaveFocus()
-  expect(screen.getByRole('tabpanel', { name: 'Web' })).toBeVisible()
-  expect(document.getElementById(tabs[0].getAttribute('aria-controls'))).not.toBeVisible()
-  await user.tab()
-  expect(screen.getByRole('tabpanel', { name: 'Web' })).toHaveFocus()
 })

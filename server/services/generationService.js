@@ -5,6 +5,7 @@ import {
   copySelectionRequestSchema,
   directionGenerationRequestSchema,
   directionSelectionRequestSchema,
+  generationJobResolutionRequestSchema,
   imageGenerationRequestSchema,
 } from '../../shared/contracts.js'
 import {authoredCopyFieldsSchema as copyEditRequestSchema} from '../../shared/briefingContracts.js'
@@ -99,6 +100,24 @@ function generatedObjectKey({ campaignId, jobId, assetId, mimeType }) {
   return `campaigns/${hashedPathSegment(campaignId)}/generation-jobs/${hashedPathSegment(jobId)}/generated/${assetId}.${extension}`
 }
 
+const rejectedStatuses = new Set([400, 401, 403, 404])
+
+/**
+ * A thrown provider error whose outcome is known, or null when the provider may
+ * still have produced a result (timeouts, aborts, network and server errors stay unknown).
+ */
+function knownProviderFailure(error, job) {
+  if (error?.code === 'provider_timeout' || error?.name === 'AbortError') return null
+  if (error?.dispatched === false) {
+    return { errorCode: error.code === 'invalid_request' ? 'invalid_request' : 'provider_configuration', actualCostMicrounits: 0 }
+  }
+  // A schema error after a response means the provider answered unusably; charge the reservation.
+  if (error?.name === 'ZodError') return { errorCode: 'invalid_output', actualCostMicrounits: job.reservedCostMicrounits }
+  const status = Number(error?.status ?? error?.response?.status)
+  if (rejectedStatuses.has(status)) return { errorCode: 'provider_rejected', actualCostMicrounits: 0 }
+  return null
+}
+
 function persistenceTimedOut(error) {
   return ['55P03', '57014', 'generation_persistence_timeout'].includes(error?.code)
 }
@@ -138,6 +157,7 @@ export function createGenerationService({
   assetIdGenerator = randomUUID,
   clock = () => new Date(),
   timeoutMs = 30_000,
+  readinessService,
   maximumCosts = defaultMaximumCosts,
   assetStore,
   personalProviderFactory,
@@ -203,6 +223,13 @@ export function createGenerationService({
     if (step === 'image' && !assetStore) {
       throw new GenerationServiceError(503, 'image_storage_unavailable', 'Image generation is unavailable until durable storage is configured')
     }
+    // No job is created when AI generation cannot run; a paused kill switch keeps its own error.
+    if (readinessService) {
+      const readiness = await readinessService.getReadiness({ actor })
+      if (!['ready', 'paused'].includes(readiness?.state)) {
+        throw new GenerationServiceError(409, 'generation_unavailable', readiness?.message ?? 'AI generation is not set up for this workspace.')
+      }
+    }
 
     const startedAt = safeInstant(clock(), 'Generation clock')
     const jobId = idGenerator()
@@ -234,6 +261,18 @@ export function createGenerationService({
     } catch(error) {
       return controlPlane.failBeforeDispatch({jobId:prepared.job.id,ownerToken:prepared.ownerToken,errorCode:error.expose?error.code:'brief_preparation_failed'})
     }
+    // Resolve the provider before dispatch: a missing or changed configuration is a
+    // known failure with nothing sent, not an uncertain outcome that blocks the campaign.
+    let provider = null
+    try {
+      const personal = !sourceProvider && personalProviderFactory
+        ? await personalProviderFactory({ actor, provider: prepared.job.provider, model: prepared.job.model, region: prepared.job.region, step, credentialVersion: prepared.job.credentialVersion })
+        : null
+      provider = sourceProvider ?? (personalProviderFactory ? personal : (personal ?? providers[prepared.job.provider]))
+    } catch { provider = null }
+    if (!provider) {
+      return controlPlane.failBeforeDispatch({ jobId: prepared.job.id, ownerToken: prepared.ownerToken, errorCode: 'provider_configuration' })
+    }
     const dispatched = await controlPlane.markDispatched({
       jobId: prepared.job.id,
       ownerToken: prepared.ownerToken,
@@ -241,18 +280,6 @@ export function createGenerationService({
     })
     if (!dispatched) {
       return { ...(await controlPlane.waitForResult({ jobId: prepared.job.id })), replayed: true }
-    }
-
-    const personal = !sourceProvider && personalProviderFactory
-      ? await personalProviderFactory({ actor, provider: prepared.job.provider, model: prepared.job.model, region: prepared.job.region, step, credentialVersion: prepared.job.credentialVersion })
-      : null
-    const provider = sourceProvider ?? (personalProviderFactory ? personal : (personal ?? providers[prepared.job.provider]))
-    if (!provider) {
-      return recoverGeneration({
-        jobId: prepared.job.id,
-        ownerToken: prepared.ownerToken,
-        reason: prepared.job.credentialVersion != null ? 'credential_version_changed' : 'provider_configuration_missing',
-      })
     }
 
     const abortController = new AbortController()
@@ -276,6 +303,14 @@ export function createGenerationService({
     try {
       result = await Promise.race([providerCall, timeout])
     } catch (error) {
+      const known = knownProviderFailure(error, prepared.job)
+      if (known) {
+        return controlPlane.completeProviderResult({
+          jobId: prepared.job.id, ownerToken: prepared.ownerToken, status: 'failed', safety: {}, usage: {},
+          actualCostMicrounits: known.actualCostMicrounits, resultMetadata: null, errorCode: known.errorCode,
+          completedAt: safeInstant(clock(), 'Generation clock'),
+        })
+      }
       return recoverGeneration({
         jobId: prepared.job.id,
         ownerToken: prepared.ownerToken,
@@ -451,6 +486,13 @@ export function createGenerationService({
     async retainCopy({ actor, campaignId, expectedRevision }) {
       requireRole(actor, editorRoles)
       return controlPlane.retainCopy({ actor, campaignId, expectedRevision })
+    },
+
+    async resolveJob({ actor, jobId, input }) {
+      requireRole(actor, editorRoles)
+      validate(generationJobResolutionRequestSchema, input ?? {})
+      if (typeof jobId !== 'string' || jobId.trim().length === 0) throw new GenerationServiceError(400, 'invalid_job_id', 'Generation job id is required')
+      return controlPlane.resolveUnknownJob({ actor, jobId })
     },
 
     async approveCopy({ actor, campaignId, expectedRevision, input }) {

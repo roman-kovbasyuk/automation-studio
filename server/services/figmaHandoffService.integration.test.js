@@ -20,6 +20,7 @@ import { createMockProvider } from '../providers/mockProvider.js'
 import { createMemoryAssetStore } from '../storage/memoryAssetStore.js'
 import { studioTemplates } from '../../shared/studioTemplates.js'
 import { hashCanonical } from '../../shared/canonicalJson.js'
+import { briefWithBriefing, confirmBriefing } from '../testing/briefingFixtures.js'
 
 test('durable handoff is idempotent, fenced and only imported after exact acknowledgement', async () => {
   const schema=`figma_flow_${randomUUID().replaceAll('-','')}`
@@ -33,7 +34,7 @@ test('durable handoff is idempotent, fenced and only imported after exact acknow
     await pool.query("INSERT INTO users (id,email,role,display_name) VALUES ('marketer','marketer@figma.test','marketer','Marketer'), ('designer','designer@figma.test','designer','Designer')")
     const actor={ id:'marketer',role:'marketer' }, designer={ id:'designer',role:'designer' }
     const common={ actor,campaignId:'campaign' }
-    const brief={ product:'Headphones',audience:'Commuters',objective:'Shop',offer:'20% off until Sunday',locale:'en',notes:'' }
+    const brief=briefWithBriefing({ product:'Headphones',audience:'Commuters',objective:'Shop',offer:'20% off until Sunday',locale:'en',notes:'' })
     await createCampaignRepository(pool).create({ id:'campaign',title:'Launch',createdBy:actor.id,brief })
     for(const manifest of studioTemplates) await createTemplateRepository(pool).createVersion({ ...manifest,manifest,manifestHash:hashCanonical(manifest),createdBy:actor.id })
     const assetStore=createMemoryAssetStore()
@@ -41,6 +42,7 @@ test('durable handoff is idempotent, fenced and only imported after exact acknow
     const versions=createVersionService({ pool,assetStore })
     const read=()=>createWorkspaceService({ pool }).getWorkspace(common)
     await generation.analyseBrief({ ...common,input:{},idempotencyKey:'brief' })
+    await confirmBriefing({ pool,...common })
     await generation.generateCopy({ ...common,input:{},idempotencyKey:'copy' })
     const set=(await read()).copies[0],copy=set.candidates[1]
     await generation.approveCopy({ ...common,expectedRevision:(await read()).campaign.revision,input:{ copyId:copy.id } })

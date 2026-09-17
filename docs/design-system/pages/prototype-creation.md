@@ -13,7 +13,7 @@
 ## Master and inheritance
 
 - Owning design layer: application patterns, using Brutalist foundations.
-- Master component, composition or flow and its contract/version: `ConnectedStudio` owns the application shell, `CampaignPage` owns campaign composition and module navigation, and `BriefingClarificationWizard` is the prototype-only briefing preflight descendant.
+- Master component, composition or flow and its contract/version: `ConnectedStudio` owns the application shell, `CampaignPage` owns campaign composition and module navigation. The prototype-only briefing preflight wizard was removed in M0 as unreachable code.
 - Is this a new master, configured instance, supported variant or composition? A configured offline runtime with the existing campaign composition plus a sequential briefing variant.
 - Inherited visual, semantic, interaction and data guarantees: Brutalist public controls and tokens, application-owned layout containers, semantic headings/statuses, keyboard-accessible controls and React StrictMode.
 - Public extension points used: Vite prototype mode, lazy entry, module `prototypeMode` prop, memory/IndexedDB store and local API-compatible adapters.

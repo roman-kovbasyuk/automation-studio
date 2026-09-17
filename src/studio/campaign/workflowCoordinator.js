@@ -23,7 +23,8 @@ export function createWorkflowCoordinator({ runtime, onNavigate = () => {} }) {
         if (incomplete && ['brief', 'copy', 'visuals'].some(id => runtime.getSnapshot(id).operation.kind === 'uncertain')) {
           return { ok: false, code: 'reconciliation_required', message: 'Resolve the previous submission before changing its input.' }
         }
-        if (patch) {
+        // A submission may carry only sources: a new project's brief is already saved.
+        if (patch?.brief) {
           const saved = await brief.save(patch, { expectedInputKey })
           if (!saved.ok) return saved
           runtime.setDirty('brief', false)

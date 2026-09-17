@@ -218,6 +218,21 @@ describe('generation and selection routes', () => {
     await app.close()
   })
 
+  test('marks an unknown job as failed only for editors with the strict resolution body', async () => {
+    const resolved = { ...pendingJob, status: 'failed', result: null, actualCostMicrounits: 3_000, unknownReason: 'provider_timeout',
+      resolution: 'marked_failed', resolvedBy: 'marketer-1', resolvedAt: '2026-09-04T10:01:10.000Z' }
+    const { app, generationService } = makeApp({ generation: { resolveJob: vi.fn(async () => resolved) } })
+    const response = await app.inject({ method: 'POST', url: '/api/v1/generation-jobs/job-1/resolve', payload: { resolution: 'marked_failed' } })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toMatchObject({ ...resolved, requestId: expect.any(String) })
+    expect(generationService.resolveJob).toHaveBeenCalledWith(expect.objectContaining({ jobId: 'job-1', input: { resolution: 'marked_failed' } }))
+    expect((await app.inject({ method: 'POST', url: '/api/v1/generation-jobs/job-1/resolve', payload: { resolution: 'succeeded' } })).statusCode).toBe(400)
+    expect((await app.inject({ method: 'POST', url: '/api/v1/generation-jobs/job-1/resolve', payload: {} })).statusCode).toBe(400)
+    const designer = makeApp({ role: 'designer', generation: { resolveJob: vi.fn(async () => resolved) } })
+    expect((await designer.app.inject({ method: 'POST', url: '/api/v1/generation-jobs/job-1/resolve', payload: { resolution: 'marked_failed' } })).statusCode).toBe(403)
+    expect(designer.generationService.resolveJob).not.toHaveBeenCalled()
+  })
+
   test('forbids designers from dispatching every generation command', async () => {
     const { app, generationService } = makeApp({ role: 'designer' })
     for (const url of ['analyse-brief', 'copy-generations', 'direction-generations', 'image-generations']) {

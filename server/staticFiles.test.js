@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { buildApp } from './app.js'
 import { openStaticBuild } from './staticFiles.js'
 
-const spaHtml = '<!doctype html><title>Banner Studio app</title><script type="module" src="/assets/app-deadbeef.js"></script>'
-const docsHtml = '<!doctype html><title>Banner Studio docs</title><link rel="stylesheet" href="/docs/assets/style.deadbeef.css">'
+const spaHtml = '<!doctype html><title>Automation Studio app</title><script type="module" src="/assets/app-deadbeef.js"></script>'
+const docsHtml = '<!doctype html><title>Automation Studio docs</title><link rel="stylesheet" href="/docs/assets/style.deadbeef.css">'
 const workflowHtml = '<!doctype html><title>Workflow documentation</title>'
 const docsNotFoundHtml = '<!doctype html><title>Documentation page not found</title>'
 
@@ -61,7 +61,7 @@ describe('production static serving', () => {
     expect(missingApi.statusCode).toBe(404)
     expect(missingApi.headers['content-type']).toContain('application/json')
     expect(missingApi.json()).toMatchObject({ code: 'NOT_FOUND' })
-    expect(missingApi.body).not.toContain('Banner Studio app')
+    expect(missingApi.body).not.toContain('Automation Studio app')
     await app.close()
   })
 
@@ -100,7 +100,7 @@ describe('production static serving', () => {
     expect(withoutSlash.statusCode).toBe(308)
     expect(withoutSlash.headers.location).toBe('/docs/')
     expect(docsRoot.statusCode).toBe(200)
-    expect(docsRoot.body).toContain('Banner Studio docs')
+    expect(docsRoot.body).toContain('Automation Studio docs')
     expect(docsRoot.headers['content-type']).toContain('text/html')
     expect(docsRoot.headers['cache-control']).toBe('no-cache')
     expect(nested.statusCode).toBe(200)
@@ -153,10 +153,10 @@ describe('production static serving', () => {
     expect(missingPage.headers['content-type']).toContain('text/html')
     expect(missingPage.headers['cache-control']).toBe('no-cache')
     expect(missingPage.body).toContain('Documentation page not found')
-    expect(missingPage.body).not.toContain('Banner Studio app')
+    expect(missingPage.body).not.toContain('Automation Studio app')
     expect(missingAsset.statusCode).toBe(404)
     expect(missingAsset.headers['content-type']).toContain('application/json')
-    expect(missingAsset.body).not.toContain('Banner Studio app')
+    expect(missingAsset.body).not.toContain('Automation Studio app')
     expect(missingHtml.statusCode).toBe(404)
     expect(missingHtml.headers['content-type']).toContain('text/html')
     expect(missingHtml.body).toContain('Documentation page not found')
@@ -178,10 +178,10 @@ describe('production static serving', () => {
     const serverFile = await app.inject({ method: 'GET', url: '/server/app.js', headers: { accept: 'text/html' } })
 
     expect(rootResponse.statusCode).toBe(200)
-    expect(rootResponse.body).toContain('Banner Studio app')
+    expect(rootResponse.body).toContain('Automation Studio app')
     expect(rootResponse.headers['cache-control']).toBe('no-cache')
     expect(browserRoute.statusCode).toBe(200)
-    expect(browserRoute.body).toContain('Banner Studio app')
+    expect(browserRoute.body).toContain('Automation Studio app')
     expect(asset.statusCode).toBe(200)
     expect(asset.headers['content-type']).toContain('application/javascript')
     expect(asset.headers['cache-control']).toBe('public, max-age=31536000, immutable')
@@ -190,7 +190,7 @@ describe('production static serving', () => {
     for (const response of [missingAsset, missingAssetWithoutExtension, sourceMap, serverFile]) {
       expect(response.statusCode).toBe(404)
       expect(response.headers['content-type']).toContain('application/json')
-      expect(response.body).not.toContain('Banner Studio app')
+      expect(response.body).not.toContain('Automation Studio app')
     }
     expectStaticSecurityHeaders(rootResponse)
     expectStaticSecurityHeaders(asset)
@@ -209,7 +209,7 @@ describe('production static serving', () => {
     for (const response of [json, wildcard, post, healthTypo, apiRoot]) {
       expect(response.statusCode).toBe(404)
       expect(response.headers['content-type']).toContain('application/json')
-      expect(response.body).not.toContain('Banner Studio app')
+      expect(response.body).not.toContain('Automation Studio app')
     }
     await app.close()
   })
@@ -246,7 +246,7 @@ describe('production static serving', () => {
     const app = buildApp({ staticRoot: root })
     const response = await app.inject({ method: 'GET', url, headers: { accept: 'text/html' } })
     expect(response.statusCode).toBe(404)
-    expect(response.body).not.toContain('Banner Studio app')
+    expect(response.body).not.toContain('Automation Studio app')
     await app.close()
   })
 
@@ -259,7 +259,7 @@ describe('production static serving', () => {
     ]) {
       const response = await app.inject({ method: 'GET', url, headers: { accept: 'text/html' } })
       expect(response.statusCode, url).toBe(200)
-      expect(response.body, url).toContain('Banner Studio app')
+      expect(response.body, url).toContain('Automation Studio app')
     }
     await app.close()
   })
@@ -348,8 +348,8 @@ describe('production static serving', () => {
     const app = buildApp({ staticRoot: root })
     const response = await app.inject({ method: 'GET', url, headers: { accept: 'text/html' } })
     expect(response.statusCode).toBe(404)
-    expect(response.body).not.toContain('Banner Studio app')
-    expect(response.body).not.toContain('Banner Studio docs')
+    expect(response.body).not.toContain('Automation Studio app')
+    expect(response.body).not.toContain('Automation Studio docs')
     await app.close()
   })
 

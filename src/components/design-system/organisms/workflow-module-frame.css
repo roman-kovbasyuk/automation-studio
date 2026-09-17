@@ -1,7 +1,0 @@
-.bs-ds-workflow-module { min-width: 0; padding: var(--a-space-8); }
-.bs-ds-workflow-module-heading { margin-bottom: var(--a-space-8); }
-.bs-ds-workflow-module-heading h2 { font-size: var(--a-type-h2-size); line-height: var(--a-type-h2-line); margin: 0; font-weight: var(--a-type-h2-weight); }
-@media (max-width: 600px) {
-  .bs-ds-workflow-module { padding: var(--a-space-4); }
-  .bs-ds-workflow-module-heading h2 { font-size: var(--a-type-h3-size); line-height: var(--a-type-h3-line); }
-}

@@ -105,7 +105,6 @@ export function createWorkflowService({
   providerRegistry = generationProviderRegistry,
   personalAiService,
   personalSettingsService,
-  briefingEnabled = false,
 } = {}) {
   if (!pool || typeof pool.query !== 'function') throw new TypeError('A PostgreSQL pool is required')
   if (typeof transaction !== 'function') throw new TypeError('A transaction function is required')
@@ -272,11 +271,7 @@ export function createWorkflowService({
       // Banner campaigns always enter the canonical briefing workflow. The
       // client marker is a compatibility hint for older callers, not a
       // permission switch that can select the retired flow.
-      if (command.projectType === 'banners') {
-        if (!briefingEnabled) throw new WorkflowServiceError(503,'briefing_unavailable','The new briefing flow is not enabled yet.')
-        command.brief.briefing=initialBriefingState(command.brief)
-      } else if (command.brief.briefing?.schemaVersion === 2) {
-        if (!briefingEnabled) throw new WorkflowServiceError(503,'briefing_unavailable','The new briefing flow is not enabled yet.')
+      if (command.projectType === 'banners' || command.brief.briefing?.schemaVersion === 2) {
         command.brief.briefing=initialBriefingState(command.brief)
       }
       const created = await transaction(pool, async (client) => {
@@ -388,7 +383,8 @@ export function createWorkflowService({
         const source = await campaigns.findByIdForUpdate(campaignId)
         if (!source) throw missing('Campaign')
         const raw=rawBrief(source.brief)
-        const canonicalBanner=briefingEnabled && (source.projectType ?? 'banners') === 'banners'
+        // Duplicates start their own canonical briefing, as creation does.
+        const canonicalBanner=(source.projectType ?? 'banners') === 'banners' || source.brief.briefing?.schemaVersion === 2
         const created = await campaigns.create({
           id: idGenerator(),
           title: `${source.title} copy`,

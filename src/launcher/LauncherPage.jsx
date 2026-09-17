@@ -99,7 +99,7 @@ export function LauncherPage() {
     <DesignSystemRoot><main className="launcher" id="launcher-services">
       <header className="launcher__header">
         <div>
-          <p className="launcher__eyebrow">Banner Studio / local workspace</p>
+          <p className="launcher__eyebrow">Automation Studio / local workspace</p>
           <h1>Local launchpad</h1>
           <p className="launcher__lede">Open the tools that run the studio, keep the surfaces close, and restart the local stack when it needs a clean start.</p>
         </div>

@@ -1,6 +1,6 @@
 import { BriefView } from './BriefView.jsx'
 import { useEffect, useRef, useState } from 'react'
-import { AppButton, FactGrid } from "../../../../components/design-system/compatibility.jsx"
+import { FactGrid } from "../../../../components/design-system/compatibility.jsx"
 import { InlineText } from '../../../../components/design-system/molecules/InlineText.jsx'
 import { AsyncStatus } from '../../../../components/design-system/molecules/AsyncStatus.jsx'
 import { PromptInputBlock } from '../../../../components/design-system/organisms/PromptInputBlock.jsx'
@@ -20,7 +20,6 @@ export default function BriefModule({ port }) {
   const source = useRef(port.inputKey), busy = useRef(false), dirtyFields = useRef(new Set())
   const [reviewDraft, setReviewDraft] = useState(() => briefing?.answers ?? null)
   const [reviewDirty, setReviewDirty] = useState(false), [reviewSaving, setReviewSaving] = useState(false), [reviewError, setReviewError] = useState('')
-  const [legacyReviewing, setLegacyReviewing] = useState(false), [legacyReviewError, setLegacyReviewError] = useState('')
   const reviewInputKey = useRef(port.inputKey)
   const sourceControls = useRef(null)
   useEffect(() => {
@@ -69,16 +68,6 @@ export default function BriefModule({ port }) {
     } catch (failure) { setError(failure.message) }
     finally { busy.current = false; setSubmitting(false) }
   }
-  async function startReview() {
-    if (!port.actions.startReview || !port.access.canEdit || running || legacyReviewing) return
-    setLegacyReviewing(true)
-    setLegacyReviewError('')
-    try {
-      const result = await port.actions.startReview()
-      if (!result?.ok) setLegacyReviewError(result?.message ?? 'Unable to review campaign questions.')
-    } catch (failure) { setLegacyReviewError(failure.message) }
-    finally { setLegacyReviewing(false) }
-  }
   const edit = (field, label, { list = false, ...props } = {}) => <InlineText label={label}
     value={list ? (analysis[field] ?? []).join(', ') : analysis[field] ?? brief[field] ?? ''}
     sourceKey={port.inputKey} readOnly={locked} onDirty={dirty => markDirty(field, dirty)} {...props}
@@ -110,10 +99,6 @@ export default function BriefModule({ port }) {
         { id: 'channels', label: 'Channels', value: edit('channels', 'Channels', { list: true, maxLength: 2000 }) },
         { id: 'formats', label: 'Formats', value: edit('formats', 'Formats', { list: true, maxLength: 2000 }) },
       ]} />
-      {port.actions.startReview && <div>
-        <AppButton type="button" disabled={!port.access.canEdit || running || legacyReviewing} onClick={startReview}>Review campaign questions</AppButton>
-        {legacyReviewError && <p role="alert">{legacyReviewError}</p>}
-      </div>}
       <PromptInputBlock label="Refine brief" formLabel="Brief refinement" rows={3} maxLength={4000} compact iconOnlySubmit
         value={chat} onChange={value => { if (!chat) source.current = port.inputKey; setChat(value); markDirty('chat', Boolean(value)) }}
         onSubmit={refine} canSubmit={Boolean(chat.trim()) && !locked} readOnly={!port.access.canEdit && !running}

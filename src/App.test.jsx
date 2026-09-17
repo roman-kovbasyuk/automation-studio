@@ -10,7 +10,7 @@ test.each(['/design-system', '/design-system/'])('opens the standalone component
   render(<App />)
   expect(await screen.findByRole('heading', { name: 'Brutalist Design System' })).toBeVisible()
   expect(screen.getByRole('heading', { name: 'Installed tokens' })).toBeVisible()
-  expect(screen.getByRole('link', { name: 'Back to Banner Studio' })).toHaveAttribute('href', '/')
+  expect(screen.getByRole('link', { name: 'Back to Automation Studio' })).toHaveAttribute('href', '/')
   expect(screen.queryByText('Connected campaign workspace')).not.toBeInTheDocument()
 })
 test('application entry renders the connected studio', () => {

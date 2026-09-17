@@ -29,7 +29,17 @@ export async function invokeProvider(provider, operation, input, signal) {
   const contract = operations[operation]
   if (!contract) throw new TypeError(`Unknown generation provider operation ${operation}`)
   if (!(signal instanceof AbortSignal)) throw new TypeError('Generation provider calls require an AbortSignal')
-  const validatedInput = contract.input.parse(input)
+  let validatedInput
+  try {
+    validatedInput = contract.input.parse(input)
+  } catch (error) {
+    // Nothing was sent: the outcome is a known failure, not an uncertain one.
+    throw Object.assign(error, { code: 'invalid_request', dispatched: false })
+  }
   const result = await provider[operation](validatedInput, signal)
-  return contract.result.parse(result)
+  try {
+    return contract.result.parse(result)
+  } catch (error) {
+    throw Object.assign(error, { code: 'invalid_output' })
+  }
 }

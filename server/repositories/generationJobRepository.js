@@ -14,6 +14,7 @@ function generationBriefCurrent(step,before,after) {
 import { copyVariantSchema, generateImageInputSchema, visualDirectionSchema } from '../../shared/contracts.js'
 import { withDeadlineTransaction, withTransaction } from '../db/pool.js'
 import { createAuditRepository } from './auditRepository.js'
+import { UNKNOWN_RESOLUTION_WAIT_MS } from '../../shared/generationErrors.js'
 import { createCampaignRepository } from './campaignRepository.js'
 import { createSettingsRepository } from './settingsRepository.js'
 import { loadVisualContext } from '../services/visualContext.js'
@@ -70,6 +71,10 @@ function mapJob(row) {
     timeoutAt: iso(row.timeout_at),
     result: row.result_metadata,
     errorCode: row.error_code,
+    unknownReason: row.unknown_reason ?? null,
+    resolution: row.resolution ?? null,
+    resolvedBy: row.resolved_by ?? null,
+    resolvedAt: row.resolved_at ? iso(row.resolved_at) : null,
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
   }
@@ -1200,6 +1205,42 @@ export function createGenerationControlPlane({
 
     async markUnknown({ jobId, ownerToken, reason }) {
       return recoverGeneration({ jobId, ownerToken, reason })
+    },
+
+    async resolveUnknownJob({ actor, jobId }) {
+      return transaction(pool, async (client) => {
+        const identity = await client.query('SELECT campaign_id FROM generation_jobs WHERE id = $1', [jobId])
+        if (!identity.rows[0]) conflict('not_found', 'Generation job was not found', 404)
+        // Match preparation's lock order: campaign, then generation job.
+        await client.query('SELECT id FROM campaigns WHERE id = $1 FOR UPDATE', [identity.rows[0].campaign_id])
+        const current = (await client.query('SELECT * FROM generation_jobs WHERE id = $1 FOR UPDATE', [jobId])).rows[0]
+        if (actor.role !== 'admin' && current.actor_id !== actor.id) {
+          conflict('forbidden', 'Only the person who started this generation or an admin can mark it as failed', 403)
+        }
+        if (current.status === 'failed' && current.resolution === 'marked_failed') return mapJob(current)
+        if (current.status !== 'unknown') conflict('generation_not_unknown', 'Only a generation with an unknown outcome can be marked as failed')
+        const resolvedAt = clock()
+        const availableAt = new Date(current.timeout_at.getTime() + UNKNOWN_RESOLUTION_WAIT_MS)
+        if (resolvedAt < availableAt) conflict('generation_resolution_too_early', 'The outcome may still arrive. Check again shortly.')
+        // The provider may have charged for the call, so its reservation stays counted.
+        const updated = await client.query(
+          `UPDATE generation_jobs
+           SET status = 'failed', resolution = 'marked_failed', resolved_by = $2, resolved_at = $3,
+               actual_cost_microunits = COALESCE(actual_cost_microunits, reserved_cost_microunits), completed_at = $3, updated_at = $3
+           WHERE id = $1 AND status = 'unknown'
+           RETURNING *`,
+          [jobId, actor.id, resolvedAt],
+        )
+        // The video worker never resumes an unknown phase; align it so video views show the failure.
+        if (current.step === 'video') {
+          await client.query("UPDATE video_jobs SET phase = 'failed', lease_token = NULL, lease_expires_at = NULL WHERE job_id = $1 AND phase = 'unknown'", [jobId])
+        }
+        await createAuditRepository(client).append({ id: idGenerator(), actorId: actor.id, actorRole: actor.role,
+          action: 'generation.marked_failed', entityType: 'generation_job', entityId: jobId, beforeStatus: null, afterStatus: null,
+          payload: { campaignId: current.campaign_id, step: current.step, unknownReason: current.unknown_reason }, createdAt: resolvedAt })
+        // Replaying the original request returns the resolved job, not the stale unknown response.
+        return (await storeResponse(client, updated.rows[0], 201)).body.job
+      })
     },
 
     async getJob({ jobId }) {

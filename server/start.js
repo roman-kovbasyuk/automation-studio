@@ -17,7 +17,7 @@ export function installShutdownHandlers(runtime, { processLike = process, logger
   const shutdown = () => {
     if (!shutdownPromise) {
       shutdownPromise = runtime.close().catch((error) => {
-        logger.error('Banner Studio shutdown failed', error)
+        logger.error('Automation Studio shutdown failed', error)
         processLike.exitCode = 1
       })
     }
@@ -33,7 +33,7 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   startServer().then((runtime) => {
     installShutdownHandlers(runtime)
   }).catch((error) => {
-    console.error('Banner Studio failed to start', error)
+    console.error('Automation Studio failed to start', error)
     process.exitCode = 1
   })
 }
