@@ -1,0 +1,6 @@
+.c-table { width: 100%; border-collapse: collapse; background: var(--a-color-surface); }
+.c-table th, .c-table td { padding: var(--a-space-4); border: var(--a-border-width) solid var(--a-color-ink); text-align: start; vertical-align: middle; }
+.c-table th { font-weight: var(--a-type-h7-weight); }
+.c-table th:has(.c-table__sort) { padding: 0; }
+.c-table__sort { width: 100%; min-height: var(--a-size-control); display: flex; align-items: center; justify-content: space-between; gap: var(--a-space-3); padding: var(--a-space-4); border: 0; background: transparent; color: inherit; cursor: pointer; text-align: start; }
+.c-table__sort:hover, .c-table__sort:focus-visible { background: var(--a-color-canvas); outline-offset: calc(-1 * var(--a-focus-width)); }

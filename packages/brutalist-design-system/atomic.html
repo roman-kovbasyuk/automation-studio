@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="refresh" content="0;url=/getting-started.html" />
+    <title>Documentation · Brutalist Design System</title>
+  </head>
+  <body>
+    <p>This reference URL moved to the current documentation. <a id="redirect-link" href="/getting-started.html">Open documentation</a>.</p>
+    <script>
+      const hash = window.location.hash.slice(1)
+      const destination = new URL('/getting-started.html', window.location.origin)
+      if (/^(?:color|typography|spacing|shape|elevation|motion|layout)$/.test(hash)) {
+        destination.pathname = '/basics.html'
+        destination.searchParams.set('basic', hash)
+        destination.hash = 'overview'
+      } else if (hash.startsWith('component-')) {
+        destination.pathname = '/components.html'
+        destination.searchParams.set('component', hash.slice('component-'.length))
+        destination.hash = 'overview'
+      } else if (hash.startsWith('block-')) {
+        destination.pathname = '/ui-blocks.html'
+        destination.searchParams.set('block', hash.slice('block-'.length))
+        destination.hash = 'overview'
+      }
+      document.getElementById('redirect-link').href = destination.pathname + destination.search + destination.hash
+      window.location.replace(destination.pathname + destination.search + destination.hash)
+    </script>
+  </body>
+</html>

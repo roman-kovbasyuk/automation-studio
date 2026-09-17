@@ -1,0 +1,9 @@
+.c-progress__label { display: flex; justify-content: space-between; align-items: baseline; gap: var(--a-space-4); }
+.c-progress-bar__track { height: var(--a-space-4); overflow: hidden; border: var(--a-border-width) solid var(--a-color-ink); border-radius: var(--a-radius-pill); background: var(--a-color-surface); }
+.c-progress-bar__track > span { display: block; width: var(--progress); height: 100%; background: var(--a-color-accent); transition: width var(--a-motion-disclosure) var(--a-motion-out); }
+.c-progress-bar__track[data-indeterminate] > span { width: 35%; animation: c-progress-travel var(--a-motion-spin) var(--a-motion-ease) infinite alternate; }
+@keyframes c-progress-travel { from { transform: translateX(-100%); } to { transform: translateX(286%); } }
+.c-progress-ring__track { display: grid; place-items: center; flex: none; width: var(--a-space-16); height: var(--a-space-16); border: var(--a-border-width) solid var(--a-color-ink); border-radius: var(--a-radius-pill); background: conic-gradient(var(--a-color-accent) var(--progress), var(--a-color-canvas) var(--progress)); padding: var(--a-space-1); }
+.c-progress-ring__track > span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: var(--a-radius-pill); background: var(--a-color-surface); }
+@media (prefers-reduced-motion: reduce) { .c-progress-bar__track > span { transition: none; } .c-progress-bar__track[data-indeterminate] > span { animation: none; width: 100%; opacity: var(--a-state-disabled); } }
+@media (forced-colors: active) { .c-progress-bar__track > span { background: Highlight; } .c-progress-ring__track { border-color: CanvasText; } }

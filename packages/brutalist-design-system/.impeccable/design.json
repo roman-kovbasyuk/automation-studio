@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-15T00:00:00.000Z",
+  "title": "Design System: Brutalist Design System",
+  "extensions": {
+    "colorMeta": {
+      "canvas": { "role": "neutral", "displayName": "Warm Canvas", "canonical": "#f4f4f0", "tonalRamp": ["#1b1b19", "#343430", "#4f4f4a", "#6a6a63", "#85857d", "#a0a099", "#c6c6be", "#f4f4f0"] },
+      "surface": { "role": "neutral", "displayName": "Working Surface", "canonical": "#ffffff", "tonalRamp": ["#1a1a1a", "#333333", "#4d4d4d", "#666666", "#808080", "#999999", "#cccccc", "#ffffff"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "#000000", "tonalRamp": ["#000000", "#1f1f1f", "#3d3d3d", "#5c5c5c", "#7a7a7a", "#999999", "#c2c2c2", "#ffffff"] },
+      "secondary": { "role": "neutral", "displayName": "Secondary Ink", "canonical": "#595959", "tonalRamp": ["#171717", "#292929", "#3b3b3b", "#4d4d4d", "#595959", "#777777", "#ababab", "#eeeeee"] },
+      "accent": { "role": "primary", "displayName": "Electric Cyan", "canonical": "#79d9ff", "tonalRamp": ["#00354a", "#005b79", "#087d9f", "#279fc2", "#49b9dc", "#79d9ff", "#b2eaff", "#e5f9ff"] },
+      "success": { "role": "secondary", "displayName": "Utility Teal", "canonical": "#23a094", "tonalRamp": ["#003d36", "#00675c", "#008b7c", "#23a094", "#51bbae", "#84d0c5", "#b7e5df", "#e8f8f5"] },
+      "danger": { "role": "tertiary", "displayName": "Signal Red", "canonical": "#dc341e", "tonalRamp": ["#4b0800", "#791508", "#a82414", "#dc341e", "#ed624f", "#f38f82", "#fac0b8", "#fde9e6"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Page titles and major catalog headings." },
+      "headline": { "displayName": "Headline", "purpose": "Section-level headings." },
+      "title": { "displayName": "Title", "purpose": "Component and specimen headings." },
+      "body": { "displayName": "Body", "purpose": "Explanations, field content, and readable prose." },
+      "label": { "displayName": "Label", "purpose": "Navigation labels, metadata, and compact control text." }
+    },
+    "shadows": [
+      { "name": "small-offset", "value": "2px 2px 0 var(--a-color-ink)", "purpose": "Compact controls and selected affordances." },
+      { "name": "interactive-offset", "value": "4px 4px 0 var(--a-color-ink)", "purpose": "Hover and focus-within feedback." },
+      { "name": "floating-offset", "value": "8px 8px 0 var(--a-color-ink)", "purpose": "Modals and elevated popovers." }
+    ],
+    "motion": [
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default state transitions." },
+      { "name": "ease-out", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Responsive lift and disclosure transitions." },
+      { "name": "fast", "value": "150ms", "purpose": "Quick interactive feedback." }
+    ],
+    "breakpoints": [
+      { "name": "narrow", "value": "600px" }
+    ]
+  },
+  "components": [
+    { "name": "Primary Button", "kind": "button", "refersTo": "button-primary", "description": "Cyan action button with tactile hard-edge hover feedback.", "html": "<button class=\"ds-button-primary\">Continue</button>", "css": ".ds-button-primary { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 8px 16px; border: 1px solid var(--a-color-ink); border-radius: 4px; background: var(--a-color-accent); color: var(--a-color-ink); font: inherit; cursor: pointer; transition: transform 150ms cubic-bezier(0.22,1,0.36,1), box-shadow 150ms cubic-bezier(0.22,1,0.36,1); } .ds-button-primary:hover { transform: translate(-4px,-4px); box-shadow: 4px 4px 0 var(--a-color-ink); } .ds-button-primary:focus-visible { outline: 2px solid var(--a-color-ink); outline-offset: 4px; }" },
+    { "name": "Default Button", "kind": "button", "refersTo": "button-default", "description": "White bordered button for secondary actions.", "html": "<button class=\"ds-button-default\">Cancel</button>", "css": ".ds-button-default { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 8px 16px; border: 1px solid var(--a-color-ink); border-radius: 4px; background: var(--a-color-surface); color: var(--a-color-ink); font: inherit; cursor: pointer; transition: transform 150ms cubic-bezier(0.22,1,0.36,1), box-shadow 150ms cubic-bezier(0.22,1,0.36,1); } .ds-button-default:hover { transform: translate(-4px,-4px); box-shadow: 4px 4px 0 var(--a-color-ink); } .ds-button-default:focus-visible { outline: 2px solid var(--a-color-ink); outline-offset: 4px; }" },
+    { "name": "Text Field", "kind": "input", "refersTo": "text-field", "description": "Full-width field with explicit ink stroke and focus ring.", "html": "<input class=\"ds-input\" placeholder=\"Search components\" />", "css": ".ds-input { width: 100%; min-height: 48px; padding: 12px 16px; border: 1px solid var(--a-color-ink); border-radius: 4px; background: var(--a-color-surface); color: var(--a-color-ink); font: inherit; } .ds-input::placeholder { color: var(--a-color-secondary); } .ds-input:focus-visible { outline: 2px solid var(--a-color-ink); outline-offset: 4px; }" },
+    { "name": "Tag", "kind": "chip", "refersTo": "tag", "description": "Pill status label for compact semantic feedback.", "html": "<span class=\"ds-tag\">In review</span>", "css": ".ds-tag { display: inline-flex; align-items: center; min-height: 28px; padding: 4px 8px; border: 1px solid var(--a-color-ink); border-radius: 999px; background: var(--a-color-surface); color: var(--a-color-ink); font: inherit; }" },
+    { "name": "Navigation Row", "kind": "nav", "description": "Compact left-aligned catalog row with an outlined active state.", "html": "<nav><a class=\"ds-nav-row\" aria-current=\"page\" href=\"#button\">Button</a></nav>", "css": ".ds-nav-row { display: flex; align-items: center; min-height: 44px; padding: 8px; border-radius: 4px; color: var(--a-color-ink); text-decoration: none; } .ds-nav-row:hover { background: var(--a-color-surface); } .ds-nav-row[aria-current=page] { background: var(--a-color-surface); box-shadow: inset 0 0 0 1px var(--a-color-ink); font-weight: 600; }" },
+    { "name": "Panel", "kind": "card", "description": "Bordered working surface for previews, source, and workflows.", "html": "<section class=\"ds-panel\"><header>Component preview</header><div>Working content</div></section>", "css": ".ds-panel { overflow: hidden; border: 1px solid var(--a-color-ink); border-radius: 20px; background: var(--a-color-surface); } .ds-panel header { padding: 24px; background: var(--a-color-canvas); border-bottom: 1px solid var(--a-color-ink); font-weight: 600; } .ds-panel > div { padding: 24px; }" }
+  ],
+  "narrative": {
+    "northStar": "The Working Specimen",
+    "overview": "Brutalist Design System treats every component as a working specimen: clear enough to inspect, direct enough to copy, and tactile enough to reveal its behavior. The visual language is high-contrast and utilitarian, with a warm paper canvas, white working surfaces, black ink, and a bright cyan accent reserved for action and state.\n\nThe system favors readable density over decoration. Strong borders, compact radii, visible focus, and small offset shadows make interaction states legible. Documentation follows a categorized, AlignUI-inspired structure so vibe coders can move from preview to source to usable implementation without losing context.",
+    "keyCharacteristics": ["Warm canvas and white surfaces", "Black ink with cyan action accents", "Compact radii, explicit borders, and offset depth", "Preview-first documentation with copyable output", "Responsive, semantic, keyboard-accessible controls"],
+    "rules": [
+      { "name": "The Small Palette Rule", "body": "Use the accent and feedback colors for meaning; let ink, canvas, and surface carry most of the interface.", "section": "colors" },
+      { "name": "The Specimen First Rule", "body": "Show a readable working example before asking users to parse implementation details.", "section": "typography" },
+      { "name": "The Hard Edge Rule", "body": "Keep depth crisp and directional; do not introduce soft gradients or diffuse shadows into the core component language.", "section": "elevation" }
+    ],
+    "dos": ["Do use shared atomic primitives for controls, layout, and interaction behavior.", "Do pair previews with copyable IDs or code wherever a developer needs to act.", "Do preserve semantic names, keyboard access, and visible focus states.", "Do use borders and offset shadows to explain structure and state."],
+    "donts": ["Don't replace reusable components with private screen-only controls.", "Don't use accent colors as decoration without an interaction or status meaning.", "Don't hide source examples behind fixed-height regions that clip wrapped code.", "Don't introduce soft, diffuse elevation that conflicts with the hard-edge visual language."]
+  }
+}
