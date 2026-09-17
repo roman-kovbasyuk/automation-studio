@@ -1,6 +1,6 @@
 # Brief review
 
-**Status:** Target (draft for owner review) · **Updated:** 17 September 2026 · **Requirements:** BRIEF-2–5, COPY-1, VIS-1, VIS-5, NFR-2, NFR-5, NFR-6 · **Decisions:** D36, D37; proposes D39 · **Depends on:** M0, DS0
+**Status:** Target (draft for owner review) · **Updated:** 17 September 2026 · **Requirements:** BRIEF-2–5, COPY-1, VIS-1, VIS-5, NFR-2, NFR-5, NFR-6 · **Decisions:** D36, D37; proposes D39 · **Depends on:** M0, DS0 · **Plan:** [implementation plan](../plans/2026-09-17-brief-review.md)
 
 How the Brief stage of a banner set turns one AI analysis into a confirmed brief: the AI prefills what it can, and the requester reviews it in up to three steps.
 
@@ -216,7 +216,7 @@ Derived in the browser from the stored proposal and the draft, using the rules a
 
 - `RadioGroup` gets `variant: 'default' | 'tags'`. The tags variant draws each option as a wrapping, tag-shaped native radio, and the selected option uses the accent tone. Keyboard and screen reader behaviour stay native. `instructions`, `error`, `required` and `customOption` work in both variants.
 - Package tests (keyboard, selection, error, custom option), an accessibility check and a documentation example; a patch version, because the change is additive (D25).
-- `RangeSlider` inherits `formatValue` from `Slider`. If the formatted value does not show for both handles, an additive fix goes into the same change.
+- `RangeSlider` needs no change: it already passes `formatValue` to both handles.
 - No gap entry is needed, because no fallback ships.
 
 ### Application
