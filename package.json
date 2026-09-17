@@ -32,7 +32,6 @@
     "test:run": "vitest run",
     "build:figma": "node scripts/build-figma-plugin.mjs",
     "design-system:check": "node scripts/design-system-check.mjs",
-    "design-system:update": "node scripts/design-system-update.mjs",
     "test:design-system": "node --test scripts/design-system-check.test.mjs && vitest run src/components/design-system/ExternalComposition.test.jsx src/components/design-system/AppButton.test.jsx src/studio/SettingsScreen.test.jsx src/studio/HomeScreen.test.jsx",
     "predev": "npm run design-system:check",
     "predev:api": "npm run design-system:check",
