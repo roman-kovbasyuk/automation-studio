@@ -1,12 +1,11 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, test, vi } from 'vitest'
+import { expect, test } from 'vitest'
 import ApplicationDesignSystemPage, { installedTokens } from './ApplicationDesignSystemPage.jsx'
-import provenance from '../../vendor/brutalist-design-system.json'
 
-test('identifies the installed revision and reads tokens from the external package', () => {
+test('identifies the workspace package and reads tokens from it', () => {
   render(<ApplicationDesignSystemPage />)
-  expect(screen.getByRole('link', { name: provenance.commit.slice(0, 12) })).toHaveAttribute('href', `${provenance.repository.replace(/\.git$/, '')}/commit/${provenance.commit}`)
+  expect(screen.getByText('packages/brutalist-design-system')).toBeVisible()
   const table = screen.getByRole('table', { name: 'Installed design-system tokens' })
   expect(within(table).getAllByRole('row')).toHaveLength(installedTokens.length + 1)
   expect(installedTokens.some(token => token.name === '--a-color-accent')).toBe(true)
@@ -20,9 +19,3 @@ test('filters and copies installed token names without maintaining a second pale
   expect(await navigator.clipboard.readText()).toBe('--a-color-accent')
   expect(screen.getByRole('status')).toHaveTextContent('Copied --a-color-accent')
 })
-
-// Vitest disables CSS modules by default. Supply Vite's raw-import result from
-// the actual installed package, rather than a synthetic palette fixture.
-vi.mock('brutalist-design-system/styles.css?raw', async () => ({
-  default: (await import('node:fs')).readFileSync('node_modules/brutalist-design-system/styles.css', 'utf8'),
-}))

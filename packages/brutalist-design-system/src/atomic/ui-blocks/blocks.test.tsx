@@ -6,7 +6,7 @@ import { SidebarPanel } from './SidebarPanel'
 import { PromptInput } from './PromptInput'
 
 test('sidebar search filters projects and Escape restores search trigger', async()=>{
- render(<SidebarPanel brand={{label:'Studio'}} primaryAction={{label:'New campaign',onClick:()=>{}}} navigation={[{id:'home',label:'Home',href:'#home',current:true}]} projects={[{id:'oslo',title:'Oslo',href:'#oslo'},{id:'paris',title:'Paris',href:'#paris'}]}/>)
+ render(<SidebarPanel brand={{label:'Studio'}} primaryAction={{label:'New project',onClick:()=>{}}} navigation={[{id:'home',label:'Home',href:'#home',current:true}]} projects={[{id:'oslo',title:'Oslo',href:'#oslo'},{id:'paris',title:'Paris',href:'#paris'}]}/>)
  const user=userEvent.setup()
  expect(screen.getByRole('link',{name:'Home'})).toHaveAttribute('aria-current','page')
  await user.click(screen.getByRole('button',{name:'Search projects'}))

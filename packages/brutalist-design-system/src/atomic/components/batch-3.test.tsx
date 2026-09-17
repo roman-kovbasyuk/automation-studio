@@ -11,7 +11,7 @@ test('third batch exports ten actual components', () => {
 })
 
 test('Breadcrumbs exposes a named navigation and an unlinked current page', () => {
-  render(<C.Breadcrumbs items={[{ label: 'Workspace', href: '/workspace' }, { label: 'Campaigns', href: '/campaigns' }, { label: 'Nordic launch' }]} />)
+  render(<C.Breadcrumbs items={[{ label: 'Workspace', href: '/workspace' }, { label: 'Projects', href: '/projects' }, { label: 'Nordic launch' }]} />)
   expect(screen.getByRole('navigation', { name: 'Breadcrumbs' })).toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Workspace' })).toHaveAttribute('href', '/workspace')
   expect(screen.getByText('Nordic launch')).toHaveAttribute('aria-current', 'page')

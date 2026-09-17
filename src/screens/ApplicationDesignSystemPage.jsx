@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 import { Container, AtomsRoot as DesignSystemRoot, Stack, Table, TextField } from 'brutalist-design-system'
 import { AppButton } from "../components/design-system/compatibility.jsx"
 import { tokenVariables } from 'brutalist-design-system'
-import provenance from '../../vendor/brutalist-design-system.json'
 import '../styles/application-design-system.css'
 
 // Atomic tokens are supplied by AtomsRoot at runtime, not duplicated in CSS.
@@ -12,7 +11,6 @@ export default function ApplicationDesignSystemPage() {
   const [query, setQuery] = useState('')
   const [message, setMessage] = useState('')
   const rows = useMemo(() => installedTokens.filter(token => `${token.name} ${token.value}`.toLowerCase().includes(query.toLowerCase())), [query])
-  const repository = provenance.repository.replace(/\.git$/, '')
   async function copyToken(name) {
     try { await navigator.clipboard.writeText(name); setMessage(`Copied ${name}`) }
     catch { setMessage(`Could not copy ${name}. Select the token name to copy it manually.`) }
@@ -23,9 +21,7 @@ export default function ApplicationDesignSystemPage() {
         <header>
           <AppButton as="a" variant="quiet" href="/">Back to Automation Studio</AppButton>
           <h1>Brutalist Design System</h1>
-          <p>The app uses the installed external library. Component documentation and development live in its repository.</p>
-          <AppButton as="a" href={repository}>Open design-system repository</AppButton>
-          <p>Installed revision: <a href={`${repository}/commit/${provenance.commit}`}><code>{provenance.commit.slice(0, 12)}</code></a></p>
+          <p>The app uses Brutalist from the workspace package <code>packages/brutalist-design-system</code>. Component documentation and development live with the package.</p>
         </header>
         <section id="installed-tokens" aria-labelledby="installed-tokens-title">
           <Stack gap={4}>

@@ -28,11 +28,11 @@ test('TextArea wires labels and errors without losing controlled multiline edits
   const user = userEvent.setup()
   function Example() {
     const [value, setValue] = useState('')
-    return <components.TextArea label="Brief" value={value} onChange={e => setValue(e.target.value)} instructions="Describe the campaign" error={!value ? 'Brief is required' : undefined} />
+    return <components.TextArea label="Brief" value={value} onChange={e => setValue(e.target.value)} instructions="Describe the project" error={!value ? 'Brief is required' : undefined} />
   }
   render(<Example />)
   const field = screen.getByRole('textbox', { name: 'Brief' })
-  expect(field).toHaveAccessibleDescription('Describe the campaign Brief is required')
+  expect(field).toHaveAccessibleDescription('Describe the project Brief is required')
   await user.type(field, 'First line{Enter}Second line')
   expect(field).toHaveValue('First line\nSecond line')
   expect(field).not.toHaveAttribute('aria-invalid')

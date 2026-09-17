@@ -48,7 +48,7 @@ test('inline text editing is documented in the Form group and reuses the shared 
   expect(sidebar.getByRole('link', { name: 'Inline text editing' })).toHaveAttribute('href', '/components.html?component=inline-text')
   const preview = screen.getByRole('tabpanel', { name: 'Inline text editing overview preview' })
   expect(preview.querySelector('.c-inline-text')).not.toBeNull()
-  expect(within(preview).getByRole('button', { name: 'Edit Campaign title' })).toBeInTheDocument()
+  expect(within(preview).getByRole('button', { name: 'Edit Project title' })).toBeInTheDocument()
 })
 
 test('progress bar and progress circle docs keep their previews separate', () => {

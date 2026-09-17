@@ -14,7 +14,7 @@ test('Dialog traps context, closes with Escape and returns focus to trigger', as
 })
 test('Drawer preserves dialog semantics and a named close action', async () => {
   const user = userEvent.setup()
-  function Example() { const [open, setOpen] = useState(false); return <C.Drawer title="Details" trigger="Open drawer" open={open} onOpenChange={setOpen}>Campaign details</C.Drawer> }
+  function Example() { const [open, setOpen] = useState(false); return <C.Drawer title="Details" trigger="Open drawer" open={open} onOpenChange={setOpen}>Project details</C.Drawer> }
   render(<Example />); await user.click(screen.getByRole('button', { name: 'Open drawer' })); expect(screen.getByRole('dialog', { name: 'Details' })).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Close dialog' })); expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 })
@@ -39,15 +39,15 @@ test('Tooltip is available on keyboard focus', async () => {
   await user.tab(); expect(await screen.findByRole('tooltip')).toHaveTextContent('Export includes all formats.')
 })
 test('Tabs arrow keys select matching content and skip disabled tabs', async () => {
-  const user = userEvent.setup(); render(<C.Tabs label="Campaign views" items={[{ id: 'brief', label: 'Brief', content: 'Brief content' }, { id: 'copy', label: 'Copy', content: 'Copy content', disabled: true }, { id: 'assets', label: 'Assets', content: 'Assets content' }]} />)
+  const user = userEvent.setup(); render(<C.Tabs label="Project views" items={[{ id: 'brief', label: 'Brief', content: 'Brief content' }, { id: 'copy', label: 'Copy', content: 'Copy content', disabled: true }, { id: 'assets', label: 'Assets', content: 'Assets content' }]} />)
   screen.getByRole('tab', { name: 'Brief' }).focus(); await user.keyboard('{ArrowRight}')
   expect(screen.getByRole('tab', { name: 'Assets' })).toHaveAttribute('aria-selected', 'true'); expect(screen.getByRole('tabpanel')).toHaveTextContent('Assets content')
 })
 test('Tabs exposes a compact 44px size variant', () => {
   const items = [{ id: 'brief', label: 'Brief', content: 'Brief content' }]
-  const view = render(<C.Tabs label="Campaign views" items={items} />)
+  const view = render(<C.Tabs label="Project views" items={items} />)
   expect(screen.getByRole('tablist')).toHaveAttribute('data-size', 'default')
-  view.rerender(<C.Tabs label="Campaign views" items={items} size="compact" />)
+  view.rerender(<C.Tabs label="Project views" items={items} size="compact" />)
   expect(screen.getByRole('tablist')).toHaveAttribute('data-size', 'compact')
 })
 test('Combobox filters, keyboard selects, and emits an option value', async () => {

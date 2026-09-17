@@ -7,12 +7,12 @@ import { Button, Panel, TextField, Checkbox, RadioGroup } from './index'
 
 test('button activates from keyboard, defaults to button, and blocks busy actions', async () => {
   const user = userEvent.setup(), action = vi.fn()
-  const view = render(<Button onClick={action}>Create campaign</Button>)
-  const button = screen.getByRole('button', { name: 'Create campaign' })
+  const view = render(<Button onClick={action}>Create project</Button>)
+  const button = screen.getByRole('button', { name: 'Create project' })
   expect(button).toHaveAttribute('type', 'button')
   button.focus(); await user.keyboard('{Enter}')
   expect(action).toHaveBeenCalledTimes(1)
-  view.rerender(<Button onClick={action} busy>Create campaign</Button>)
+  view.rerender(<Button onClick={action} busy>Create project</Button>)
   await user.click(button)
   expect(button).toBeDisabled()
   expect(button).toHaveAttribute('aria-busy', 'true')
@@ -20,22 +20,22 @@ test('button activates from keyboard, defaults to button, and blocks busy action
 })
 
 test('icon-only actions keep their supplied accessible name', () => {
-  render(<Button iconOnly icon="search" aria-label="Search campaigns" />)
-  expect(screen.getByRole('button', { name: 'Search campaigns' })).toBeEnabled()
+  render(<Button iconOnly icon="search" aria-label="Search projects" />)
+  expect(screen.getByRole('button', { name: 'Search projects' })).toBeEnabled()
   expect(screen.queryByRole('img')).toBeNull()
 })
 
 test('Panel labels the section and retains zero-valued description and content', () => {
-  render(<Panel title="Campaign brief" description={0}>{0}</Panel>)
-  const panel = screen.getByRole('region', { name: 'Campaign brief' })
-  expect(within(panel).getByRole('heading', { name: 'Campaign brief' })).toHaveAttribute('data-type', 'h4')
+  render(<Panel title="Project brief" description={0}>{0}</Panel>)
+  const panel = screen.getByRole('region', { name: 'Project brief' })
+  expect(within(panel).getByRole('heading', { name: 'Project brief' })).toHaveAttribute('data-type', 'h4')
   expect(within(panel).getAllByText('0')).toHaveLength(2)
 })
 
 test('TextField connects unique labels, helper, errors, and caller descriptions', async () => {
   const user = userEvent.setup()
-  render(<><span id="external">Additional context</span><TextField label="Campaign title" instructions="Use a short title" error="Title is required" aria-describedby="external" /><TextField label="Second title" /></>)
-  const field = screen.getByRole('textbox', { name: 'Campaign title' })
+  render(<><span id="external">Additional context</span><TextField label="Project title" instructions="Use a short title" error="Title is required" aria-describedby="external" /><TextField label="Second title" /></>)
+  const field = screen.getByRole('textbox', { name: 'Project title' })
   expect(field).toHaveAccessibleDescription('Additional context Use a short title Title is required')
   expect(field).toHaveAttribute('aria-invalid', 'true')
   expect(field.id).not.toBe(screen.getByRole('textbox', { name: 'Second title' }).id)

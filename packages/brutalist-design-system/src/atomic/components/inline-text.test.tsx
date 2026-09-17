@@ -6,12 +6,12 @@ import * as C from './index'
 
 test('InlineText autosaves on blur and does not expose Save or Cancel controls', async () => {
   const user = userEvent.setup()
-  function Example() { const [value, setValue] = useState('Campaign'); return <><C.InlineText label="Title" value={value} onSave={setValue} /><button>Next</button></> }
+  function Example() { const [value, setValue] = useState('Project'); return <><C.InlineText label="Title" value={value} onSave={setValue} /><button>Next</button></> }
   render(<Example />)
   await user.click(screen.getByRole('button', { name: 'Edit Title' }))
   const input = screen.getByRole('textbox', { name: 'Title' })
-  await user.clear(input); await user.type(input, 'Updated campaign'); await user.click(screen.getByRole('button', { name: 'Next' }))
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Edit Title' })).toHaveTextContent('Updated campaign'))
+  await user.clear(input); await user.type(input, 'Updated project'); await user.click(screen.getByRole('button', { name: 'Next' }))
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Edit Title' })).toHaveTextContent('Updated project'))
   expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: 'Next' })).toHaveFocus()
 })

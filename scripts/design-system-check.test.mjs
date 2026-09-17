@@ -1,119 +1,121 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { createHash } from 'node:crypto'
-import { mkdtemp, mkdir, writeFile, rm, readFile } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, rm, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { checkStyleBoundary, importedNames, packageHashes, sha256, upstream, verifyDesignSystem } from './design-system-check.mjs'
+import { dirname, join } from 'node:path'
+import {
+  checkPackageIsolation, checkPublicEntryPoints, checkStyleBoundary, checkVocabulary, checkWorkspaceLink, importedNames,
+  moduleSpecifiers, packageExports, verifyDesignSystem,
+} from './design-system-check.mjs'
+
+const pkg = 'packages/brutalist-design-system'
 
 async function fixture(t) {
-  const root = await mkdtemp(join(tmpdir(), 'ds-verify-test-'))
+  const root = await mkdtemp(join(tmpdir(), 'ds-boundary-test-'))
   t.after(() => rm(root, { recursive: true, force: true }))
-  await Promise.all(['src', 'vendor', 'node_modules/brutalist-design-system'].map(p => mkdir(join(root, p), { recursive: true })))
-  const writeJson = (p, value) => writeFile(join(root, p), JSON.stringify(value))
-  const spec = 'file:vendor/brutalist-design-system-test.tgz'
-  const archive = Buffer.from('synthetic archive bytes; verifier checks identity, updater owns packing')
-  const dependencies = { 'brutalist-design-system': spec }
-  await writeJson('package.json', { dependencies })
-  await writeFile(join(root, 'vendor/brutalist-design-system-test.tgz'), archive)
-  await writeFile(join(root, 'node_modules/brutalist-design-system/index.js'), 'export const AppButton = () => null;')
-  await writeFile(join(root, 'node_modules/brutalist-design-system/styles.css'), ':root { --v2-ink: black; } .ds-button { color: var(--v2-ink); } .v2-pill-tabs { display: flex; }')
-  await writeJson('node_modules/brutalist-design-system/package.json', { type: 'module' })
-  await writeJson('package-lock.json', { packages: { '': { dependencies }, 'node_modules/brutalist-design-system': { resolved: spec, integrity: `sha512-${createHash('sha512').update(archive).digest('base64')}` } } })
-  await writeJson('vendor/brutalist-design-system.json', { repository: upstream, commit: 'a'.repeat(40), artifact: 'brutalist-design-system-test.tgz', sha256: sha256(archive), files: await packageHashes(join(root, 'node_modules/brutalist-design-system')) })
-  await writeFile(join(root, 'src/Example.jsx'), "import { AppButton } from 'brutalist-design-system'; export const Example = () => <AppButton>Save</AppButton>;")
-  return { root, writeJson }
+  const write = async (path, content) => {
+    await mkdir(dirname(join(root, path)), { recursive: true })
+    await writeFile(join(root, path), typeof content === 'string' ? content : JSON.stringify(content))
+  }
+  await write('package.json', { workspaces: ['packages/*'], dependencies: { 'brutalist-design-system': '^0.1.0' } })
+  await write(`${pkg}/package.json`, { name: 'brutalist-design-system', version: '0.1.0', exports: { '.': { source: './src/atomic/index.ts' } },
+    dependencies: { 'lucide-react': '^1.43.0' }, peerDependencies: { react: '>=19' }, devDependencies: { vitest: '^5.0.0' } })
+  await write(`${pkg}/src/atomic/index.ts`, "export * from './components'\nexport { SidebarPanel } from './ui-blocks/SidebarPanel'\n")
+  await write(`${pkg}/src/atomic/components/index.ts`, "export { Button, buttonSizes } from './Button'\nexport type { ButtonProps } from './Button'\nexport const [firstTone, ...otherTones] = ['neutral', 'accent']\n")
+  await write(`${pkg}/src/atomic/components/Button.tsx`, "import './button.css'\nimport { useId } from 'react'\nimport { Plus } from 'lucide-react'\nexport type ButtonProps = { label: string }\nexport const buttonSizes = ['default']\nexport function Button(props: ButtonProps) { useId(); return <button>{props.label}<Plus /></button> }\n")
+  await write(`${pkg}/src/atomic/components/button.css`, '.c-button { color: var(--a-color-ink); gap: var(--a-space-4); } .atomic-root {} .a-type {} .b-sidebar {} .v2-pill-tabs {}')
+  await write(`${pkg}/src/atomic/components/Button.test.tsx`, "import { readFileSync } from 'node:fs'\nimport { expect, test } from 'vitest'\ntest('renders', () => expect(readFileSync).toBeTruthy())\n")
+  await write(`${pkg}/src/atomic/ui-blocks/SidebarPanel.tsx`, "import { Button } from '../components/Button'\nexport function SidebarPanel() { return <Button label='New project' /> }\n")
+  await write('scripts/design-system-vocabulary.json', { entries: [] })
+  await write('src/Example.jsx', "import { Button } from 'brutalist-design-system'\nimport 'brutalist-design-system/styles.css'\nexport const Example = () => <Button label='Save' />\n")
+  await mkdir(join(root, 'node_modules'), { recursive: true })
+  await symlink(join('..', pkg), join(root, 'node_modules/brutalist-design-system'))
+  return { root, write }
 }
+
+test('accepts a workspace package used through its public entry points', async t => {
+  const { root } = await fixture(t)
+  await verifyDesignSystem(root)
+})
+
+test('finds static, dynamic, re-exported, required and CSS imports, ignoring URLs', () => {
+  const found = moduleSpecifiers("import a from 'a'\nexport { b } from './b?raw'\nexport * from 'c'\nconst d = await import('d')\nconst e = require('e')\n", 'x.js')
+  assert.deepEqual(found.map(item => item.specifier), ['a', './b', 'c', 'd', 'e'])
+  assert.deepEqual(moduleSpecifiers("@import './tokens.css';\n@import url('https://fonts.example/font.css');", 'x.css').map(item => item.specifier), ['./tokens.css'])
+})
+
+test('rejects a package file that imports application code', async t => {
+  const { root, write } = await fixture(t)
+  await write(`${pkg}/src/atomic/components/Button.tsx`, "import { api } from '../../../../../src/studio/api.js'\nexport function Button() { return api }\n")
+  await assert.rejects(checkPackageIsolation(root), /Button\.tsx:1 imports \.\.\/\.\.\/\.\.\/\.\.\/\.\.\/src\/studio\/api\.js, outside the package/)
+})
+
+test('rejects a package import of a module the package does not declare', async t => {
+  const { root, write } = await fixture(t)
+  await write(`${pkg}/src/atomic/components/Button.tsx`, "import clsx from 'clsx'\nimport { Slot } from '@radix-ui/react-slot'\nexport function Button() { return clsx(Slot) }\n")
+  await assert.rejects(checkPackageIsolation(root), error => /imports clsx, which the package does not declare/.test(error.message) && /@radix-ui\/react-slot/.test(error.message))
+})
+
+test('rejects application deep imports and relative imports of package files', async t => {
+  const { root, write } = await fixture(t)
+  await write('src/Deep.jsx', "import { Button } from 'brutalist-design-system/src/atomic/components/Button'\n")
+  await assert.rejects(checkPublicEntryPoints(root), /src\/Deep\.jsx:1 imports brutalist-design-system\/src\/atomic\/components\/Button; use brutalist-design-system or brutalist-design-system\/styles\.css/)
+  await write('src/Deep.jsx', "import '../packages/brutalist-design-system/src/atomic/components/button.css'\n")
+  await assert.rejects(checkPublicEntryPoints(root), /imports package files directly/)
+})
+
+test('rejects product vocabulary unless a reviewed allowlist entry covers it, and stale entries', async t => {
+  const { root, write } = await fixture(t)
+  await write(`${pkg}/src/atomic/ui-blocks/SidebarPanel.tsx`, "import { Button } from '../components/Button'\nexport function SidebarPanel() { return <Button label='New Campaign' /> }\n")
+  await assert.rejects(checkVocabulary(root, []), /src\/atomic\/ui-blocks\/SidebarPanel\.tsx uses the product term "campaign"/)
+  const entry = { file: 'src/atomic/ui-blocks/SidebarPanel.tsx', term: 'campaign', reason: 'test' }
+  await checkVocabulary(root, [entry])
+  await assert.rejects(checkVocabulary(root, [entry, { file: 'src/atomic/components/Button.tsx', term: 'banner', reason: 'test' }]), /no longer matches; remove it/)
+})
+
+test('rejects an installed copy that is not the workspace package', async t => {
+  const { root, write } = await fixture(t)
+  await rm(join(root, 'node_modules/brutalist-design-system'))
+  await write('node_modules/brutalist-design-system/package.json', { name: 'brutalist-design-system' })
+  await assert.rejects(checkWorkspaceLink(root), /is not the workspace package/)
+  await write('package.json', { workspaces: ['packages/*'], dependencies: { 'brutalist-design-system': 'file:vendor/brutalist.tgz' } })
+  await assert.rejects(checkWorkspaceLink(root), /must depend on the packages\/brutalist-design-system workspace package/)
+  await write('package.json', { workspaces: ['packages/*'], dependencies: { 'brutalist-design-system': '^0.1.0', '@roman-kovbasyuk/banner-design-system': 'file:legacy.tgz' } })
+  await assert.rejects(checkWorkspaceLink(root), /Legacy design-system dependency/)
+})
+
+test('reads runtime exports from package source, following re-exports and skipping types', async t => {
+  const { root, write } = await fixture(t)
+  assert.deepEqual((await packageExports(root)).sort(), ['Button', 'SidebarPanel', 'buttonSizes', 'firstTone', 'otherTones'])
+  await write('src/Example.jsx', "import { ButtonProps } from 'brutalist-design-system'\n")
+  await assert.rejects(verifyDesignSystem(root), /src\/Example\.jsx imports missing export ButtonProps/)
+})
+
 test('detects aliased imports and reexports without mistaking local names for public API', () => {
   assert.deepEqual(importedNames("import { AppButton as Button } from 'brutalist-design-system'; export { Surface as Panel } from 'brutalist-design-system';"), ['AppButton', 'Surface'])
 })
-test('accepts matching artifact, lockfile, installed bytes and component imports', async t => {
-  const { root } = await fixture(t)
-  await mkdir(join(root, 'node_modules/brutalist-design-system/node_modules/dependency'), { recursive: true })
-  await writeFile(join(root, 'node_modules/brutalist-design-system/node_modules/dependency/index.js'), 'dependency')
-  await verifyDesignSystem(root)
-})
-test('rejects an alternate archive even when the package version did not change', async t => {
-  const { root, writeJson } = await fixture(t)
-  await writeJson('package.json', { dependencies: { 'brutalist-design-system': 'file:vendor/local-extension.tgz' } })
-  await assert.rejects(verifyDesignSystem(root), /provenance disagree/)
-})
-test('rejects node_modules modifications and archive replacement', async t => {
-  const { root } = await fixture(t)
-  const path = join(root, 'node_modules/brutalist-design-system/index.js')
-  const before = await readFile(path)
-  await writeFile(path, 'export const AppButton = "local patch";')
-  await assert.rejects(verifyDesignSystem(root), /Installed design-system files differ/)
-  await writeFile(path, before)
-  await writeFile(join(root, 'vendor/brutalist-design-system-test.tgz'), 'replacement')
-  await assert.rejects(verifyDesignSystem(root), /archive differs/)
-})
-test('rejects an upstream release that no longer provides an imported component', async t => {
-  const { root } = await fixture(t)
-  await writeFile(join(root, 'src/Example.jsx'), "import { MissingControl } from 'brutalist-design-system';")
-  await assert.rejects(verifyDesignSystem(root), /imports missing export MissingControl/)
-})
 
-test('rejects private component selectors while allowing app-owned layout', async t => {
-  const { root } = await fixture(t)
-  await writeFile(join(root, 'src/layout.css'), '.app-toolbar { display: flex; gap: 16px; }')
-  await verifyDesignSystem(root)
-  await writeFile(join(root, 'src/layout.css'), '.app-toolbar .ds-button { padding: 2px; }')
-  await assert.rejects(verifyDesignSystem(root), /private component selector/)
-})
-
-test('rejects token redefinitions even in an app-specific selector', async t => {
-  const { root } = await fixture(t)
-  await writeFile(join(root, 'src/layout.css'), '.app-panel { --v2-ink: red; }')
-  await assert.rejects(verifyDesignSystem(root), /redefines upstream token/)
-})
-
-test('rejects reinstalling the second design-system dependency', async t => {
-  const { root, writeJson } = await fixture(t)
-  const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
-  manifest.dependencies['@roman-kovbasyuk/banner-design-system'] = 'file:vendor/legacy.tgz'
-  await writeJson('package.json', manifest)
-  await assert.rejects(verifyDesignSystem(root), /Legacy design-system dependency/)
-})
-
-test('protects legacy class names still owned by the canonical package', async t => {
-  const { root } = await fixture(t)
-  await writeFile(join(root, 'src/layout.css'), '.app-toolbar .v2-pill-tabs { background: red; }')
-  await assert.rejects(verifyDesignSystem(root), /private component selector/)
-})
-
-
-test('rejects explicit styling on aliased and namespaced upstream controls', async t => {
-  const { root } = await fixture(t)
-  for (const source of [
-    "import { AppButton as Save } from 'brutalist-design-system'; const A = () => <Save className='local-skin' />;",
-    "import * as DS from 'brutalist-design-system'; const A = () => <DS.AppButton style={{ padding: 2 }} />;",
-  ]) {
-    await writeFile(join(root, 'src/Example.jsx'), source)
-    await assert.rejects(verifyDesignSystem(root), /customizes an upstream component/)
-  }
-})
-
-test('allows component variants and layout on plain containers', async t => {
-  const { root } = await fixture(t)
-  await writeFile(join(root, 'src/Example.jsx'), "import { AppButton } from 'brutalist-design-system'; const A = () => <div className='toolbar'><AppButton variant='primary'>Save</AppButton></div>;")
-  await verifyDesignSystem(root)
-})
-
-test('protects Atomic component classes at all three layers', async t => {
-  const { root } = await fixture(t)
-  await writeFile(join(root, 'node_modules/brutalist-design-system/styles.css'), '.atomic-root { color: var(--a-color-ink); } .a-type {} .c-button {} .b-sidebar {}')
-  for (const selector of ['atomic-root', 'a-type', 'c-button', 'b-sidebar']) {
-    await writeFile(join(root, 'src/layout.css'), `.app-layout .${selector} { padding: 2px; }`)
+test('rejects private component selectors and token redefinitions while allowing app-owned layout', async t => {
+  const { root, write } = await fixture(t)
+  await write('src/layout.css', '.app-toolbar { display: flex; gap: var(--a-space-4); }')
+  await checkStyleBoundary(root)
+  for (const selector of ['c-button', 'atomic-root', 'a-type', 'b-sidebar', 'v2-pill-tabs']) {
+    await write('src/layout.css', `.app-layout .${selector} { padding: 2px; }`)
     await assert.rejects(checkStyleBoundary(root), /private component selector/)
   }
+  await write('src/layout.css', '.app-panel { --a-color-ink: red; }')
+  await assert.rejects(checkStyleBoundary(root), /redefines upstream token --a-color-ink/)
 })
 
-test('protects Atomic tokens referenced by CSS but supplied by AtomsRoot', async t => {
-  const { root } = await fixture(t)
-  await writeFile(join(root, 'node_modules/brutalist-design-system/styles.css'), '.c-button { color: var(--a-color-ink); gap: var(--a-space-4); }')
-  await writeFile(join(root, 'src/layout.css'), '.app-layout { --a-color-ink: red; }')
-  await assert.rejects(checkStyleBoundary(root), /redefines upstream token --a-color-ink/)
-  await writeFile(join(root, 'src/layout.css'), '.app-layout { display: grid; gap: var(--a-space-4); }')
-  await checkStyleBoundary(root)
+test('rejects explicit styling on aliased and namespaced upstream controls, but not on plain containers', async t => {
+  const { root, write } = await fixture(t)
+  for (const source of [
+    "import { Button as Save } from 'brutalist-design-system'; const A = () => <Save className='local-skin' />;",
+    "import * as DS from 'brutalist-design-system'; const A = () => <DS.Button style={{ padding: 2 }} />;",
+  ]) {
+    await write('src/Example.jsx', source)
+    await assert.rejects(verifyDesignSystem(root), /customizes an upstream component/)
+  }
+  await write('src/Example.jsx', "import { Button } from 'brutalist-design-system'; const A = () => <div className='toolbar'><Button label='Save' /></div>;")
+  await verifyDesignSystem(root)
 })
