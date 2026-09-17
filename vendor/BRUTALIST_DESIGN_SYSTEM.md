@@ -42,3 +42,12 @@ Rendered route checks complement the static checks. Native fallbacks and app
 behavior adapters are recorded in
 `docs/design-system/missing-components.md`. The old banner-design-system package and stylesheet have been removed. The check
 also prevents that second dependency from being reintroduced.
+
+## Requesting changes
+
+Never edit the design system from this application. Request changes through the
+Brutalist change protocol; additive requests from this application are
+pre-approved and breaking changes need the owner's approval (decision D14).
+The target process, including installing pipeline releases with
+`npm run design-system:update -- --artifact <tgz> --commit <sha>` (not yet
+implemented), is specified in `docs/specs/design-system-integration.md`.

@@ -1,5 +1,7 @@
 # Banner creation rebuild
 
+> **Review note, 16 September 2026.** Later decisions change parts of this brief: designer review becomes an escalation path ([D1](../../product/decisions.md)) and the visible flow becomes the four-stage asset creation flow — Brief, Copy, Visuals, Assets ([D6](../../product/decisions.md)). Its navigation, draft retention and no-implicit-generation requirements still apply. Its review, approval and Distribute requirements are superseded and will be re-specified.
+
 ## Identity and authority
 
 Accepted implementation request, 16 September 2026. Observatory b232135a-3c4a-48c8-af05-0e419da23066. Source: FigJam Project-X node 10:484, explicitly validated by the user. Entry: src/studio/campaign/CampaignPage.jsx. Existing route /mvp/campaign/:id?module=:module#campaign-module-:module.

@@ -23,7 +23,7 @@ Spacing, typography, surfaces, borders, and corners consume existing semantic `-
 
 ## Components
 
-The view composes AppButton, ActionCard, EmptyState, SelectMenu, TextAction, and MediaWorkflowCard, with AssetImage for stored images. TextAction supplies the quiet compact upload and prompt-copy actions; MediaWorkflowCard supplies the labelled article, contextual heading, selected outline, and ordered sections. Their reusable APIs remain in [component contracts](../../docs/design-system/components.md); module behavior and integration remain in the [Visuals README](../../src/studio/campaign/modules/visuals/README.md).
+The view composes AppButton, ActionCard, EmptyState, SelectMenu, TextAction, and MediaWorkflowCard, with AssetImage for stored images. TextAction supplies the quiet compact upload and prompt-copy actions; MediaWorkflowCard supplies the labelled article, contextual heading, selected outline, and ordered sections. Their reusable APIs remain in [component contracts](../../docs/archive/design-system/components.md); module behavior and integration remain in the [Visuals README](../../src/studio/campaign/modules/visuals/README.md).
 
 Upload failures appear as an alert beside the initiating method or image action. Prompt copying provides local status feedback and a manual-copy fallback. Historical cards remain readable with “Source changed” and saved-input guidance; stale images cannot be selected for Banners. Generated-image failures expose retry, uncertain outcomes request a state check, and blocked outcomes offer upload guidance. Video is the explicit “No video yet” placeholder.
 

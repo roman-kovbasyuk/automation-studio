@@ -2,42 +2,86 @@ import { fileURLToPath } from 'node:url'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import taskLists from 'markdown-it-task-lists'
 
+// docs/ is the single documentation source (decision D11). This folder only renders it.
 export default withMermaid({
   base: '/docs/',
+  srcDir: '../docs',
+  // The archive is browsed in the repository, not published on the site.
+  srcExclude: ['archive/**'],
   outDir: fileURLToPath(new URL('../../dist/docs/', import.meta.url)),
-  title: 'Banner Studio Docs',
-  description: 'Product behavior, architecture decisions and operations for Banner Studio',
+  title: 'Automation Studio Docs',
+  description: 'Product concept, decisions, recipes and engineering reference for Automation Studio',
   cleanUrls: true,
   appearance: false,
+  // Links to repository files outside docs/ (root contracts, vendor notes, source READMEs)
+  // and to the unpublished archive resolve in the repository but not on the site.
+  ignoreDeadLinks: [
+    /(^|\/)(FRONTEND|DESIGN|PRODUCT|AGENTS|CLAUDE|README)(\.md)?$/,
+    /(^|\/)vendor\//,
+    /(^|\/)archive\//,
+    /^https?:\/\/(localhost|127\.0\.0\.1)/,
+  ],
   markdown: {
     config: (md) => {
       md.use(taskLists, { enabled: true })
     },
   },
   themeConfig: {
-    nav: [{ text: 'Product recipes', link: '/workflow' }, { text: 'Decisions & explorations', link: '/decisions/' }],
+    nav: [
+      { text: 'Product', link: '/product/concept' },
+      { text: 'Engineering', link: '/engineering/architecture' },
+      { text: 'Decisions', link: '/product/decisions' },
+    ],
     search: { provider: 'local' },
     sidebar: [
-      { text: 'Product', items: [{ text: 'Overview', link: '/' }, { text: 'Campaign modules', link: '/campaign-modules' }, { text: 'Technical architecture', link: '/architecture' }] },
-      { text: 'Product recipes', items: [
-        { text: 'All recipes', link: '/workflow' },
-        { text: 'Banner creation', link: '/recipes/banner-creation' },
-        { text: 'Campaign flow specification', link: '/recipes/campaign-flow' },
-        { text: 'Slide deck creation', link: '/recipes/slide-deck-creation' },
-        { text: 'Website creation', link: '/recipes/website-creation' },
-        { text: 'Template creation', link: '/recipes/template-creation' },
-        { text: 'Product logic designer', link: '/decisions/asset-workflows' },
+      { text: 'Start', items: [{ text: 'Overview', link: '/' }] },
+      { text: 'Product', items: [
+        { text: 'Concept', link: '/product/concept' },
+        { text: 'PRD', link: '/product/prd' },
+        { text: 'Glossary', link: '/product/glossary' },
+        { text: 'Decisions', link: '/product/decisions' },
+        { text: 'Recipes', link: '/product/recipes' },
+        { text: 'Roadmap', link: '/product/roadmap' },
       ] },
-      { text: 'Decisions & explorations', items: [
-        { text: 'Decision register', link: '/decisions/' },
-        { text: 'Admin & data model', link: '/decisions/admin-data' },
-        { text: 'Hosting options', link: '/decisions/hosting' },
-        { text: 'Terraform & CLI setup', link: '/decisions/infrastructure' },
-        { text: 'Delivery stages', link: '/decisions/delivery' },
-        { text: 'Detailed backend proposal', link: '/decisions/backend-reference' },
-        { text: 'Maintaining these docs', link: '/decisions/maintenance' },
+      { text: 'Specifications', items: [
+        { text: 'Overview', link: '/specs/' },
+        { text: 'Domain model', link: '/specs/domain-model' },
+        { text: 'Recipes', link: '/specs/recipes' },
+        { text: 'Brand model', link: '/specs/brand-model' },
+        { text: 'Template model', link: '/specs/template-model' },
+        { text: 'Quality and escalation', link: '/specs/quality-and-escalation' },
+        { text: 'Asset creation flow UX', link: '/specs/asset-creation-flow-ux' },
+        { text: 'Deck generation', link: '/specs/deck-generation' },
+        { text: 'Migration from campaigns', link: '/specs/campaign-migration' },
+        { text: 'Design system integration', link: '/specs/design-system-integration' },
       ] },
-      { text: 'Earlier planning', collapsed: true, items: [{ text: 'Team process', link: '/team-process' }, { text: 'Original MVP roadmap', link: '/roadmap' }] },
+      { text: 'Engineering', items: [
+        { text: 'Architecture', link: '/engineering/architecture' },
+        { text: 'Local development', link: '/engineering/local-development' },
+        { text: 'AI generation', link: '/engineering/ai-generation' },
+        { text: 'Known issues', link: '/engineering/known-issues' },
+        { text: 'Campaign modules (current)', link: '/engineering/campaign-modules' },
+        { text: 'Briefing (current)', link: '/engineering/briefing' },
+        { text: 'Banner templates and brands', link: '/engineering/templates/banner-template-editor' },
+        { text: 'MSD slide templates', link: '/engineering/templates/msd-presentation-templates' },
+        { text: 'Admin area', link: '/engineering/admin' },
+        { text: 'Proposal: admin and data model', link: '/engineering/proposals/admin-and-data-model' },
+      ] },
+      { text: 'Application design system', collapsed: true, items: [
+        { text: 'Overview', link: '/design-system/' },
+        { text: 'Consumer boundary', link: '/design-system/migration' },
+        { text: 'Gap list', link: '/design-system/missing-components' },
+        { text: 'Adoption audit', link: '/design-system/adoption-audit' },
+        { text: 'Design brief template', link: '/design-system/page-brief-template' },
+        { text: 'Brief: banner creation rebuild', link: '/design-system/pages/banner-creation-rebuild' },
+        { text: 'Brief: templates catalog', link: '/design-system/pages/templates' },
+        { text: 'Brief: offline prototype', link: '/design-system/pages/prototype-creation' },
+      ] },
+      { text: 'Operations', collapsed: true, items: [
+        { text: 'Hosting options', link: '/operations/hosting' },
+        { text: 'Infrastructure', link: '/operations/infrastructure' },
+      ] },
+      { text: 'About', items: [{ text: 'Maintaining these docs', link: '/documentation' }] },
     ],
     outline: { level: [2, 3] },
     socialLinks: [],

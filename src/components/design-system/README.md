@@ -1,5 +1,7 @@
 # Application component library
 
+> **Compatibility layer.** The installed `brutalist-design-system` package is the source of UI components ([FRONTEND.md](../../../FRONTEND.md), [consumer boundary](../../../docs/design-system/migration.md)). Components in this folder are adapters or migration debt; do not add new skins here.
+
 Browse `/design-system` → Library structure. Search by component, responsibility or constraint, then check adoption status. Current library imports:
 
 ```jsx
@@ -18,11 +20,9 @@ Paths above are relative to this directory. Old flat modules are compatibility e
 
 `TokenChip` is the explicit token-name reference used in Library detail panels. `TokenCopyTarget` is the hidden-token interaction used by visual foundation specimens: it keeps the layout readable while exposing a labelled, keyboard-operable copy target.
 
-- [Component contracts](../../../docs/design-system/components.md)
-- [Audit and hierarchy](../../../docs/design-system/audit.md)
-- [Migration and rollback](../../../docs/design-system/migration.md)
-- [Prioritized roadmap](../../../docs/design-system/roadmap.md)
-- [Validation and remaining risks](../../../docs/design-system/validation.md)
+- [Consumer boundary and migration](../../../docs/design-system/migration.md)
+- [Missing components and native fallbacks](../../../docs/design-system/missing-components.md)
+- Earlier component contracts, audit, roadmap and validation: [archive](../../../docs/archive/README.md)
 
 Primitive palette values feed semantic `--v2-*` tokens in `foundations/tokens.css`; consumers import the existing `styles/tokens.css` entry. The only supported application theme is light. Use `--v2-text-secondary` for secondary text, not the decorative muted swatch.
 

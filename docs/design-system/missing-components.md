@@ -1,87 +1,55 @@
-# Consumer boundary and unsupported patterns
+# Design-system gap list
 
-The canonical dependency is `brutalist-design-system`, at the exact commit in
-`vendor/brutalist-design-system.json` (7b06e5e01c7a64ed0bd509e0d7850acfc3c618b7
-for this review). Never change the external repository or installed package as
-part of app cleanup. Refresh with `npm run design-system:update`.
+**Status:** Current · **Reviewed against:** `brutalist-design-system` `0.1.0-atomic.0`, commit `50c322c7fc38b934abb5391587dd509d0de40f62` · **Updated:** 17 September 2026
 
-## Public components
+Patterns the application needs that the installed Brutalist package does not provide, the fallback used meanwhile, and what would replace it. The process is defined in [design system integration](../specs/design-system-integration.md); the evidence for each entry is in the [adoption audit](adoption-audit.md).
 
-Buttons, fields, selects, checkboxes, switches, tabs, cards, tables, fact lists,
-surfaces, alerts, task status, skeletons, menus, drawers, dialogs and upload zones
-use public exports. Existing local import paths are reexports or callback/prop
-adapters. `Button.primary` translates to `AppButton.variant`; SelectMenu translates
-its value callback to the upstream native select change event.
+## Rules
 
-The Home banner entry uses the published Atomic `PromptInput` organism through
-`AtomicPromptInputAdapter`; the adapter only translates workflow callbacks and
-preserves file-only submission. Other workflow surfaces retain the compatibility
-`PromptComposer` while they migrate to the published organism contract. Layout
-belongs to plain containers; upstream roots receive their public variants and
-sizes without local skins.
+- Check the installed exports and this list before writing local UI.
+- A fallback uses unstyled native behaviour or a composition of public components. Never style a native element to imitate a missing library control.
+- Generic gaps get a change request through the Brutalist change protocol. Record its ID here.
+- Close an entry only in the change that replaces the fallback with the released component.
+- When the installed package changes, re-review this list and update the commit above. This will be enforced by `npm run design-system:check` (planned).
 
-## Native defaults when upstream lacks the behavior
+Status values: `open` (no request yet), `requested`, `available` (released, not yet adopted), `closed`.
 
-| Pattern | Current boundary | Adoption requirement |
-| --- | --- | --- |
-| Autosaving Brief summary | Native button and textarea; preserves 700ms pause, blur, IME, captured revisions and failed-save retry. | An upstream editor with compatible autosave/composition semantics. |
-| Brand palette picker | Native color input; names, hex values and roles use public fields. | Public color picker export. |
-| Attachment selection | Hidden native file inputs behind public controls in PromptInput and Visuals; the Home adapter preserves file-only submission for the existing brief flow. | No visible replacement skin; upstream FileDropzone is used in standalone upload areas. |
-| Routed workflow navigation | Native ordered links; current/disabled states remain app-owned. | Interactive routed Stepper; current upstream Stepper is display-only. |
-| Empty and decision regions | Plain native text/regions; alerts use the upstream Alert. | Suitable standalone EmptyState/DecisionNotice exports. |
-| Recipe graph | ReactFlow behavior and default graph controls; nodes compose public Surface/StatusBadge. | A graph editor is outside the installed library API. |
-| Sidebar project metadata | SidebarPanel accepts project titles and actions, but has no public slot for a project-type icon or secondary label. | Project metadata slot or renderer. |
-| Sidebar primary-action permissions | SidebarPanel primaryAction has no disabled state. The app blocks the navigation callback for read-only roles without adding a local visual override. | Disabled primary-action support. |
-| Sidebar shell border placement | SidebarPanel exposes no border-placement variant; its Surface renders all four borders. The requested desktop shell needs only the right divider, with no left, bottom or top stroke. The current component is retained without local CSS overrides. | Public SidebarPanel shell/border variant supplied upstream, followed by the supported package refresh and consumer verification. External-package changes require explicit authorization. |
-| Sidebar profile trigger | SidebarPanel's account API always renders a Button-backed Menu trigger and has no avatar, trigger-content, or upward-opening profile slot. The app uses a native profile block with the account initials, name, hover state, upward chevron, and native menu items while this interaction remains unavailable upstream. | Public account trigger renderer or profile slot with configurable placement and avatar content. |
-| Inline outlined keyword input | Native unstyled input is used for brief visual keywords because the public system lacks this primitive. | Public inline outlined keyword-input export. |
+## Open and available gaps
 
-Banner text editing now uses public labelled fields outside the artwork because
-the Atomic package does not export CanvasText. The live import graph contains five native form-control declarations
-in four files: AutoSaveSummary (button, textarea), ColorTokenEditor (color input),
-PromptComposer and VisualsView (hidden file inputs). This source
-count excludes controls generated by dependencies and does not count app links.
+| ID | Pattern | Used in | Fallback | Waiting for | Request | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| G-routed-steps | Step navigation where steps are links | Brand setup wizard (`molecules/WorkflowSteps.jsx`); planned four-stage asset creation flow | Local ordered list of links; the campaign page uses public `WorkflowSteps` with `onChange` | `WorkflowSteps` with optional `href` per step | R1 | open |
+| G-autosave-inline-text | Text saved automatically after a pause and on blur, respecting IME composition, with retry | Brief summary (`AutoSaveSummary.jsx` via `molecules/InlineText.jsx`) | Native textarea and button; 700 ms pause, blur, IME, captured revision, failed-save retry | `InlineText` autosave option | R2 | open |
+| G-dialog-external-open | Dialog opened by application state or a custom trigger | `compatibility.jsx` `Dialog`/`Drawer`; `PreviewDialog` | Native `<dialog>` with focus return; no local modal skin | `Dialog`/`Drawer` with optional `trigger` when controlled | R3 | open |
+| G-sidebar-profile-trigger | Profile block with avatar, name and upward menu | `SidebarAccountMenu.jsx` | Native buttons and menu items | `SidebarPanel` account trigger slot | R4 | open |
+| G-sidebar-primary-disabled | Disabled primary action for read-only roles | Studio sidebar | Navigation callback blocked; no visual override | `SidebarPanel` `primaryAction.disabled` | R5 | open |
+| G-sidebar-project-metadata | Project type icon and secondary label in the sidebar | Studio sidebar | Title only | `SidebarPanel` project `icon` and secondary label | R5 | open |
+| G-sidebar-shell-border | Sidebar with only a right divider | Studio shell | Public component with all four borders, no override | `SidebarPanel` shell/border variant | R5 | open |
+| G-keyword-input | Free-text tags added with Enter | Brief visual keywords (`BriefQuestionsView.jsx`) | Public `TextField` with Enter handler plus removable `Tag`s | `TagInput` component | R7 | open (low priority) |
+| G-canvas-text | Editing banner text on the artwork | Banner template editor | Public fields beside the artwork | Canvas text editing component | none | open (deferred) |
+| G-icon-bundle-size | Tree-shakeable icons | Whole application bundle | None; large design-system chunk | Per-icon or tree-shakeable icon registry | R8 | open |
+| G-color-picker | Brand palette colour picking | `ColorTokenEditor.jsx` | Native `<input type="color">` | `ColorPicker` (released); read-only state still missing | R6 (read-only) | available → adopt A1 |
+| G-attachment-selection | File attachment in composers and Visuals | `PromptComposer.jsx`, `VisualsView.jsx` | Hidden native file inputs behind public buttons | `PromptInput`, `FileDropzone`, `AttachmentArea` (released) | none | available → adopt A6, A7 |
 
-## Removed duplication
+## Closed
 
-The legacy second package, copied showcase, example entrypoints and local token
-catalog are retired. The application design-system reference reads the installed
-stylesheet and provenance directly, so it cannot display an independently edited
-token scale. Product brand palettes, artwork fonts, slide layouts and export
-geometry remain application data rather than application UI tokens.
+| ID | Pattern | Resolution | Date |
+| --- | --- | --- | --- |
+| G-empty-decision | Empty and decision regions | Public `EmptyState`; decisions compose public `Alert` | 17 Sep 2026 |
+| G-recipe-graph | Recipe graph editor | Not a design-system concern; editor frozen (D4) | 17 Sep 2026 |
+| G-button-link | Button used as navigation | Links use public `TextAction` with `href` | 17 Sep 2026 |
 
-## Verification and future changes
+## Contract changes to keep in mind
 
-The 2026-09-13 review covers the shell, Home, creation, settings, templates and
-editor, presentations, brand screens, six campaign modules and admin records/editor.
-Desktop/mobile route checks complement component, command and integration tests.
-The recipe graph has no persisted live fixture in the current app database; its
-editing/validation/simulation behavior is covered by the admin tests.
-
-Preflight checks reject missing named exports, package/provenance drift, upstream
-token redefinitions, private component selectors and explicit className/style props
-on directly imported upstream components. They cannot prove the effect of arbitrary
-spread props, reexport chains or every ancestor selector; retain rendered checks
-when adding routes or patterns. New upstream components are available after refresh,
-but adoption is a deliberate replacement of the corresponding fallback above.
-
-## Current Atomic package and remaining gaps
-
-The application now uses the canonical Atomic package `0.1.0-atomic.0` from
-commit `7b06e5e01c7a64ed0bd509e0d7850acfc3c618b7`. The shared compatibility
-prerequisite and the banner-first consumer migration are installed and checked
-through the canonical updater. Same-name APIs remain application-reviewed
-adapters, not a second design-system implementation.
-
-| Candidate gap or changed contract | Migration decision |
+| Change in the package | Application boundary |
 | --- | --- |
-| CanvasText is removed; banner editing uses public fields beside the artwork. | Keep this as the current interaction boundary until an upstream canvas editor exists. Do not skin a native textarea to mimic the retired component. |
-| Dialog and Drawer require their own string trigger. | Banner confirmation can use that trigger directly. Existing externally opened dialogs and React-node triggers need separate contract review; do not wrap existing buttons in the new trigger. |
-| Button is a button, not a polymorphic link. | Preserve link behavior through suitable public navigation components or unstyled native anchors. Do not silently replace navigation with click-only button semantics. |
-| SelectionTile is removed. | The pilot composes Surface and a labelled pressed Button. Selection is performed by that control; the artwork is a preview. This is an intentional interaction change to review during integration. |
-| Full icon registry is included in the library runtime. | The application build reports a large design-system chunk. Track package-level export/tree-shaking improvements; do not patch the installed bundle. |
+| `CanvasText` removed | Banner text is edited in public fields beside the artwork. Do not skin a textarea to imitate it. |
+| `Dialog`/`Drawer` require a string trigger | Existing externally opened dialogs keep the native fallback until R3. Do not wrap existing buttons in the new trigger. |
+| `Button` is not polymorphic | Navigation uses `TextAction` with `href` or unstyled anchors; never click-only buttons for links. |
+| `SelectionTile` removed | Selections compose `Surface` and a labelled pressed `Button`; the artwork is a preview. |
 
-The Atomic package now exports EmptyState, WorkflowSteps, PromptInput, and
-AttachmentArea. Reassess the older gap rows against their actual APIs during
-cutover; their names alone do not establish compatibility with autosave,
-file-only submission, routing, or draft-retention behavior.
+## Boundary
+
+- Application code imports public components and `brutalist-design-system/styles.css` only. Existing local import paths in `src/components/design-system/` are adapters (see the audit); do not add new skins there.
+- Product brand palettes, artwork fonts, slide layouts and export geometry are application data, not UI tokens.
+- `npm run design-system:check` rejects missing named exports, package or provenance drift, upstream token redefinitions, private component selectors and explicit `className`/`style` on directly imported upstream components. It cannot prove the effect of spread props, re-export chains or ancestor selectors; keep rendered checks for new routes and patterns.

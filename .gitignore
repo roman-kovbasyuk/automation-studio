@@ -3,10 +3,6 @@
 CLAUDE.local.md
 .env
 
-# Raw scraped media (large, regenerable)
-projects/*/01-research/raw/
-projects/*/01-research-static/raw/
-
 # OS noise
 .DS_Store
 Thumbs.db
@@ -15,11 +11,10 @@ Thumbs.db
 __pycache__/
 *.pyc
 
-# Lingu Studio web app
+# Automation Studio web app
 node_modules/
 dist/
 .worktrees/
-.superpowers/sdd/
 .studio-demo-assets/
 .impeccable/review/
 docs-site/.vitepress/cache/
