@@ -1,6 +1,6 @@
 # Brief review
 
-**Status:** Target (draft for owner review) · **Updated:** 17 September 2026 · **Requirements:** BRIEF-2–5, COPY-1, VIS-1, VIS-5, NFR-2, NFR-5, NFR-6 · **Decisions:** D36, D37; proposes D39 · **Depends on:** M0, DS0 · **Plan:** [implementation plan](../plans/2026-09-17-brief-review.md)
+**Status:** Implemented, awaiting review · **Updated:** 17 September 2026 · **Requirements:** BRIEF-2–5, COPY-1, VIS-1, VIS-5, NFR-2, NFR-5, NFR-6 · **Decisions:** D36, D37, D39 · **Depends on:** M0, DS0 · **Plan:** [implementation plan](../plans/2026-09-17-brief-review.md)
 
 How the Brief stage of a banner set turns one AI analysis into a confirmed brief: the AI prefills what it can, and the requester reviews it in up to three steps.
 
@@ -216,7 +216,7 @@ Derived in the browser from the stored proposal and the draft, using the rules a
 
 - `RadioGroup` gets `variant: 'default' | 'tags'`. The tags variant draws each option as a wrapping, tag-shaped native radio, and the selected option uses the accent tone. Keyboard and screen reader behaviour stay native. `instructions`, `error`, `required` and `customOption` work in both variants.
 - Package tests (keyboard, selection, error, custom option), an accessibility check and a documentation example; a patch version, because the change is additive (D25).
-- `RangeSlider` needs no change: it already passes `formatValue` to both handles.
+- `RangeSlider` handles now share one scale: both span the full range and are clamped so they never cross. Building this page showed that each handle's range stopped at the other, which drew the handles on different scales and locked the upper handle at the maximum (for example with 65+).
 - No gap entry is needed, because no fallback ships.
 
 ### Application
@@ -269,7 +269,7 @@ In `src/studio/campaign/modules/brief/`:
 
 Made in the implementation pull request:
 
-- **Decision D39** (numbering assumes M0's D37 and D38): *Brief review is AI-prefilled and stepwise. One analysis fills the settings it has a basis for and marks them as suggested; the requester reviews them in up to three steps; found copy is always kept, with optional new copy; image prompts use the keywords and audience settings.*
+- **Decision D39**: *Brief review is AI-prefilled and stepwise. One analysis fills the settings it has a basis for and marks them as suggested; the requester reviews them in up to three steps; found copy is always kept, with optional new copy; image prompts use the keywords and audience settings.*
 - **PRD:** BRIEF-3 becomes *The analysis prefills the settings it has a basis for and marks them as suggested; the requester reviews every setting and answers those left empty.* BRIEF-5 becomes *Found copy is always kept; the requester chooses whether to also write new copy options.*
 - **[Asset creation flow UX](asset-creation-flow-ux.md):** the Brief region table points here; the status line row for a brief ready for review, in the interface's US spelling; the Brutalist mapping (`RadioGroup` tags variant, `RangeSlider`).
 - **[Recipes](recipes.md):** the `copyMode` values; `importSuppliedCopy` runs when `{ analysis: foundCopy, exists: true }`; the `confirmBrief` questions.

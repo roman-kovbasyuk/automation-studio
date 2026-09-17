@@ -94,7 +94,7 @@ A restricted language. No free code.
 ```yaml
 { input: sizes, exists: true }
 { input: wordingFidelity, equals: verbatim }
-{ answer: copyMode, equals: keep_original }
+{ answer: copyMode, equals: keep_and_create }
 { analysis: foundCopy, exists: true }
 { check: analysisValid }
 { checks: [textFits, requiredWording] }
@@ -177,8 +177,8 @@ Version 1 capabilities for the proof of concept. "Today" names the existing impl
 | --- | --- | --- | --- | --- | --- |
 | `collectMaterials` | touchpoint | all | `maxBytes` (≤ 25 MB) | brief sources | Home composer, `briefSourceService` |
 | `analyseMaterials` | action | all | `suggestVisualKeywords` (0–7) | analysis, found copy, draft answers | `analyseBrief` with sources (`generationService`) |
-| `confirmBrief` | touchpoint | all | `questions` (answer fields and recipe inputs to ask) | confirmation | `briefingService` confirmation; `copyMode` is asked only when copy was found, otherwise it is `create_new` |
-| `importSuppliedCopy` | action | banners | — | copy items (supplied) | confirmation with `keep_original` |
+| `confirmBrief` | touchpoint | all | `questions` (answer fields and recipe inputs to ask) | confirmation | `briefingService` confirmation; when copy was found, `copyMode` records whether to also write new copy (`keep_original` or `keep_and_create`), otherwise it is `create_new` |
+| `importSuppliedCopy` | action | banners | — | copy items (supplied) | confirmation when copy was found (`keep_original` or `keep_and_create`) |
 | `writeCopy` | action | banners | `variants` (1–5) | copy items (generated) | `generateCopy` |
 | `chooseCopy` | touchpoint | banners | `min` (≥ 1) | selected copy items | Copy module selection |
 | `outlineDeck` | action | presentations | `templateSet`, `slideCount` source | outline (layout per slide) | `presentationPlanContract` (no service yet) |
@@ -260,11 +260,12 @@ stages:
     nodes:
       - id: C1
         kind: condition
-        label: Keep supplied copy?
-        when: { answer: copyMode, equals: keep_original }
+        label: Copy found in the materials?
+        when: { analysis: foundCopy, exists: true }
         yes: C2
         no: C3
-      - { id: C2, kind: action, capability: importSuppliedCopy, label: Import copy from materials, next: C5 }
+      - { id: C2, kind: action, capability: importSuppliedCopy, label: Import copy from materials, next: C2a }
+      - { id: C2a, kind: condition, label: Also write new copy?, when: { answer: copyMode, equals: keep_and_create }, yes: C3, no: C5 }
       - id: C3
         kind: action
         capability: writeCopy

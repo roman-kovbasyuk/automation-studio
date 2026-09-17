@@ -50,6 +50,8 @@ Drafted on 17 September 2026 and updated for decisions D17–D30 the same day:
 | DS2 | Checkable gap list (JSON); breaking-change gate | M2 |
 | DS3 | First gap fixes in the package: routed steps (R1), autosave inline text (R2), controlled dialogs (R3) | M2 interface |
 
+**Brief review (after DS0).** [Design](../specs/brief-review.md) and [plan](../plans/2026-09-17-brief-review.md), implemented and awaiting review: AI-prefilled settings reviewed in up to three steps, found copy always kept with optional new copy, keywords and audience settings in image prompts (D39).
+
 **Preparation outside the build:** the pilot designer (D28) creates the Folkeuniversitetet slide template set and uploads the licensed Matter font files before M3.
 
 ### Later

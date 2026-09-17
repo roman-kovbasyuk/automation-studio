@@ -1,6 +1,6 @@
 # Brief review — implementation plan
 
-**Status:** Approved, in progress · **Date:** 17 September 2026 · **Design:** [Brief review](../specs/brief-review.md) · **Decisions:** D36, D37; D39 recorded in T10 · **Depends on:** M0; DS0 before T6
+**Status:** Implemented, awaiting review · **Date:** 17 September 2026 · **Design:** [Brief review](../specs/brief-review.md) · **Decisions:** D36, D37; D39 recorded in T10 · **Depends on:** M0; DS0 before T6
 
 ## Goal
 
@@ -17,7 +17,7 @@ Build the [Brief review](../specs/brief-review.md) design: one AI analysis prefi
 ## Working rules
 
 - Branch `feat/brief-review` in its own worktree with its own `node_modules` (`npx npm@10 ci`); one commit per task. The design and this plan are part of the branch.
-- While M0 is in review the branch starts from `feat/m0-stabilise`; it is rebased onto `v3` when M0 merges and again when DS0 merges.
+- While M0 and DS0 are in review the branch sits on `feat/ds0-brutalist-workspace`, which sits on `feat/m0-stabilise`; it is rebased onto `v3` as they merge.
 - T1–T5 do not need DS0. T6–T9 start after DS0 merges.
 - Behaviour changes start with a failing test.
 - Tests and manual checks use the mock provider, `npm run dev:prototype` or `scripts/testing/start-isolated-studio.mjs`, never the demo database. Real Vertex AI checks need the owner's approval (T11).
@@ -165,6 +165,34 @@ Pure functions used by the interface:
 - Browser check with the isolated launcher and mock provider: a brief with found copy and cues, a brief with neither, Save changes on a confirmed brief, keyboard only, and 320 px width. Record the results in this plan.
 - Ask the owner before trying real briefs with Vertex AI EU, because the local API writes to the demo database.
 - Open one pull request into `v3`.
+
+## Results
+
+| Task | Result (17 September 2026) |
+| --- | --- |
+| T1 | `keep_and_create` accepted; age range helpers; confirmed briefs need no age limit or one continuous range |
+| T2 | Keeping found copy with new copy imports it once and writes copy for new copy settings; `found_copy_not_kept` rejects dropping found copy; the capacity check counts five new options. The mock provider now finds every headline in a block. Fixtures keep found copy; `test:workflow` needed no change because its brief has none |
+| T3 | `normalizeBriefingProposal` runs inside `verifyBriefingProposal`, at analysis acceptance and at confirmation |
+| T4 | Analysis and direction instructions updated; the mock provider reads setting lines and a few words; the prototype proposes settings and writes copy only for writing modes |
+| T5 | `briefReviewModel.js` with 13 tests |
+| T6 | `RadioGroup` tags variant, tests, documentation example, usage guidance, changelog; Brutalist 0.1.1 |
+| T7 | `BriefStep` and `AnalysisProgress`; the analysis status in `BriefView` became the progress panel. `BriefReview` moved to T9 so that every commit stays green |
+| T8 | `FoundCopyStep`, `SettingsStep`, `VisualContextStep` and `SuggestedBadge` with 4 tests |
+| T9 | `BriefReview` with 7 tests; `BriefModule` wiring; the coordinator's navigation rule with a test; the single review form, its questions view and stale wizard styles removed. The browser check found two defects, both fixed: Brutalist's `RangeSlider` drew its handles on different scales and locked the upper handle at the maximum (fixed in the package, recorded in 0.1.1), and a spacing step Brutalist does not define collapsed the found copy step |
+| T10 | D39; PRD BRIEF-3 and BRIEF-5; UX spec Brief region, status line and Brutalist mapping; recipe spec and product recipe example; roadmap; AI generation page; design status |
+
+## Final verification
+
+| Check | Result |
+| --- | --- |
+| `npm run test:run` | 1,791 passed, 1 skipped |
+| `npm run design-system:check`, `npm run test:design-system` | Pass |
+| `npm run verify --workspace brutalist-design-system` | Pass: 143 tests, typecheck, builds, documentation examples, packed consumer at 0.1.1 |
+| `npm run build` (including the docs), `npm run verify:production` | Pass |
+| `npm run test:workflow` | Pass. It drives the API; the steps were checked in the browser |
+| Browser, desktop, isolated launcher with mock providers | A brief with found copy and setting lines reached Copy through the steps: Proceed without an answer showed the error and focused the first choice; Settings showed Suggested marks, and changing the age range with arrow keys and gender with arrow keys cleared them; Visual context showed *Starts writing 5 copy options.*; Finalize opened Copy with the found copy and five new options. On the confirmed brief, a keyword change warned *Visuals will need updating.* and Save changes stayed on Brief; a goal change warned about copy and visuals and Cancel restored it |
+| Browser, 320 px | No horizontal scroll; collapsed summaries wrap with Edit below; tags wrap, and long goal labels wrap inside their tags |
+| Real briefs through Vertex AI EU | Not run: needs the owner's approval because the local API writes to the demo database |
 
 ## Risks
 
