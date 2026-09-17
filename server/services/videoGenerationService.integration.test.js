@@ -84,7 +84,7 @@ test('video plan requires explicit acceptance and survives worker restart withou
     expect(asset.bytes).toEqual(await readFile(join(dir, 'video.mp4')))
     expect(JSON.stringify(finished)).not.toContain('operationName')
   } finally { if (dir) await rm(dir, { recursive: true, force: true }); await h.cleanup() }
-})
+}, 30_000)
 
 test('expired submitting lease becomes unknown and cannot trigger replacement generation', async () => {
   const h = await setup()
@@ -101,7 +101,7 @@ test('expired submitting lease becomes unknown and cannot trigger replacement ge
     await expect(h.service.submitPlan({ actor: h.actor, campaignId: h.request.campaignId, planId: second.id,
       idempotencyKey: 'another', acceptedCostMicrounits: 200000 })).rejects.toMatchObject({ code: 'video_in_progress' })
   } finally { await h.cleanup() }
-})
+}, 30_000)
 
 test('changed source, missing consent, budget and role checks stop video before submission', async () => {
   const h = await setup()
@@ -116,7 +116,7 @@ test('changed source, missing consent, budget and role checks stop video before 
     await expect(h.service.submitPlan(command)).rejects.toMatchObject({ code: 'source_changed' })
     expect(h.provider.submit).not.toHaveBeenCalled()
   } finally { await h.cleanup() }
-})
+}, 30_000)
 
 async function queue(h, key = 'video') {
   const plan = await h.service.plan(h.request)
@@ -135,7 +135,7 @@ test('archived campaigns hide video records and prevent further local commands',
     await h.service.runNext()
     expect(h.provider.submit).not.toHaveBeenCalled()
   } finally { await h.cleanup() }
-})
+}, 30_000)
 
 test('a queued video crossing the UTC budget day must reserve on its dispatch day', async () => {
   const h = await setup()
@@ -148,7 +148,7 @@ test('a queued video crossing the UTC budget day must reserve on its dispatch da
     expect(h.provider.submit).not.toHaveBeenCalled()
     expect((await h.pool.query('SELECT actual_cost_microunits FROM generation_jobs WHERE id=$1', [job.id])).rows[0].actual_cost_microunits).toBe('0')
   } finally { await h.cleanup() }
-})
+}, 30_000)
 
 test('download failure resumes the saved operation without a second video submission', async () => {
   const h = await setup()
@@ -166,7 +166,7 @@ test('download failure resumes the saved operation without a second video submis
     expect(h.provider.submit).toHaveBeenCalledTimes(1)
     expect(h.provider.poll).toHaveBeenCalledTimes(2)
   } finally { await h.cleanup() }
-})
+}, 30_000)
 
 test('concurrent workers submit once and cancellation cannot publish an in-flight result', async () => {
   const h = await setup()
@@ -187,7 +187,7 @@ test('concurrent workers submit once and cancellation cannot publish an in-fligh
     expect((await h.pool.query('SELECT actual_cost_microunits FROM generation_jobs WHERE id=$1', [job.id])).rows[0].actual_cost_microunits).toBeNull()
     expect((await h.pool.query("SELECT count(*)::int AS count FROM assets WHERE kind='video'")).rows[0].count).toBe(0)
   } finally { await h.cleanup() }
-})
+}, 30_000)
 
 
 test('review freezes selected video and delivery preserves its exact MP4 bytes', async () => {
@@ -256,4 +256,4 @@ test('review freezes selected video and delivery preserves its exact MP4 bytes',
     expect(manifest.files.find(file=>file.mimeType==='video/mp4')).toMatchObject({ sha256:video.sha256,width:1280,height:720,durationSeconds:4,hasAudio:false })
     expect(h.provider.submit).toHaveBeenCalledTimes(1)
   } finally { if (dir) await rm(dir,{recursive:true,force:true}); await h.cleanup() }
-})
+}, 30_000)

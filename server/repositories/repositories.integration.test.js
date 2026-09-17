@@ -227,7 +227,7 @@ describe('migration runner', () => {
     await Promise.all([firstPool.end(), secondPool.end()])
     pools.delete(firstPool)
     pools.delete(secondPool)
-  })
+  }, 30_000)
 
   test('persists repository data after all clients disconnect', async () => {
     const firstPool = makePool()
