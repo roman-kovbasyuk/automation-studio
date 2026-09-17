@@ -1,6 +1,6 @@
 # M0 Stabilise — implementation plan
 
-**Status:** Accepted plan · **Date:** 17 September 2026 · **Milestone:** M0 in the [roadmap](../product/roadmap.md) · **Decisions:** D31–D35
+**Status:** In progress (T1 done) · **Date:** 17 September 2026 · **Milestone:** M0 in the [roadmap](../product/roadmap.md) · **Decisions:** D31–D38
 
 ## Goal
 
@@ -40,6 +40,14 @@ Run tests from a checkout with its own `node_modules` (run `npm install` in the 
 
 **Verify:** `npm run test:run` passes with zero failures, three consecutive times for `repositories.integration.test.js`.
 
+**Result (17 September 2026):** 1,868 passed, 1 skipped, 0 failed; `repositories.integration.test.js` passed three consecutive runs. What changed:
+
+- The four group D failures were the confirmation gate, not timing. A shared fixture (`server/testing/briefingFixtures.js`) analyses and confirms briefs with the mock provider, or seeds a confirmed briefing for control-plane tests.
+- The isolated studio and launcher enable the briefing flow; runtime and interface tests confirm the brief before copy.
+- Twelve rolling-upgrade tests that ran current services on schemas 012–020 were retired: those services need tables from migration 051, and every database is past 053. Historical tests that do not need current services were kept.
+- `PresentationLibrary` was removed early (only its own test used it).
+- A partial `AnimatedBanner` mock fixes the unhandled error reported in every run.
+
 ### T2 — Remove unreachable frontend code
 
 Delete the modules listed in the [adoption audit](../design-system/adoption-audit.md#unreachable-code) with the tests that cover only them.
@@ -55,6 +63,10 @@ Delete the modules listed in the [adoption audit](../design-system/adoption-audi
 | `src/styles/shadcn.css`, `components.json` | Only imported by `src/mvp` |
 | Dependencies `radix-ui`, `class-variance-authority`, `clsx`, `tailwind-merge`, `tailwindcss`, `@tailwindcss/vite` and the Tailwind plugin in `vite.config.js` | Brutalist keeps its own `radix-ui` dependency |
 | `.impeccable/surfaces/src-mvp-mvpapp-jsx.md` | Design tool record for deleted code |
+| `src/studio/BannerTemplateEditor.jsx`, `banner-template-editor.css`, `BannerTemplateEditor.test.jsx`, `BannerTemplateEditor.interaction.test.jsx`; the `?banner=` editor branch in `TemplateLibrary.jsx` and its catalog test; the ignored `onCreateCampaign` prop passed by `StudioApp.jsx` | Cannot be opened in the application (D38). Archive `docs/engineering/templates/banner-template-editor.md` |
+| The **Review campaign questions** branch in `src/studio/campaign/modules/brief/BriefModule.jsx` | The coordinator no longer provides `startReview` |
+
+**Done in T1:** `src/studio/PresentationLibrary.jsx`, its test and `presentation-templates.css`.
 
 **Keep:** `src/studio/campaign/testing/workspaceFixtures.js` — a test helper used by 30 live test files.
 
@@ -126,12 +138,19 @@ Replace *Generation unknown. Check its status before trying again.* in `src/stud
 - `unknown`: *Checking whether … was created…* with the reason (D33) while the 40-second wait runs; then *We could not confirm the result* with the reason, **Check again** and **Mark as failed** (calls the resolve endpoint).
 - `generation_unavailable`: *Analysis is unavailable: …* with **Check again**; no job is created.
 - Failed brief sources in `src/studio/campaign/modules/brief/BriefSourcesView.jsx` show a message instead of the raw `errorCode` (for example `brief_collection_text_too_large`).
+- Module errors never show raw exception text (seen: *api.listVideoJobs is not a function* in Visuals with an incomplete API); unexpected errors use the generic message and are logged.
 
 **Tests:** runtime mapping tests; Brief, Copy and Visuals module tests for each state; no request is sent on page load or refresh.
 
-### T6 — Open the project immediately
+### T6 — AI-first project creation
 
-Today `create()` in `src/studio/StudioApp.jsx` uploads sources and runs analysis on Home before navigating.
+**AI briefing always on (D37).** Today project creation returns 503 *The new briefing flow is not enabled yet* unless `BRIEFING_ENABLED=true`.
+
+1. Remove `BRIEFING_ENABLED` and the `briefingEnabled` / `sourceBriefing` switches from `server/bootstrap.js`, `scripts/dev-studio.mjs`, `server/services/workflowService.js`, `server/services/generationReadinessService.js`, the test runtimes, `src/studio/useBriefingCapability.js` and `src/studio/StudioApp.jsx`.
+2. Production already requires `GENERATION_PROVIDER=gemini`; it now also requires `VERTEX_AI_LOCATION=eu`, the managed connection the briefing needs. Development and tests keep explicit mock providers.
+3. Home checks generation readiness before the user starts. When AI is unavailable, the prompt and uploads are disabled with the readiness message, so no project is created that cannot continue.
+
+**Open the project immediately.** Today `create()` in `src/studio/StudioApp.jsx` uploads sources and runs analysis on Home before navigating.
 
 1. Home creates the campaign (no uploads) and navigates to the Brief stage at once.
 2. The pending submission (files and text) is handed to `CampaignPage` in memory, using the existing `analyzeOnOpen` mechanism extended with sources.
@@ -139,7 +158,7 @@ Today `create()` in `src/studio/StudioApp.jsx` uploads sources and runs analysis
 4. A reload before uploads finish shows the draft with *Upload interrupted — add your files again*; nothing is re-sent automatically.
 5. The new campaign appears in the sidebar immediately; an uncertain creation still checks the list before allowing another attempt.
 
-**Tests:** `StudioApp` creation test (navigates before analysis completes); `CampaignPage` pending-submission test; reload does not re-dispatch; failed upload stays in Brief with retry.
+**Tests:** configuration tests for the production AI requirement; readiness states on Home; `StudioApp` creation test (navigates before analysis completes); `CampaignPage` pending-submission test; reload does not re-dispatch; failed upload stays in Brief with retry.
 
 ### T7 — Product naming in code
 
@@ -161,6 +180,7 @@ Record the kept identifiers in [known issues](../engineering/known-issues.md) as
 | `lodash-es` (high, via Mermaid/VitePress) and `mermaid` (moderate, direct) | Update Mermaid and dependents where a non-breaking fix exists |
 | `vite` inside VitePress (high, no fix) | Development server only; document and revisit on the next VitePress release |
 | `firebase-admin` chain (8 moderate, production) | Needs `firebase-admin` 14 (major). Separate follow-up with authentication tests, not in M0 (D34) |
+| `package-lock.json` out of sync for npm 11 (`npm ci` fails: missing `@emnapi/core`, `@emnapi/runtime`) | Regenerate the lockfile with the npm version of the Docker image (Node 22) and pin that npm version for development |
 
 **Verify:** `npm audit` shows no high findings outside the documented development-only item; full suite and build pass.
 
@@ -203,6 +223,8 @@ Taken on 17 September 2026.
 | When is **Mark as failed** offered? | 40 seconds after the job's timeout, always with the reason (D33) |
 | Upgrade `firebase-admin` to 14 inside M0? | No, separate follow-up (D34) |
 | One pull request for M0, or one per task? | One; the plan is reviewed with the documentation pull request (D35) |
+| Keep a way to run without AI? | No. AI is at the centre of every creation flow; the briefing flag is removed (D37) |
+| Reconnect or remove the unreachable banner template editor? | Remove it in T2 (D38) |
 
 ## Baseline test run
 
