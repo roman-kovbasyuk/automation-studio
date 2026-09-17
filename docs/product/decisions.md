@@ -24,6 +24,7 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D14 | **Brutalist changes go only through the change protocol.** Additive requests from Automation Studio are pre-approved; breaking changes need the owner's approval. | 17 Sep 2026 | The rule requiring explicit authorization for every external-package change |
 | D15 | **The change protocol is agent-agnostic.** Any agent or person can implement a request; pull mode is the default; Codex, Claude Code and command adapters are optional. | 17 Sep 2026 | Codex-only implementation in the v1 pipeline |
 | D16 | **One install path, owned by the app.** Releases are installed only through the app's updater (vendored artifact plus provenance). Brutalist releases are pushed to GitHub (`main` and a version tag) before any app installs them. | 17 Sep 2026 | Direct installation of local absolute package paths by the v1 pipeline |
+| D17 | **Decks are delivered as editable PPTX only.** No PDF or slide PNG downloads. | 17 Sep 2026 | Provisional P6 (PDF plus PNG per slide) |
 
 ## Provisional decisions
 
@@ -36,7 +37,6 @@ Taken on 17 September 2026 as the recommended option while the owner was unavail
 | P3 | Observatory task reporting is optional in the change pipeline. | Required | Change protocol v2 |
 | P4 | The change queue runs on the owner's machine for the pilot. | Shared host | Change protocol v2 |
 | P5 | Pull-mode claims last 2 hours and can be renewed. | Fixed lease | Change protocol v2 |
-| P6 | Pilot decks are delivered as PDF plus one PNG per slide. Editable PPTX is added only if the pilot requires it. | PPTX or Google Slides from the start | [Roadmap](roadmap.md), deck specification |
 | P7 | Deck visuals are AI-generated artwork or user uploads. A brand image library comes later. | Brand image library first | Deck specification |
 | P8 | MSD is the pilot brand: it is the only brand with both banner and slide templates. | Another brand | [Roadmap](roadmap.md) |
 | P9 | The asset creation flow is the top-level record for the proof of concept. Grouping flows into projects comes later. | Projects containing several flows from the start | Domain model specification |
