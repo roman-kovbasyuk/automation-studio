@@ -28,3 +28,13 @@ test('image wording remains needs-review and cannot claim text verification',()=
   value.foundCopy[0].verification='needs_review'
   expect(verifyBriefingProposal(value,{sourceKey,sources:images}).foundCopy[0].verification).toBe('needs_review')
 })
+test('corrects copy questions and age ranges the model can get wrong, and stays stable when repeated',()=>{
+  const found=proposal();found.answers={...found.answers,copyMode:'create_new',ageGroups:['45_54','18_24']}
+  const corrected=verifyBriefingProposal(found,{sourceKey,sources})
+  expect(corrected.answers).toMatchObject({copyMode:null,ageGroups:['18_24','25_34','35_44','45_54']})
+  expect(verifyBriefingProposal(corrected,{sourceKey,sources})).toEqual(corrected)
+  for(const copyMode of ['keep_original','keep_and_create'])
+    expect(verifyBriefingProposal({...proposal(),answers:{...emptyBriefAnswers(),copyMode}},{sourceKey,sources}).answers.copyMode).toBe(copyMode)
+  const none={...proposal(),foundCopy:[],answers:{...emptyBriefAnswers(),copyMode:'keep_original',ageGroups:['under_18','18_24','25_34','35_44','45_54','55_64','65_plus']}}
+  expect(verifyBriefingProposal(none,{sourceKey,sources}).answers).toMatchObject({copyMode:'create_new',ageGroups:[]})
+})
