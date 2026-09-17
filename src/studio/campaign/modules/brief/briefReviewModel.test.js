@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest'
 import { emptyBriefAnswers } from '../../../../../shared/briefingContracts.js'
 import {
-  ageLabel, briefIssues, initialDraft, outOfDate, stepIssues, stepOfField, stepSummary, suggestedBlocks, visibleSteps, writesCopy,
+  ageLabel, briefIssues, initialDraft, stepIssues, stepSummary, suggestedBlocks, visibleSteps, writesCopy,
 } from './briefReviewModel.js'
 
 const found = { fields: { headline: 'Spring sale: 20% off', body: '', offer: '', cta: '' }, sourceRefs: [], verification: 'text_verified' }
@@ -37,7 +37,6 @@ describe('brief review model', () => {
     expect(stepIssues('visuals', draft)).toEqual({})
     expect(stepIssues('settings', complete)).toEqual({})
     expect(Object.keys(briefIssues(draft))).toEqual(['summary', 'copyMode', 'reach', 'goalCustom', 'ageGroups'])
-    expect(['summary', 'copyMode', 'goalCustom', 'visualTags'].map(stepOfField)).toEqual(['understanding', 'copy', 'settings', 'visuals'])
   })
 
   test.each([
@@ -72,14 +71,15 @@ describe('brief review model', () => {
     expect(suggestedBlocks(initialDraft(defaults.answers, { ...defaults, suggestedVisualTags: [] }), { ...defaults, suggestedVisualTags: [] }, new Set(), false).size).toBe(0)
   })
 
-  test('says when saving writes copy and what goes out of date', () => {
+  test('says when saving writes copy', () => {
     expect(writesCopy({ ...complete, copyMode: 'keep_original' }, brief(complete))).toBe(false)
     expect(writesCopy({ ...complete, copyMode: 'keep_and_create' }, brief(complete))).toBe(true)
     const confirmed = brief({ ...complete, copyMode: 'create_new' }, { id: 'confirmation-1' })
     expect(writesCopy({ ...complete, copyMode: 'create_new', visualTags: ['Oslo'] }, confirmed)).toBe(false)
     expect(writesCopy({ ...complete, copyMode: 'create_new', goal: 'signups' }, confirmed)).toBe(true)
-    expect(outOfDate(confirmed, { ...complete, copyMode: 'create_new', goal: 'signups' })).toBe('copy')
-    expect(outOfDate(confirmed, { ...complete, copyMode: 'create_new', visualTags: ['Oslo'] })).toBe('visuals')
-    expect(outOfDate(confirmed, { ...complete, copyMode: 'create_new', summary: 'Courses ' })).toBeNull()
+    // copyMode is not in the copy key, so switching into a writing mode must count on its own.
+    const keptOriginal = brief({ ...complete, copyMode: 'keep_original' }, { id: 'confirmation-2' })
+    expect(writesCopy({ ...complete, copyMode: 'keep_and_create' }, keptOriginal)).toBe(true)
+    expect(writesCopy({ ...complete, copyMode: 'keep_original' }, keptOriginal)).toBe(false)
   })
 })

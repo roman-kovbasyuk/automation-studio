@@ -7,10 +7,23 @@
 .bs-found-copy-dialog { display: grid; gap: var(--a-space-4); }
 .bs-found-copy-dialog dl, .bs-found-copy-dialog__sources { display: grid; gap: var(--a-space-3); }
 
-/* Stepwise brief review: layout only; components keep their own appearance. */
-.bs-brief-review { display: grid; gap: var(--a-space-4); min-width: 0; max-width: 840px; }
-.bs-brief-step__actions { display: grid; justify-items: end; gap: var(--a-space-3); text-align: end; }
-.bs-brief-save { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--a-space-3); }
+/* Brief review: layout only; components keep their own appearance. */
+.bs-brief-review { display: grid; gap: var(--a-space-6); min-width: 0; max-width: 840px; }
+.bs-brief-understanding { display: grid; gap: var(--a-space-3); }
+.bs-inline-field-error { color: var(--a-color-danger); }
 .bs-brief-settings { display: grid; gap: var(--a-space-6); min-width: 0; }
 .bs-found-copy-list { display: grid; gap: var(--a-space-4); margin: 0; padding: 0; list-style: none; }
-.bs-brief-keywords { display: flex; flex-wrap: wrap; gap: var(--a-space-2); margin: 0; padding: 0; list-style: none; }
+.bs-brief-review__cta { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--a-space-4); }
+
+/* A big, colored marker on Settings and Visual context headers. */
+.bs-step-heading { display: inline-flex; align-items: center; gap: var(--a-space-3); }
+.bs-step-icon { display: grid; place-items: center; flex: none; width: 48px; height: 48px; border-radius: var(--a-radius-pill); background: var(--a-color-accent); color: var(--a-color-ink); }
+
+/* Icon + text pairs placed where the design system wraps children in a <span> or <p> (RadioGroup tag
+   options, RangeSlider instructions): must stay inline, so Inline's <div> cannot be used here. */
+.bs-inline-icon-label { display: inline-flex; align-items: center; gap: var(--a-space-2); vertical-align: middle; }
+
+/* A short reveal when Edit opens a collapsed, already-confirmed section. */
+.bs-brief-step[data-state='revealed'] { animation: bs-step-reveal var(--a-motion-disclosure) var(--a-motion-out); }
+@keyframes bs-step-reveal { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .bs-brief-step[data-state='revealed'] { animation: none; } }

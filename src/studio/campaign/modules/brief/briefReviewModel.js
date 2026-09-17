@@ -1,7 +1,7 @@
 import { ageRangeFromGroups, briefAnswersConfirmedSchema, briefAnswersDraftSchema, normalizeAgeGroups } from '../../../../../shared/briefingContracts.js'
 import { classifyBriefChange } from '../../../../../shared/briefingDependencies.js'
 
-// Pure rules for the stepwise brief review (docs/specs/brief-review.md).
+// Pure rules for the brief review (docs/specs/brief-review.md).
 
 export const STEP_FIELDS = Object.freeze({
   understanding: ['summary', 'audience'],
@@ -15,7 +15,10 @@ export const GENDER_OPTIONS = Object.freeze([{ value: 'men', label: 'Men' }, { v
 export const GOAL_OPTIONS = Object.freeze([{ value: 'awareness', label: 'Brand awareness' }, { value: 'traffic', label: 'Traffic' },
   { value: 'leads', label: 'Lead generation' }, { value: 'signups', label: 'Sign-ups' }, { value: 'sales', label: 'Sales' }, { value: 'other', label: 'Other' }])
 export const REACH_OPTIONS = Object.freeze([{ value: 'local', label: 'Local' }, { value: 'national', label: 'National' }, { value: 'global', label: 'Global' }])
-export const OUT_OF_DATE_MESSAGES = Object.freeze({ copy: 'Copy and visuals will need updating.', visuals: 'Visuals will need updating.' })
+// Icons compose onto the plain-text options above in the view layer; the model stays React-free.
+export const GENDER_ICONS = Object.freeze({ men: 'Mars', women: 'Venus', all: 'Users' })
+export const GOAL_ICONS = Object.freeze({ awareness: 'Eye', traffic: 'TrendingUp', leads: 'UserPlus', signups: 'UserCheck', sales: 'ShoppingCart' })
+export const REACH_ICONS = Object.freeze({ local: 'MapPin', national: 'Flag', global: 'Globe' })
 
 const ageBounds = [[18, 24], [25, 34], [35, 44], [45, 54], [55, 64], [65, null]]
 const requiredMessages = { summary: 'Enter a summary.', audience: 'Describe the audience.', copyMode: 'Choose whether to also write new copy.',
@@ -49,10 +52,6 @@ export function briefIssues(draft) {
 
 export function stepIssues(step, draft) {
   return Object.fromEntries(Object.entries(briefIssues(draft)).filter(([field]) => STEP_FIELDS[step].includes(field)))
-}
-
-export function stepOfField(field) {
-  return Object.keys(STEP_FIELDS).find(step => STEP_FIELDS[step].includes(field))
 }
 
 export function ageLabel(groups) {
@@ -101,17 +100,10 @@ const trimmed = draft => {
   return parsed.success ? parsed.data : draft
 }
 
-/**
- * Whether confirming the draft starts writing copy. The server also skips writing when the
- * same copy settings were confirmed earlier; Copy then shows the existing options.
- */
+/** Whether confirming the draft may start writing copy; copyMode is not in the copy key, so switching into a writing mode counts on its own. */
 export function writesCopy(draft, brief) {
   if (!['create_new', 'keep_and_create'].includes(draft.copyMode)) return false
-  return !brief.briefing?.confirmation || classifyBriefChange(brief, withAnswers(brief, trimmed(draft))).copy
-}
-
-/** What saving the draft makes out of date: 'copy' (copy and visuals), 'visuals' or null. */
-export function outOfDate(brief, draft) {
-  const change = classifyBriefChange(brief, withAnswers(brief, trimmed(draft)))
-  return change.copy ? 'copy' : change.visual ? 'visuals' : null
+  if (!brief.briefing?.confirmation) return true
+  if (brief.briefing.answers.copyMode !== draft.copyMode) return true
+  return classifyBriefChange(brief, withAnswers(brief, trimmed(draft))).copy
 }

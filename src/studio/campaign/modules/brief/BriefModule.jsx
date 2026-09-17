@@ -25,15 +25,18 @@ export default function BriefModule({ port }) {
   const [reviewDraft, setReviewDraft] = useState(savedDraft)
   const [reviewDirty, setReviewDirty] = useState(false), [reviewSaving, setReviewSaving] = useState(false)
   const reviewInputKey = useRef(port.inputKey)
+  // Edits may land mid-save: the version shows whether the saved draft is still current; ownSave adopts our own save's input key.
+  const reviewVersion = useRef(0), ownSave = useRef(false), [savedTick, setSavedTick] = useState(0)
   const sourceControls = useRef(null)
   const analysisJob = useRef(briefing?.analysisJobId ?? null)
   const [reanalysed, setReanalysed] = useState(false)
   useEffect(() => {
-    if (!reviewDirty && briefing?.schemaVersion === 2 && reviewInputKey.current !== port.inputKey) {
-      setReviewDraft(savedDraft())
-      reviewInputKey.current = port.inputKey
-    }
-  }, [briefing, port.inputKey, reviewDirty])
+    if (briefing?.schemaVersion !== 2 || reviewInputKey.current === port.inputKey) return
+    if (!reviewDirty) setReviewDraft(savedDraft())
+    else if (!ownSave.current) return
+    reviewInputKey.current = port.inputKey
+    ownSave.current = false
+  }, [briefing, port.inputKey, reviewDirty, savedTick])
   useEffect(() => {
     const current = briefing?.analysisJobId ?? null
     if (current && analysisJob.current && current !== analysisJob.current) setReanalysed(true)
@@ -48,8 +51,11 @@ export default function BriefModule({ port }) {
   const locked = !port.access.canEdit || !port.input.analysis || submitting || running
   const reviewedDraft = reviewDraft ?? savedDraft()
   const reviewDisabled = !port.access.canEdit || running || reviewSaving
+  // Saving the review runs as the brief's confirm operation, which must not lock the review.
+  const reviewLocked = running && port.operation.actionId !== 'confirm'
   const sources = port.input.sources ?? (proposal?.foundCopy ? [...new Map(proposal.foundCopy.flatMap(candidate => candidate.sourceRefs).map(ref => [ref.sourceId, { id: ref.sourceId, name: ref.label, status: 'ready' }])).values()] : [])
   const changeReview = nextDraft => {
+    reviewVersion.current += 1
     setReviewDraft(nextDraft)
     setReviewDirty(true)
     port.setDirty(true)
@@ -57,18 +63,25 @@ export default function BriefModule({ port }) {
   /** Confirms the reviewed draft and returns the result, so the review can place any error. */
   async function confirmReview(nextDraft) {
     if (reviewDisabled || !nextDraft) return { ok: false }
+    const version = reviewVersion.current
+    ownSave.current = false
     setReviewSaving(true)
     try {
       const result = await port.actions.confirm({ sourceKey: briefing.sourceKey, analysisJobId: briefing.analysisJobId, answers: nextDraft }, { expectedInputKey: reviewInputKey.current })
-      if (result?.ok) {
+      if (result?.ok && reviewVersion.current === version) {
         setReviewDirty(false)
         port.setDirty(false)
+      } else if (result?.ok) {
+        ownSave.current = true
+        setSavedTick(tick => tick + 1)
+        port.setDirty(true)
       }
       return result ?? { ok: false }
     } catch (failure) { return { ok: false, message: failure.message } }
     finally { setReviewSaving(false) }
   }
   const discardReview = () => {
+    reviewVersion.current += 1
     setReviewDraft(savedDraft())
     setReviewDirty(false)
     port.setDirty(false)
@@ -92,14 +105,12 @@ export default function BriefModule({ port }) {
       return port.actions.save({ brief: { ...brief, analysis: result.data } }, { expectedInputKey })
     }} />
   if (briefing?.schemaVersion === 2 && proposal && running && port.operation.actionId === 'analyze') return <AnalysisProgress />
-  if (briefing?.schemaVersion === 2 && proposal && reviewedDraft) return <>
-    <BriefReview key={briefing.analysisJobId} brief={brief} proposal={proposal} draft={reviewedDraft} dirty={reviewDirty}
-      readOnly={!port.access.canEdit} busy={running || reviewSaving} error={port.operation.error?.message ?? ''}
-      notice={reanalysed ? 'Your materials changed, so the settings were suggested again.' : ''}
-      onChange={changeReview} onConfirm={confirmReview} onDiscard={discardReview} onOpenSource={sourceId => sourceControls.current?.openSource(sourceId)} />
-    <BriefSourcesView ref={sourceControls} sources={sources} disabled={!port.access.canEdit || running || reviewDirty}
-      actions={{ getSource: port.actions.getSource, retrySource: port.actions.retrySource, removeSource: port.actions.removeSource }} />
-  </>
+  if (briefing?.schemaVersion === 2 && proposal && reviewedDraft) return <BriefReview key={briefing.analysisJobId} brief={brief} proposal={proposal}
+    draft={reviewedDraft} dirty={reviewDirty} readOnly={!port.access.canEdit} busy={reviewLocked} saving={reviewSaving} error={port.operation.error?.message ?? ''}
+    notice={reanalysed ? 'Your materials changed, so the settings were suggested again.' : ''}
+    onChange={changeReview} onConfirm={confirmReview} onDiscard={discardReview} onOpenSource={sourceId => sourceControls.current?.openSource(sourceId)}
+    sourcesSlot={<BriefSourcesView ref={sourceControls} sources={sources} disabled={!port.access.canEdit || running || reviewDirty}
+      actions={{ getSource: port.actions.getSource, retrySource: port.actions.retrySource, removeSource: port.actions.removeSource }} />} />
   if (!analysis || rawDirty) return <><BriefView campaign={{ brief }} inputKey={port.inputKey} heading={false} operationError={port.operation.error}
     api={{ extractBriefFile: port.actions.extractFile }} onGenerate={port.actions.submit}
     onDirty={value => { setRawDirty(value); port.setDirty(value) }} readOnly={!port.access.canEdit} pending={running ? port.operation.actionId : ''} collectSources={Boolean(briefing)} />

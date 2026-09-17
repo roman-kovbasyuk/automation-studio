@@ -52,7 +52,7 @@ export function ModuleHost({ runtime, moduleId, actions, onNavigate, requestedTe
   const View = moduleRegistry[moduleId]
   const moduleOwnsProgress = ['brief', 'visuals'].includes(moduleId)
   const moduleOwnsError = moduleId === 'visuals'
-  return <WorkflowModuleFrame id={`campaign-module-${moduleId}`} title={MODULE_LABELS[moduleId]} busy={port.operation.kind === 'running'}>
+  return <WorkflowModuleFrame id={`campaign-module-${moduleId}`} title={MODULE_LABELS[moduleId]} busy={port.operation.kind === 'running'} bare={moduleId === 'brief'}>
     {port.operation.kind === 'running' && !moduleOwnsProgress && <AsyncStatus>Working on {MODULE_LABELS[moduleId].toLowerCase()}…</AsyncStatus>}
     {/* Copy places this notice beside its options; Visuals explains image jobs on each tile. */}
     {moduleId !== 'copy' && !(moduleId === 'visuals' && port.access.generationBlock?.step === 'image') && <GenerationBlockNotice

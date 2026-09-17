@@ -22,7 +22,7 @@ function FoundCopyPreview({ candidate, onOpenSource }) {
   </Stack>
 }
 
-/** Step 1: found copy is always kept; the question is whether to also write new options. */
+/** Found copy is always kept; the question is whether to also write new options. */
 export function FoundCopyStep({ draft, foundCopy, errors, suggested, disabled, onChange, onOpenSource }) {
   const [allOpen, setAllOpen] = useState(false)
   return <Stack gap={6}>
