@@ -2227,7 +2227,7 @@ describe('persisted generation control plane', () => {
     const first = await harness.service.analyseBrief({ actor: harness.actor, campaignId: harness.campaign.id, idempotencyKey: 'ambiguous', input: {} })
     const retry = await harness.service.analyseBrief({ actor: harness.actor, campaignId: harness.campaign.id, idempotencyKey: 'ambiguous', input: {} })
 
-    expect(first.body.job).toMatchObject({ status: 'unknown', reservedCostMicrounits: 1_000, actualCostMicrounits: null })
+    expect(first.body.job).toMatchObject({ status: 'unknown', unknownReason: 'provider_timeout', reservedCostMicrounits: 1_000, actualCostMicrounits: null })
     expect(retry).toEqual({ ...first, replayed: true })
     expect(call).toHaveBeenCalledOnce()
     await expect(harness.service.analyseBrief({ actor: harness.actor, campaignId: harness.campaign.id, idempotencyKey: 'new-key', input: {} }))

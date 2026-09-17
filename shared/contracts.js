@@ -777,6 +777,8 @@ export const generationResultMetadataSchema = z.union([
 export const generationJobDetailsSchema = generationJobSchema.extend({
   result: generationResultMetadataSchema.nullable(),
   errorCode: nonEmptyString.nullable(),
+  // Optional so responses stored before reasons were exposed still replay.
+  unknownReason: nonEmptyString.nullable().optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema,
 })

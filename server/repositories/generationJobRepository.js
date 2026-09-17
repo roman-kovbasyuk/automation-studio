@@ -70,6 +70,7 @@ function mapJob(row) {
     timeoutAt: iso(row.timeout_at),
     result: row.result_metadata,
     errorCode: row.error_code,
+    unknownReason: row.unknown_reason ?? null,
     createdAt: iso(row.created_at),
     updatedAt: iso(row.updated_at),
   }
