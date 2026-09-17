@@ -51,6 +51,7 @@ export default withMermaid({
         { text: 'Template model', link: '/specs/template-model' },
         { text: 'Quality and escalation', link: '/specs/quality-and-escalation' },
         { text: 'Asset creation flow UX', link: '/specs/asset-creation-flow-ux' },
+        { text: 'Brief review', link: '/specs/brief-review' },
         { text: 'Deck generation', link: '/specs/deck-generation' },
         { text: 'Migration from campaigns', link: '/specs/campaign-migration' },
         { text: 'Design system integration', link: '/specs/design-system-integration' },
