@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "vite",
     "dev:prototype": "vite --mode prototype --host 127.0.0.1 --port 5190 --strictPort",
@@ -29,7 +32,6 @@
     "test:run": "vitest run",
     "build:figma": "node scripts/build-figma-plugin.mjs",
     "design-system:check": "node scripts/design-system-check.mjs",
-    "design-system:update": "node scripts/design-system-update.mjs",
     "test:design-system": "node --test scripts/design-system-check.test.mjs && vitest run src/components/design-system/ExternalComposition.test.jsx src/components/design-system/AppButton.test.jsx src/studio/SettingsScreen.test.jsx src/studio/HomeScreen.test.jsx",
     "predev": "npm run design-system:check",
     "predev:api": "npm run design-system:check",
@@ -40,7 +42,7 @@
     "@google/genai": "2.21.0",
     "@xyflow/react": "^12.11.6",
     "archiver": "8.0.0",
-    "brutalist-design-system": "file:vendor/brutalist-design-system-0.1.0-atomic.0-50c322c7fc38.tgz",
+    "brutalist-design-system": "^0.1.0",
     "fastify": "^5.12.3",
     "firebase": "12.18.0",
     "firebase-admin": "^13.10.0",

@@ -1,0 +1,3 @@
+.c-text-action { display: inline; border: 0; padding: 0; background: transparent; color: var(--a-color-ink); font: inherit; text-decoration: underline; text-decoration-color: var(--a-color-accent); text-decoration-thickness: var(--a-focus-width); text-underline-offset: var(--a-space-1); cursor: pointer; }
+.c-text-action:hover { text-decoration-color: var(--a-color-ink); }
+.c-text-action:disabled, .c-text-action[aria-disabled] { opacity: var(--a-state-disabled); cursor: not-allowed; }

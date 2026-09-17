@@ -1,0 +1,5 @@
+import { Icon, Text } from '../atoms'
+import './workflow.css'
+export type WorkflowStep = { id: string; label: string; description?: string; complete?: boolean; disabled?: boolean }
+export type WorkflowStepsProps = { label: string; steps: readonly WorkflowStep[]; current: string; onChange: (id: string) => void; orientation?: 'horizontal' | 'vertical' }
+export function WorkflowSteps({label,steps,current,onChange,orientation='horizontal'}:WorkflowStepsProps){return <nav className="c-workflow" aria-label={label} data-orientation={orientation}><ol>{steps.map((step,i)=><li key={step.id}><button type="button" className="c-workflow__step" aria-current={step.id===current?'step':undefined} disabled={step.disabled} onClick={()=>onChange(step.id)}><span className="c-workflow__circle" data-complete={step.complete||undefined}>{step.complete?<Icon name="check" size="small"/>:<Text as="span" variant="h7">{i+1}</Text>}</span><span className="c-workflow__copy"><Text as="span" variant="h7">{step.label}</Text>{step.description&&<Text as="span" variant="small" tone="secondary">{step.description}</Text>}</span></button></li>)}</ol></nav>}

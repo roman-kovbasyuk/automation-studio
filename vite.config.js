@@ -1,8 +1,8 @@
 import { fileURLToPath, URL } from 'node:url'
-import { defineConfig } from 'vite'
+import { defaultClientConditions, defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig(({ mode }) => ({
+export default defineConfig(({ command, mode }) => ({
   base: '/',
   plugins: [react()],
   server: {
@@ -11,6 +11,9 @@ export default defineConfig(({ mode }) => ({
   },
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    // Serve and test Brutalist from its workspace source so package edits need no rebuild;
+    // production builds use the built library.
+    conditions: command === 'serve' ? ['source', ...defaultClientConditions] : [...defaultClientConditions],
   },
   test: {
     environment: 'jsdom',

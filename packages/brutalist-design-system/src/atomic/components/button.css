@@ -1,0 +1,17 @@
+.c-button { display: inline-flex; align-items: center; justify-content: center; gap: var(--a-space-2); min-height: var(--a-size-control); max-width: 100%; padding: var(--a-space-2) var(--a-space-4); appearance: none; font: inherit; color: var(--a-color-ink); background: var(--a-color-surface); border: var(--a-border-width) solid var(--a-color-ink); border-radius: var(--a-radius-small); cursor: pointer; transition: transform var(--a-motion-fast) var(--a-motion-out), box-shadow var(--a-motion-fast) var(--a-motion-out); }
+.c-button[data-variant='primary'] { background: var(--a-color-accent); }
+.c-button[data-variant='danger'] { background: var(--a-color-danger); border-color: var(--a-color-danger); color: var(--a-color-surface); }
+.c-button[data-variant='quiet'] { background: transparent; border-color: transparent; }
+.c-button[data-size='compact'], .c-button[data-size='small'] { min-height: var(--a-size-compact); }
+.c-button[data-size='xsmall'] { min-height: var(--a-size-small); padding-inline: var(--a-space-3); }
+.c-button[data-size='xxsmall'] { min-height: calc(var(--a-size-small) - var(--a-space-1)); padding-inline: var(--a-space-2); }
+.c-button[data-icon-only] { width: var(--a-size-control); padding: var(--a-space-2); flex: none; }
+.c-button[data-icon-only][data-size='compact'], .c-button[data-icon-only][data-size='small'] { width: var(--a-size-compact); }
+.c-button[data-icon-only][data-size='xsmall'] { width: var(--a-size-small); }
+.c-button[data-icon-only][data-size='xxsmall'] { width: calc(var(--a-size-small) - var(--a-space-1)); }
+.c-button:not(:disabled):hover { border-color: var(--a-color-ink); transform: translate(var(--a-motion-liftStrong), var(--a-motion-liftStrong)); box-shadow: var(--a-shadow-interactive); }
+.c-button:not(:disabled):active { transform: none; box-shadow: none; }
+.c-button:disabled { opacity: var(--a-state-disabled); cursor: not-allowed; }
+.c-button__spinner { animation: c-button-spin var(--a-motion-spin) linear infinite; }
+@keyframes c-button-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .c-button { transition: none; } .c-button:not(:disabled):hover { transform: none; } .c-button__spinner { animation: none; } }

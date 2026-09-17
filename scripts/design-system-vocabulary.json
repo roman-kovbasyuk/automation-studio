@@ -1,0 +1,41 @@
+{
+  "description": "Reviewed product terms allowed in packages/brutalist-design-system/src. Paths are relative to the package. Checked by npm run design-system:check.",
+  "reviewed": "2026-09-17",
+  "entries": [
+    {
+      "file": "src/atomic/componentManifest.js",
+      "term": "banner",
+      "reason": "Generic Banner component: a full-width message bar, not a marketing banner"
+    },
+    {
+      "file": "src/atomic/components/ReferenceComponents.tsx",
+      "term": "banner",
+      "reason": "Generic Banner component: a full-width message bar, not a marketing banner"
+    },
+    {
+      "file": "src/atomic/components/index.ts",
+      "term": "banner",
+      "reason": "Generic Banner component: a full-width message bar, not a marketing banner"
+    },
+    {
+      "file": "src/atomic/components/reference-components.css",
+      "term": "banner",
+      "reason": "Generic Banner component: a full-width message bar, not a marketing banner"
+    },
+    {
+      "file": "src/atomic/components/reference-components.test.tsx",
+      "term": "banner",
+      "reason": "Generic Banner component: a full-width message bar, not a marketing banner"
+    },
+    {
+      "file": "src/atomic/screens/docs/componentContent.tsx",
+      "term": "banner",
+      "reason": "Generic Banner component: a full-width message bar, not a marketing banner"
+    },
+    {
+      "file": "src/atomic/screens/docs/docsNavigation.ts",
+      "term": "banner",
+      "reason": "Generic Banner component: a full-width message bar, not a marketing banner"
+    }
+  ]
+}

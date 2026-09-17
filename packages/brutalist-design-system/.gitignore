@@ -1,0 +1,17 @@
+# Secrets / machine-local
+.env
+.env.*
+!.env.example
+
+# OS and generated files
+.DS_Store
+Thumbs.db
+node_modules
+dist/
+dist-library/
+dist-atomic-library/
+.worktrees/
+.superpowers/sdd/
+# Local monitoring tooling
+/observatory/
+.design-system-changes/

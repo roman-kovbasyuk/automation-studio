@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="refresh" content="0;url=/basics.html" />
+    <title>Basics · Brutalist Design System</title>
+  </head>
+  <body>
+    <p>This documentation URL moved to <a id="redirect-link" href="/basics.html">Basics</a>.</p>
+    <script>
+      const destination = new URL('/basics.html', window.location.origin)
+      destination.search = window.location.search
+      destination.hash = window.location.hash
+      document.getElementById('redirect-link').href = destination.pathname + destination.search + destination.hash
+      window.location.replace(destination.pathname + destination.search + destination.hash)
+    </script>
+  </body>
+</html>

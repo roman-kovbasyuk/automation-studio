@@ -1,0 +1,7 @@
+.c-breadcrumbs ol, .c-pagination, .c-pagination ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--a-space-2); margin: 0; padding: 0; list-style: none; }
+.c-breadcrumbs li, .c-pagination li { display: flex; align-items: center; gap: var(--a-space-2); min-width: 0; }
+.c-breadcrumbs__link { position: relative; color: inherit; text-decoration: underline; text-decoration-color: transparent; text-decoration-thickness: var(--a-border-width); text-underline-offset: 3px; }
+.c-breadcrumbs__link::after { content: ''; position: absolute; inset-inline: 0; inset-block-end: -2px; height: var(--a-border-width); background: currentColor; transform: scaleX(1); transform-origin: left center; transition: transform var(--a-motion-fast) var(--a-motion-out), background-color var(--a-motion-fast) var(--a-motion-out); }
+.c-breadcrumbs__link:is(:hover, :focus-visible)::after { background: var(--a-color-accent); transform: scaleX(1.08); }
+@media (prefers-reduced-motion: reduce) { .c-breadcrumbs__link::after { transition: none; } }
+.c-pagination .c-button { min-width: var(--a-size-compact); }

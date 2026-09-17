@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "declarationDir": "dist-atomic-library",
+    "rootDir": "src/atomic"
+  },
+  "include": ["src/atomic/index.ts", "src/atomic/atoms/**/*.ts", "src/atomic/atoms/**/*.tsx", "src/atomic/components/**/*.ts", "src/atomic/components/**/*.tsx"],
+  "exclude": ["**/*.test.*", "node_modules"]
+}

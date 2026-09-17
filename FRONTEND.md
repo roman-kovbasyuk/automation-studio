@@ -143,7 +143,7 @@ The application is an **Operate** interface: clear hierarchy, decisive controls,
 
 ### Token authority
 
-Read public tokens, typography and component declarations from the installed package. Never maintain another authoritative copy of numeric UI values in this document, a design brief or local CSS. The installed foundation defines the visual language; component APIs define its supported application. Recheck those contracts when the dependency changes.
+Read public tokens, typography and component declarations from the Brutalist package. Never maintain another authoritative copy of numeric UI values in this document, a design brief or local CSS. The installed foundation defines the visual language; component APIs define its supported application. Recheck those contracts when the dependency changes.
 
 - **Color:** reserve semantic roles for their purpose. Brand palettes belong to artwork. Do not create per-page accent colors or infer status from color alone.
 - **Typography:** use public text/heading roles and semantic heading levels separately. One page title; subordinate section headings; readable body and metadata. Do not select the largest heading just because it exists. Do not encode arbitrary visual role names as invalid HTML headings.
@@ -298,7 +298,7 @@ Keep new code near the owning feature; extract a shared **application compositio
 
 Scope artwork CSS and resource lifecycle. Release object URLs, observers and subscriptions. Load heavy editors/renderers when needed; measure representative bundle and runtime impact before claiming an optimization. Do not animate or remount large result lists on routine updates.
 
-Refresh the external package only with `npm run design-system:update` from the application checkout. Review breaking public APIs and migrate consumers explicitly. Do not edit the external repository, vendored archive or `node_modules`; request changes through the Brutalist change protocol described in [design system integration](docs/specs/design-system-integration.md). Existing compatible imports update after rebuild; no additional binding step exists.
+Brutalist lives in this repository as the workspace package `packages/brutalist-design-system`. Change it in the pull request that needs the change, following [design system integration](docs/specs/design-system-integration.md): generic needs go into the package with tests and a documentation example, and breaking public API changes need the owner's approval with consumers migrated in the same change. Application code imports only `brutalist-design-system` and `brutalist-design-system/styles.css`. The dev server and tests use package source, so edits need no rebuild; production builds use the built library.
 
 ## 10. Design and development workflow
 
@@ -347,7 +347,7 @@ npm run build
 
 The test path above is an instruction placeholder, not a runnable universal test target. Select actual tests from the changed feature. Run broader suites when shared boundaries or the release scope require them. Isolate tests that mutate shared fixtures or coordinate exclusive access to their test resources.
 
-The design-system check verifies provenance/installed bytes, public imports, token/class boundaries and explicit component-root styling. It does not prove arbitrary spread props, every ancestor selector, correct page composition, accessibility, brand fidelity or workflow behavior. Visual and interaction evidence remains required.
+The design-system check verifies the workspace link, package isolation and vocabulary, public entry points and named imports, token/class boundaries and explicit component-root styling. It does not prove arbitrary spread props, every ancestor selector, correct page composition, accessibility, brand fidelity or workflow behavior. Visual and interaction evidence remains required.
 
 ### Review gates
 
@@ -392,12 +392,12 @@ Track reopened design decisions, repeated local overrides, task completion failu
 Apply this contract using current evidence from the owning layer:
 
 - The accepted product/feature specification for intent, permissions and flow behavior.
-- The installed public package API and provenance for component and token contracts.
+- The Brutalist package's public API and version for component and token contracts.
 - The master composition or flow specification for inherited guarantees and supported variation.
 - The descendant’s design brief for task-specific choices and verification.
 - Domain schemas and fresh tests for supported states, persistence and completion evidence.
 - Published output-system and template versions for artifact composition and validity.
 
-Inspect [the package manifest](package.json), [design-system provenance](vendor/brutalist-design-system.json) and [recorded component gaps](docs/design-system/missing-components.md) when evaluating implementation compatibility. Store exact versions, source paths and audit findings in the relevant verification record rather than freezing them into this policy.
+Inspect [the application manifest](package.json), [the Brutalist package manifest](packages/brutalist-design-system/package.json) and [recorded component gaps](docs/design-system/missing-components.md) when evaluating implementation compatibility. Store exact versions, source paths and audit findings in the relevant verification record rather than freezing them into this policy.
 
 The [DESIGN.md format](https://github.com/google-labs-code/design.md/blob/main/docs/spec.md) is useful for a portable visual description. This contract is deliberately broader: product behavior, page patterns, data ownership and delivery gates cannot be communicated by a palette and typography specification alone. It does not introduce a second machine-readable UI token source.

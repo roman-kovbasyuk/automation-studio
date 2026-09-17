@@ -1,0 +1,65 @@
+{
+  "name": "brutalist-design-system",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/atomic/index.ts",
+      "types": "./dist-atomic-library/index.d.ts",
+      "default": "./dist-atomic-library/index.js"
+    },
+    "./styles.css": {
+      "source": "./src/atomic/atoms/styles.css",
+      "default": "./dist-atomic-library/styles.css"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "dev:atomic": "vite --config vite.atomic.config.ts --host 127.0.0.1 --port 5210 --strictPort",
+    "build:atomic": "vite build --config vite.atomic.config.ts",
+    "test:atomic": "vitest run src/atomic",
+    "check:atomic-boundaries": "node scripts/atomic/boundaries.mjs",
+    "test:atomic-boundaries": "node --test scripts/atomic/*.test.mjs",
+    "build:atomic-library": "node scripts/atomic/build-library.mjs",
+    "verify:atomic-consumer": "node scripts/atomic/verify-consumer.mjs",
+    "verify:docs-examples": "node scripts/atomic/verify-docs-examples.mjs",
+    "verify:atomic": "npm run test:atomic-boundaries && npm run check:atomic-boundaries && npm run test:atomic && npm run typecheck && npm run build:atomic && npm run build:atomic-library && npm run verify:docs-examples && npm run verify:atomic-consumer",
+    "dev": "vite",
+    "preview": "vite preview",
+    "build": "vite build",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:scripts": "node --test scripts/atomic/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "build:library": "node scripts/atomic/build-library.mjs",
+    "verify": "npm run verify:atomic",
+    "verify:consumer": "node scripts/atomic/verify-consumer.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "^1.43.0",
+    "radix-ui": "^1.6.7"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^22.20.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "jsdom": "30.0.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "typescript": "^7.0.2",
+    "vite": "8.2.2",
+    "vitest": "^5.0.0"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
