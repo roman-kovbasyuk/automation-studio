@@ -55,7 +55,7 @@ test('existing campaign starts question review only on explicit action',async()=
     runtime=createCampaignRuntime({api,actor:studio.actor('marketer'),templates:[],workspace:await api.getWorkspace(campaign.id)})
     const coordinator=createWorkflowCoordinator({runtime})
     expect((await api.getWorkspace(campaign.id)).jobs).toHaveLength(0)
-    expect(await coordinator.actions.brief.startReview()).toEqual({ok:true})
+    expect(await coordinator.actions.brief.submit()).toEqual({ok:true})
     const saved=await api.getWorkspace(campaign.id)
     expect(saved.campaign.brief.briefing.analysisJobId).toBeTruthy()
     expect(saved.campaign.brief.briefing.confirmation).toBeNull()
