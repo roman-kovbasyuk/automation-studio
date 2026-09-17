@@ -27,6 +27,8 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D17 | **Decks are delivered as editable PPTX only.** No PDF or slide PNG downloads. | 17 Sep 2026 | Provisional P6 (PDF plus PNG per slide) |
 | D18 | **Escalated decks are improved in the PPTX itself.** The designer downloads the generated PPTX, edits it in PowerPoint or Keynote and uploads it back; the requester accepts it. Banners keep the Figma route. | 17 Sep 2026 | Figma round trip for decks |
 | D19 | **Deck image slots use the placeholder defined in the template.** Each slide template declares what its image slots show until an image is inserted (for example a labelled grey box). No image generation or upload for decks in the proof of concept. | 17 Sep 2026 | Provisional P7 (AI-generated artwork or uploads) |
+| D20 | **Folkeuniversitetet is the pilot brand.** Banner templates are used with role bindings; a Folkeuniversitetet slide template set is created for decks. | 17 Sep 2026 | Provisional P8 (MSD) |
+| D21 | **Folkeuniversitetet uses its licensed heading font Matter in the pilot.** Licensed font files are uploaded to the brand, so brand font support (BRAND-4) is required for the pilot, and PPTX recipients need Matter available. | 17 Sep 2026 | Unconfirmed Matter with Inter fallback |
 
 ## Provisional decisions
 
@@ -39,7 +41,6 @@ Taken on 17 September 2026 as the recommended option while the owner was unavail
 | P3 | Observatory task reporting is optional in the change pipeline. | Required | Change protocol v2 |
 | P4 | The change queue runs on the owner's machine for the pilot. | Shared host | Change protocol v2 |
 | P5 | Pull-mode claims last 2 hours and can be renewed. | Fixed lease | Change protocol v2 |
-| P8 | MSD is the pilot brand: it is the only brand with both banner and slide templates. | Another brand | [Roadmap](roadmap.md) |
 | P9 | The asset creation flow is the top-level record for the proof of concept. Grouping flows into projects comes later. | Projects containing several flows from the start | Domain model specification |
 
 ## Earlier decisions still in force
