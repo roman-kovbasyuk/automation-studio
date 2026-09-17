@@ -54,7 +54,7 @@ try {
     scripts: { typecheck: 'tsc --noEmit', build: 'vite build', 'build:ssr': 'vite build --ssr src/App.tsx --outDir dist-ssr' },
     dependencies: {
       [packageName]: `file:${packageSource}`,
-      react: source.dependencies.react, 'react-dom': source.dependencies['react-dom'],
+      react: source.devDependencies.react, 'react-dom': source.devDependencies['react-dom'],
     },
     devDependencies: Object.fromEntries(['@types/react', '@types/react-dom', '@vitejs/plugin-react', 'typescript', 'vite'].map(name => [name, source.devDependencies[name]])),
   }, null, 2))
