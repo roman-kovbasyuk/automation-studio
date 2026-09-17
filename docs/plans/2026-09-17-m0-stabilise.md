@@ -208,6 +208,10 @@ Implemented on 17 September 2026 on branch `feat/m0-stabilise`, one commit or mo
 | T8 | `postcss` 8.5.28 and the Mermaid `lodash-es` chain updated; the lockfile is accepted by `npm ci` on npm 10 and 11. Remaining: `firebase-admin` chain (D34) and development-only VitePress tooling |
 | T9 | Known issues, AI generation, adoption audit and this plan updated |
 
+**Final verification (17 September 2026):** `npm run test:run` 1,764 passed and 1 skipped; `npm run design-system:check`, `npm run build`, `node scripts/verify-build.mjs`, `npm run test:workflow` (isolated schema, through delivery) and `npm run build:figma` pass; the documentation has no broken links.
+
+**Manual check** in the isolated studio launcher with mock providers: a prompt on Home opened the project in Brief at once and listed it in the sidebar; an uncertain copy job past its wait showed its reason with **Check again** and **Mark as failed**, and marking it failed resolved, audited and unblocked the project; a blocked analysis showed its plain-language reason with the brief still editable. The check also found the sidebar brand still reading "Studio", now fixed.
+
 **Test runner:** tests run with half the CPU cores (`maxWorkers: '50%'`); with more workers the shared PostgreSQL made timeouts flaky and the run was no faster.
 
 ## Final verification
