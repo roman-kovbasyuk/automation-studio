@@ -2,7 +2,7 @@
 
 **Status:** Current · **Updated:** 16 September 2026
 
-These pages support application UI work. They do not describe brands or produced content; for those see [banner templates and brands](../engineering/templates/banner-template-editor.md).
+These pages support application UI work. They do not describe brands or produced content; for those see [banner templates and brands](../engineering/templates/banner-templates-and-brands.md).
 
 Start with the root contracts:
 

@@ -694,8 +694,6 @@ export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, pro
             <Suspense fallback={<div className="bs-loading" role="status" aria-label="Loading templates"><Skeleton lines={3} /></div>}>
               <TemplateLibrary
                 templates={templates}
-                api={api}
-                onCreateCampaign={() => navigate('/')}
                 canChoose={editor && !pending}
                 onChoose={(id) => {
                   setRequestedTemplate(id)

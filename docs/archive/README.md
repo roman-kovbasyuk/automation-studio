@@ -169,3 +169,4 @@ Workflow cutover inventory and verification from 15 September 2026.
 | --- | --- |
 | [workflow-cutover-inventory](records/workflow-cutover-inventory.md) | Canonical workflow cutover inventory |
 | [workflow-cutover-verification](records/workflow-cutover-verification.md) | Canonical workflow verification |
+| [banner-template-editor](records/banner-template-editor.md) | Banner template editor (removed in M0, D38) |

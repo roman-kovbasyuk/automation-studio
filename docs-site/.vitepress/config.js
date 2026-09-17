@@ -62,7 +62,7 @@ export default withMermaid({
         { text: 'Known issues', link: '/engineering/known-issues' },
         { text: 'Campaign modules (current)', link: '/engineering/campaign-modules' },
         { text: 'Briefing (current)', link: '/engineering/briefing' },
-        { text: 'Banner templates and brands', link: '/engineering/templates/banner-template-editor' },
+        { text: 'Banner templates and brands', link: '/engineering/templates/banner-templates-and-brands' },
         { text: 'MSD slide templates', link: '/engineering/templates/msd-presentation-templates' },
         { text: 'Admin area', link: '/engineering/admin' },
         { text: 'Proposal: admin and data model', link: '/engineering/proposals/admin-and-data-model' },

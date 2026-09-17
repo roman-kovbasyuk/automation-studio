@@ -40,7 +40,7 @@ Start with the [product concept](product/concept.md).
 | [Known issues](engineering/known-issues.md) | Defects, product-model gaps and technical debt |
 | [Campaign modules](engineering/campaign-modules.md) | The current six-module banner flow |
 | [Briefing](engineering/briefing.md) | How uploaded materials are analysed today |
-| [Banner templates and brands](engineering/templates/banner-template-editor.md) | Template editor and brand resolution |
+| [Banner templates and brands](engineering/templates/banner-templates-and-brands.md) | Brand resolution for banner templates |
 | [MSD slide templates](engineering/templates/msd-presentation-templates.md) | Slide layouts and AI content contracts for decks |
 | [Admin area](engineering/admin.md) | Admin views and the frozen recipe editor |
 | [Admin and data model](engineering/proposals/admin-and-data-model.md) | Proposal for projects, runs, tasks and workers |

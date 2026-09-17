@@ -4,7 +4,6 @@ import { randomUUID } from 'node:crypto'
 import Fastify from 'fastify'
 import { registerCampaignRoutes } from './routes/campaigns.js'
 import { registerTemplateRoutes } from './routes/templates.js'
-import { registerBannerTemplateEditorRoutes } from './routes/bannerTemplateEditor.js'
 import { registerUserRoutes } from './routes/users.js'
 import { registerSettingsRoutes } from './routes/settings.js'
 import { registerSessionRoute } from './routes/session.js'
@@ -92,7 +91,6 @@ export function buildApp({ readiness = async () => true, resolveActor, workflowS
     if (briefSourceService || briefingService) registerBriefingRoutes(app,{requireRole,briefSourceService,briefingService})
     if (workspaceService) registerWorkspaceRoutes(app, { requireRole, workspaceService })
     registerTemplateRoutes(app, dependencies)
-    registerBannerTemplateEditorRoutes(app, dependencies)
     registerUserRoutes(app, { ...dependencies, personalAiService, personalSettingsService, generationReadinessService })
     registerSettingsRoutes(app, dependencies)
     if (videoGenerationService) registerVideoRoutes(app, { requireRole, videoGenerationService })

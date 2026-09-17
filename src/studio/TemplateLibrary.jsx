@@ -1,12 +1,10 @@
 import { SearchField } from 'brutalist-design-system'
 import { useEffect, useMemo, useState } from 'react'
 import { AppButton, SelectField } from '../components/design-system/compatibility.jsx'
-import { BannerTemplateEditor, defaultBannerDraft } from './BannerTemplateEditor.jsx'
 import { SectionHeading } from './primitives.jsx'
 import { GenericTemplateArt, DESIGN_SYSTEMS } from './NovartisTemplateGallery.jsx'
 import { TemplateGroup } from './TemplateGroup.jsx'
 import { TEMPLATE_GROUPS, normalizeCatalog, readCatalogSelection, selectCatalog } from './templateCatalog.js'
-import { studioTemplates } from '../../shared/studioTemplates.js'
 import './template-library.css'
 
 const designSystemOptions = DESIGN_SYSTEMS.map(system => ({
@@ -15,9 +13,7 @@ const designSystemOptions = DESIGN_SYSTEMS.map(system => ({
 }))
 
 function selectionFromLocation() {
-  const selection = readCatalogSelection(window.location.search)
-  const params = new URLSearchParams(window.location.search)
-  return { ...selection, bannerId: params.get('banner') ?? '' }
+  return readCatalogSelection(window.location.search)
 }
 
 function previewForEntry(entry) {
@@ -27,12 +23,11 @@ function previewForEntry(entry) {
   return <GenericTemplateArt template={{ name: entry.name, manifest: value }} />
 }
 
-export function TemplateLibrary({ templates = [], onChoose, onEditTemplate, onDeleteTemplate, onAddTemplate, api, canChoose = true }) {
+export function TemplateLibrary({ templates = [], onChoose, onEditTemplate, onDeleteTemplate, onAddTemplate, canChoose = true }) {
   const [selection, setSelection] = useState(selectionFromLocation)
   const [searchOpen, setSearchOpen] = useState(() => Boolean(selectionFromLocation().query))
   const [message, setMessage] = useState('')
   const [pendingKey, setPendingKey] = useState(null)
-  const [draft, setDraft] = useState(defaultBannerDraft)
 
   const catalog = useMemo(() => normalizeCatalog({ templates, systemId: selection.systemId, groups: TEMPLATE_GROUPS }), [templates, selection.systemId])
   const activeGroupId = catalog.groups.some(group => group.id === selection.groupId) ? selection.groupId : 'all'
@@ -43,11 +38,8 @@ export function TemplateLibrary({ templates = [], onChoose, onEditTemplate, onDe
     query: selection.query,
     sort: selection.sort,
   }), [activeGroupId, catalog.entries, catalog.groups, selection.query, selection.sort])
-  const selectedEntry = selection.bannerId ? catalog.entries.find(entry => entry.templateId === selection.bannerId) : null
-  const directTemplate = selectedEntry?.original ?? templates.find(template => template.id === selection.bannerId) ?? studioTemplates.find(template => template.id === selection.bannerId)
-  const directEditorTemplate = directTemplate?.manifest ? directTemplate : directTemplate?.ratios ? { id: directTemplate.id, name: directTemplate.name, version: directTemplate.version, manifest: directTemplate } : null
 
-  function writeSelection(next, { clearBanner = false } = {}) {
+  function writeSelection(next) {
     const params = new URLSearchParams(window.location.search)
     params.delete('category')
     if (next.systemId) params.set('system', next.systemId)
@@ -58,11 +50,10 @@ export function TemplateLibrary({ templates = [], onChoose, onEditTemplate, onDe
     else params.delete('q')
     if (next.sort && next.sort !== 'last-used') params.set('sort', next.sort)
     else params.delete('sort')
-    if (clearBanner) params.delete('banner')
     const query = params.toString()
     const hash = window.location.hash
     window.history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}${hash}`)
-    setSelection({ ...next, bannerId: clearBanner ? '' : next.bannerId ?? '' })
+    setSelection(next)
   }
 
   useEffect(() => {
@@ -102,19 +93,6 @@ export function TemplateLibrary({ templates = [], onChoose, onEditTemplate, onDe
     setMessage(`Adding ${group.singularLabel.toLowerCase()} templates is not available yet.`)
   }
 
-  if (selection.bannerId && directEditorTemplate?.manifest && !onChoose) {
-    return <section id="template-categories" className="bs-library">
-      <BannerTemplateEditor
-        template={directEditorTemplate}
-        draft={draft}
-        onChange={setDraft}
-        onBack={() => writeSelection({ ...selection, bannerId: '' }, { clearBanner: true })}
-        onCreateCampaign={() => handleCreate(selectedEntry ?? { name: directEditorTemplate.name, templateId: directEditorTemplate.id })}
-        api={api}
-      />
-    </section>
-  }
-
   return <section id="template-categories" className="bs-library" data-template-system={selection.systemId}>
     <SectionHeading as="h1" title="Templates" />
     <div className="bs-template-toolbar" aria-label="Template controls">
@@ -146,6 +124,5 @@ export function TemplateLibrary({ templates = [], onChoose, onEditTemplate, onDe
         pendingKey={pendingKey}
       />)}
     </div>
-    {api && <span className="bs-template-library__api" hidden aria-hidden="true">{api.constructor?.name ?? 'api'}</span>}
   </section>
 }

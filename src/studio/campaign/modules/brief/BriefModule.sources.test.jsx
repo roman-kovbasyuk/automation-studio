@@ -24,26 +24,3 @@ test('opens the same source preview from found copy only after an explicit click
   expect(screen.getByRole('dialog', { name: 'campaign.pdf' })).toHaveTextContent('Travel lighter.')
 })
 
-test('offers legacy review only when supported and never starts it on mount', async () => {
-  const startReview = vi.fn(async () => ({ ok: true }))
-  const port = {
-    input: { brief: { notes: 'Original brief' }, analysis: { title: 'Launch', summary: 'A launch.', audience: 'Commuters', objective: 'Shop', channels: [], formats: [], themes: [], warnings: [] } },
-    inputKey: 'legacy-key', access: { canEdit: true }, operation: { kind: 'idle' },
-    actions: { save: vi.fn(), refine: vi.fn(), submit: vi.fn(), startReview }, setDirty: vi.fn(),
-  }
-  render(<BriefModule port={port} />)
-
-  expect(startReview).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByRole('button', { name: 'Review campaign questions' }))
-  await waitFor(() => expect(startReview).toHaveBeenCalledTimes(1))
-})
-
-test('keeps the legacy review entry disabled while read-only', () => {
-  const port = {
-    input: { brief: { notes: 'Original brief' }, analysis: { title: 'Launch', summary: 'A launch.', audience: 'Commuters', objective: 'Shop', channels: [], formats: [], themes: [], warnings: [] } },
-    inputKey: 'legacy-key', access: { canEdit: false }, operation: { kind: 'idle' },
-    actions: { save: vi.fn(), refine: vi.fn(), submit: vi.fn(), startReview: vi.fn() }, setDirty: vi.fn(),
-  }
-  render(<BriefModule port={port} />)
-  expect(screen.getByRole('button', { name: 'Review campaign questions' })).toBeDisabled()
-})

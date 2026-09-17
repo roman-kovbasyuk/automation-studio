@@ -1,8 +1,10 @@
-# Banner templates and brands
+# Banner template editor
 
-**Status:** Current implementation · **Updated:** 16 September 2026
+**Status:** Historical · **Removed:** 17 September 2026 ([D38](../../product/decisions.md))
 
-## Banner template editor
+The draft-only template editor on the Templates page and its `/api/v1/banner-template-editor` endpoints were removed in milestone M0: after the template catalog redesign the editor could no longer be opened from the application. Template authoring returns with the [template model](../../specs/template-model.md). Current brand resolution for templates: [banner templates and brands](../../engineering/templates/banner-templates-and-brands.md).
+
+## Description at removal
 
 The Templates shell fills at least the viewport height. Ads begins with an illustrated campaign entry and the existing campaign button leading to /mvp. Banner previews open an editor at `/mvp/templates?category=ads&banner=<template-id>#template-categories`.
 
@@ -24,13 +26,3 @@ Authenticated endpoints:
 The server resolves only actor-accessible templates and never accepts client layout manifests or remote image URLs. The UI displays honest not-connected states for image generation, uploaded-image video conversion and Figma review. It links to the existing campaign flow, without claiming that draft content transfers there.
 
 Next integration work: actor-scoped persistent drafts and uploads; generation job adapter; video conversion adapter; campaign/review handoff preserving the existing approval workflow. No provider calls or external Figma writes are made by this v1.
-
-## Brands and templates
-
-Brand systems are separate from the application UI design system. `shared/resolveTemplateBrand.js` maps a published brand's palette and typography roles, and its approved primary logo, into a template's geometry and saves an immutable resolved manifest. The browser preview (`AnimatedBanner`) and the PNG renderer consume the same resolved manifest.
-
-- Assigning a brand (`POST /api/v1/brand-design-systems/:brandId/templates`, admins only) creates **new versions of the shared templates**. Publishing or restoring a brand refreshes assigned templates. Existing template and campaign snapshots stay unchanged.
-- Supported fonts: Inter and OFL-licensed Arimo at weights 400, 600 and 700. Arimo is the Arial-compatible substitute used for the MSD reference.
-- Local fixtures: `node scripts/setup-msd-templates.mjs` (blocked in production).
-
-The target model changes this: templates reference brand roles and each asset creation flow pins its brand ([D2](../../product/decisions.md)). See [known issues](../known-issues.md#product-model-gaps).

@@ -32,7 +32,7 @@ flowchart TB
 | Brief sources | `server/briefSources/`, `server/briefTextExtractor.js` | Text, PDF, DOCX and PNG/JPEG/WebP within a 25 MB budget. See [briefing](briefing.md). |
 | Storage | `server/storage/` | Google Cloud Storage in production; local demo store (`.studio-demo-assets/`); memory store in tests. |
 | Rendering | `server/rendering/inProcessRenderer.js`, `shared/templateManifest.js` | Deterministic PNG rendering from template manifests. Fonts: Inter and Arimo at 400/600/700. |
-| Brands and templates | `server/services/brandDesignSystemService.js`, `server/services/templateBrandService.js`, `shared/resolveTemplateBrand.js` | See [templates and brands](templates/banner-template-editor.md#brands-and-templates). |
+| Brands and templates | `server/services/brandDesignSystemService.js`, `server/services/templateBrandService.js`, `shared/resolveTemplateBrand.js` | See [templates and brands](templates/banner-templates-and-brands.md). |
 | Versions, review, delivery | `server/services/versionService.js`, `reviewService.js`, `deliveryService.js`, `shared/workflowRules.js` | Immutable versions with content hashes; ZIP package with manifest. |
 | Figma | `figma-plugin/`, `server/services/figma*.js` | The plugin imports a scene package into Figma frames and submits returned artwork. |
 | Documentation | `docs/` (content), `docs-site/` (VitePress shell) | Built into `dist/docs` and served at `/docs`. See [documentation](../documentation.md). |

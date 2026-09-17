@@ -3,9 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { expect, test, vi } from 'vitest'
-import { PromptComposer } from './PromptComposer.jsx'
+import { PromptComposer } from './organisms/PromptComposer.jsx'
 import { SelectMenu } from './molecules/SelectMenu.jsx'
-import { TemplateLibrary } from '../../studio/TemplateLibrary.jsx'
 
 test('the status selector uses upstream popup selection and forwards its value', async () => {
   const user = userEvent.setup()

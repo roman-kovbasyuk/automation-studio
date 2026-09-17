@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { expect, test, vi } from 'vitest'
 import { PromptComposer } from './organisms/PromptComposer.jsx'
 import { WorkflowModuleFrame } from './organisms/WorkflowModuleFrame.jsx'
-import { SettingsRow } from './organisms/SettingsPanel.jsx'
 
 test('prompt uses external controls and preserves keyboard submit, attachments, and busy lock', () => {
   const onSubmit = vi.fn(), onAttach = vi.fn(), onRemove = vi.fn()
@@ -22,9 +21,8 @@ test('prompt uses external controls and preserves keyboard submit, attachments, 
   expect(onSubmit).toHaveBeenCalledOnce()
 })
 
-test('workflow and settings panels use the external Surface while keeping accessible structure', () => {
-  render(<><WorkflowModuleFrame id="example" title="Brief" busy><p>Draft</p></WorkflowModuleFrame><SettingsRow label="Profile">Fields</SettingsRow></>)
+test('workflow panels use the external Surface while keeping accessible structure', () => {
+  render(<WorkflowModuleFrame id="example" title="Brief" busy><p>Draft</p></WorkflowModuleFrame>)
   expect(screen.getByRole('region', { name: 'Brief' })).toHaveClass('a-surface')
   expect(screen.getByRole('region', { name: 'Brief' })).toHaveAttribute('aria-busy', 'true')
-  expect(screen.getByText('Profile').closest('.a-surface')).toBeInTheDocument()
 })

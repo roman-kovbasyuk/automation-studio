@@ -191,6 +191,10 @@ async function migrationDirectoryThrough(maximumVersion) {
   return makeMigrationDirectory(files)
 }
 
+// Every test starts from a reset database with all migrations applied; under full-suite
+// load that setup alone can exceed the default hook and test timeouts.
+vi.setConfig({ testTimeout: 30_000, hookTimeout: 30_000 })
+
 beforeEach(async () => {
   await resetDatabase()
   const pool = makePool()
@@ -227,7 +231,7 @@ describe('migration runner', () => {
     await Promise.all([firstPool.end(), secondPool.end()])
     pools.delete(firstPool)
     pools.delete(secondPool)
-  }, 30_000)
+  })
 
   test('persists repository data after all clients disconnect', async () => {
     const firstPool = makePool()
