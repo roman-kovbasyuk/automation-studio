@@ -646,3 +646,30 @@ describe('Gemini prompts and conservative cost estimates', () => {
     })).toBe(3_000)
   })
 })
+
+test('briefing analysis prefills only grounded settings and suggests keywords for images',async()=>{
+  const sourceKey='a'.repeat(64)
+  const reviewed={...analysis,briefingProposal:{sourceKey,foundCopy:[],answers:{...emptyBriefAnswers(),copyMode:'create_new'},suggestedVisualTags:[]}}
+  const {provider,client}=harness(textResponse({analysis:reviewed}))
+  await provider.analyseBrief({brief:{...brief,briefing:{schemaVersion:2,sourceIds:[],sourceKey,analysisJobId:null,answers:emptyBriefAnswers(),confirmation:null}},
+    sources:[{id:'campaign-input',name:'Campaign input',contentHash:'b'.repeat(64),blocks:[{id:'text-1',text:'Evening courses for pensioners in Oslo.'}],attachmentRefs:[]}]},new AbortController().signal)
+  const instruction=client.models.generateContent.mock.calls[0][0].config.systemInstruction
+  expect(instruction).toMatch(/only when the materials state them or clearly imply them/i)
+  expect(instruction).toMatch(/never infer age or gender from stereotypes/i)
+  expect(instruction).toMatch(/one continuous range/i)
+  expect(instruction).toMatch(/keep_original.*keep_and_create.*otherwise leave copyMode null.*create_new/i)
+  expect(instruction).toMatch(/subject, place, people, mood and light, and style/i)
+  expect(instruction).not.toMatch(/unless explicitly given/i)
+})
+
+test('visual directions must use the confirmed keywords and audience settings',async()=>{
+  const {client,provider}=harness(textResponse({directions:directions(5)}))
+  await provider.generateDirections({brief,copy},new AbortController().signal)
+  const request=client.models.generateContent.mock.calls[0][0]
+  expect(request.contents).toBe(buildDirectionsPrompt({brief,copy}))
+  expect(request.config.systemInstruction).toMatch(/context\.tags/)
+  expect(request.config.systemInstruction).toMatch(/brief\.briefing\.answers/)
+  expect(request.config.systemInstruction).toMatch(/visibly use the visual keywords/i)
+  expect(request.config.systemInstruction).toMatch(/match the confirmed age groups and gender/i)
+  expect(request.config.systemInstruction).toMatch(/fit the confirmed reach.*fit the confirmed goal/i)
+})
