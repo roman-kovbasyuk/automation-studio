@@ -2,16 +2,18 @@ import { MODULE_IDS, assertModuleId, projectModuleInput, moduleInputKey, stableI
   getCurrentVersion } from './moduleContracts.js'
 import { deriveWorkflowState } from './workflowState.js'
 import { observeJob } from './jobObserver.js'
-import { generationLimitMessage } from '../../../shared/generationErrors.js'
+import { generationLimitMessage, generationReasonCode } from '../../../shared/generationErrors.js'
+import { generationProblemMessage } from './generationStatus.js'
+import { isProgrammingFault, safeErrorMessage } from '../safeErrorMessage.js'
 
 const idle = Object.freeze({ kind: 'idle', actionId: null, jobId: null, error: null })
 const failure = (code, message) => Object.assign(new Error(message), { code })
-const resultError = error => ({ ok: false, code: error.code ?? 'request_failed', message: error.message })
-const jobFailure = job => {
-  const message = job.status === 'failed' && generationLimitMessage(job.errorCode)
-  return message ? failure(job.errorCode, message)
-    : failure(`generation_${job.status}`, `Generation ${job.status}. Check its status before trying again.`)
-}
+const resultError = error => ({ ok: false, code: error.code ?? 'request_failed', message: safeErrorMessage(error) })
+// Limit codes stay the error code so batches stop; other outcomes keep generation_<status>
+// and carry the reason separately.
+const jobFailure = job => Object.assign(
+  failure(job.status === 'failed' && generationLimitMessage(job.errorCode) ? job.errorCode : `generation_${job.status}`, generationProblemMessage(job)),
+  { reasonCode: generationReasonCode(job), jobId: job.id })
 const jobOwner = { brief_analysis: 'brief', copy: 'copy', directions: 'visuals', image: 'visuals' }
 
 function freeze(value) {
@@ -89,7 +91,9 @@ export function createCampaignRuntime({ api, actor, templates = [], workspace: i
   }
   function showError(moduleId, actionId, error, uncertain = false, jobId = null) {
     setOperation(moduleId, { kind: uncertain ? 'uncertain' : 'failed', actionId, jobId,
-      error: { message: error.message, code: error.code ?? 'request_failed', requestId: error.requestId ?? null } })
+      error: { message: safeErrorMessage(error), code: error.code ?? 'request_failed', requestId: error.requestId ?? null,
+        ...(error.reasonCode ? { reasonCode: error.reasonCode } : {}) } })
+    if (isProgrammingFault(error)) console.error(error)
   }
 
   async function loadHistory() {
@@ -290,6 +294,15 @@ export function createCampaignRuntime({ api, actor, templates = [], workspace: i
       return () => listeners.get(moduleId).delete(listener)
     },
     refresh, execute,
+    /** Marks an unknown generation outcome as failed (D33), then refreshes the workspace. */
+    async resolveGeneration(jobId) {
+      if (disposed) return resultError(failure('disposed', 'This campaign is no longer active.'))
+      try {
+        await api.resolveJob(jobId)
+        await refresh()
+        return { ok: true }
+      } catch (error) { return resultError(error) }
+    },
     async read(operation) {
       if (disposed) throw failure('disposed', 'This campaign is no longer active.')
       const value = await operation({ api, workspace, signal: lifetime.signal })

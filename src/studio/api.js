@@ -22,10 +22,17 @@ export function createStudioApi({ getToken, getHeaders, fetchImpl = globalThis.f
       headers.set('If-Match', `"${revision}"`)
     }
     if (idempotencyKey !== undefined) headers.set('Idempotency-Key', idempotencyKey)
-    const response = await fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, {
-      method, headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal,
-      credentials: 'same-origin', cache: 'no-store',
-    })
+    let response
+    try {
+      response = await fetchImpl(`${baseUrl.replace(/\/$/, '')}${path}`, {
+        method, headers, ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal,
+        credentials: 'same-origin', cache: 'no-store',
+      })
+    } catch (error) {
+      if (error?.name === 'AbortError') throw error
+      // Browsers report transport failures with inconsistent raw text; the request may have reached the server.
+      throw new StudioApiError('The connection was interrupted. Check the latest state before trying again.', { status: 0, code: 'network_error' })
+    }
     if (!response.ok) {
       let error
       try { error = await response.json() } catch { /* Some proxies return HTML errors. */ }

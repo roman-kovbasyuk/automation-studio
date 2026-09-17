@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { AppButton, Alert } from "../components/design-system/compatibility.jsx"
+import { safeErrorMessage } from './safeErrorMessage.js'
 
 export function Button({ children, primary=false, busy=false, ...props }) {
   return <AppButton {...props} variant={primary ? 'primary' : 'secondary'} busy={busy}>{children}</AppButton>
 }
 export function ErrorNotice({error, onRetry}) {
   if (!error) return null
-  const settingsRequired = ['provider_unavailable', 'not_connected', 'credential_version_changed', 'provider_configuration_missing'].includes(error.code)
-  return <Alert tone="danger" title={error.status === 409 ? 'This campaign has changed' : 'Something needs attention'}><p>{error.message ?? String(error)}</p>{settingsRequired && <p><a href="/mvp/settings">Open Settings</a> to configure a personal AI provider.</p>}{error.details && <ul>{(Array.isArray(error.details)?error.details:[]).map((detail,index)=><li key={index}>{detail.path}: {detail.message}</li>)}</ul>}{onRetry && <Button onClick={onRetry}>Reload campaign</Button>}</Alert>
+  const settingsRequired = ['provider_unavailable', 'not_connected', 'provider_configuration', 'credential_version_changed', 'provider_configuration_missing']
+    .some(code => code === error.code || code === error.reasonCode)
+  return <Alert tone="danger" title={error.status === 409 ? 'This campaign has changed' : 'Something needs attention'}><p>{safeErrorMessage(error)}</p>{settingsRequired && <p><a href="/mvp/settings">Open Settings</a> to configure a personal AI provider.</p>}{error.details && <ul>{(Array.isArray(error.details)?error.details:[]).map((detail,index)=><li key={index}>{detail.path}: {detail.message}</li>)}</ul>}{onRetry && <Button onClick={onRetry}>Reload campaign</Button>}</Alert>
 }
 export function SectionHeading({ title, children, action, as: Heading = 'h2' }) {
   return <header className="bs-section-heading"><div><Heading>{title}</Heading>{children && <p>{children}</p>}</div>{action}</header>

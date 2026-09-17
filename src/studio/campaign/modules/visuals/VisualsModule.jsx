@@ -94,7 +94,7 @@ export default function VisualsModule({ port }) {
     {feedback?.kind === 'general' && <ErrorNotice error={feedback.error} />}
     {feedback && <AppButton onClick={reconcile}>Check latest state</AppButton>}
     <VisualsView input={port.input} assets={port.assets} readOnly={!port.access.canEdit}
-    progress={progress} batchIds={batchIds} onReconcile={reconcile} videoJobs={videoJobs} videoActions={{plan:port.actions.videoPlan,submit:async(plan,key)=>{
+    progress={progress} batchIds={batchIds} onReconcile={reconcile} onResolve={port.resolveGeneration} videoJobs={videoJobs} videoActions={{plan:port.actions.videoPlan,submit:async(plan,key)=>{
       const job=await port.actions.videoSubmit(plan,key);setVideoJobs(previous=>[...previous.filter(item=>item.id!==job.id),job]);return job
     },refresh:refreshVideos,cancel:async id=>{const job=await port.actions.videoCancel(id);await refreshVideos();return job}}} canManageVideo={port.access.canManageVideo}
     feedback={feedback}

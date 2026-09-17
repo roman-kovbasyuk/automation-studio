@@ -8,6 +8,7 @@ import { EmptyState } from '../../../../components/design-system/molecules/Empty
 import { useExitPresence } from '../../../../components/design-system/molecules/useExitPresence.js'
 import { PreviewDialog } from '../../../../components/design-system/organisms/PreviewDialog.jsx'
 import { ErrorNotice, SectionHeading, useAssetUrl } from '../../../primitives.jsx'
+import { GenerationBlockNotice } from '../../GenerationBlockNotice.jsx'
 import './copy-cards.css'
 
 const AnimatedBanner = lazy(() => import('../../../AnimatedBanner.jsx').then(module => ({ default: module.AnimatedBanner })))
@@ -25,7 +26,7 @@ function CopyPreview({ copy, input, assets, onClose }) {
 }
 
 /** Domain-only view: no workspace, HTTP client, revision, or sibling state. */
-export function CopyView({ input, inputKey, setDirty = () => {}, access, operation, actions, assets, onNext, reconcile, navigate,
+export function CopyView({ input, inputKey, setDirty = () => {}, access, operation, actions, assets, onNext, reconcile, resolveGeneration, navigate,
   nextLabel = 'Continue to Visuals', heading = true }) {
   const [actionError, setActionError] = useState(null)
   const [localAction, setLocalAction] = useState(null)
@@ -37,7 +38,6 @@ export function CopyView({ input, inputKey, setDirty = () => {}, access, operati
   const uncertain = operation.kind === 'uncertain'
   const readOnly = !access.canEdit
   const generationBlock = access.generationBlock
-  const generationName = ({ image: 'Image generation', directions: 'Visual prompt generation', copy: 'Copy generation', brief_analysis: 'Brief analysis' })[generationBlock?.step] ?? 'Generation'
   const visibleError = operation.error ?? actionError
   const canCheck = !!reconcile && (!!generationBlock || uncertain || !!visibleError)
   const sets = useMemo(() => input.copies.filter(set => !set.stale), [input.copies])
@@ -100,11 +100,7 @@ export function CopyView({ input, inputKey, setDirty = () => {}, access, operati
       actions={access.editDestination && navigate && <AppButton onClick={() => navigate(access.editDestination)}>Go to Review</AppButton>}>
       {access.reason || 'This copy is read-only.'}
     </DecisionNotice>}
-    {generationBlock && <DecisionNotice label={generationBlock.status === 'unknown' ? 'Check generation status' : 'Generation in progress'} actions={checkControl}>
-      {generationBlock.status === 'unknown'
-        ? `${generationName} needs checking before you can change copy.`
-        : `${generationName} is running. You can change copy when it finishes.`}
-    </DecisionNotice>}
+    <GenerationBlockNotice block={generationBlock} onCheck={reconcile} onResolve={resolveGeneration} disabled={pending} />
     {!generationBlock && checkControl}
     {needsDecision && <DecisionNotice label="Brief changed" busy={pending} actions={<>
       <AppButton disabled={readOnly || pending || uncertain || !actions.retain} onClick={() => attempt('retain', actions.retain)} busy={localAction?.kind === 'retain'}>Keep old copy</AppButton>

@@ -10,6 +10,7 @@ import { AssetImage, AssetVideo } from '../../../primitives.jsx'
 import { VideoControls } from './VideoControls.jsx'
 import { selectedCopies, visualStatus } from './visualsModel.js'
 import { generationLimitMessage } from '../../../../../shared/generationErrors.js'
+import { UnresolvedImageStatus } from './UnresolvedImageStatus.jsx'
 import './visuals.css'
 
 const videoPhaseLabels = {
@@ -32,7 +33,7 @@ function CopyPrompt({ prompt }) {
   }}><Copy size={16} aria-hidden="true" />Copy prompt</TextAction>{feedback && <span role="status" className="bs-visual-feedback">{feedback}</span>}</>
 }
 
-export function VisualsView({ input, assets, videoJobs = [], videoActions = {}, canManageVideo = false, pending, progress, batchIds = [], feedback, readOnly, onGenerate, onImage, onUpload, onSelect, onNext, onReconcile, onClearFeedback = () => {}, heading = false }) {
+export function VisualsView({ input, assets, videoJobs = [], videoActions = {}, canManageVideo = false, pending, progress, batchIds = [], feedback, readOnly, onGenerate, onImage, onUpload, onSelect, onNext, onReconcile, onResolve, onClearFeedback = () => {}, heading = false }) {
   const fileInput = useRef(null), uploadTarget = useRef(null)
   const [uploadOpen, setUploadOpen] = useState(false), [uploadCopyId, setUploadCopyId] = useState('')
   const [contextOpen, setContextOpen] = useState(false)
@@ -132,9 +133,8 @@ export function VisualsView({ input, assets, videoJobs = [], videoActions = {}, 
             : <div className="bs-visual-placeholder"><ImagePlus size={32} aria-hidden="true" />
               {generating ? <span>Generating image…</span> : imageError ? <p role="alert">{imageError.message}</p>
                 : state === 'failed' ? <p role="alert">{quotaError ?? 'Image generation failed. Retry this image or upload your own.'}</p>
-                : unresolved ? <p role="status">Status needs checking. Check latest state before retrying.</p>
+                : unresolved ? <UnresolvedImageStatus generation={direction.generation} onCheck={onReconcile} onResolve={onResolve} disabled={disabled} />
                 : blocked ? <p>Generation was blocked.</p> : <span>Not generated yet</span>}
-              {unresolved && <TextAction onClick={onReconcile}>Check image status</TextAction>}
               {!generating && !blocked && !unresolved && !direction.stale && <AppButton disabled={disabled || Boolean(quotaError)} onClick={() => onImage(direction.id)}>{state === 'failed' ? 'Retry image' : 'Generate image'}</AppButton>}
             </div>}
           {linked && <div className="bs-visual-copy"><span>Linked copy · {copyLabel(direction.copy.id)}</span><p>{direction.copy.headline}</p></div>}

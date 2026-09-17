@@ -2,6 +2,21 @@ import { describe, expect, test, vi } from 'vitest'
 import { createStudioApi, StudioApiError } from './api.js'
 
 describe('Studio HTTP client', () => {
+  test('reports transport failures with a safe message and code, and keeps aborts as aborts', async () => {
+    const api = createStudioApi({ fetchImpl: vi.fn(async () => { throw new TypeError('Failed to fetch') }) })
+    await expect(api.getSession()).rejects.toMatchObject({ name: 'StudioApiError', status: 0, code: 'network_error',
+      message: 'The connection was interrupted. Check the latest state before trying again.' })
+    const aborted = createStudioApi({ fetchImpl: vi.fn(async () => { throw new DOMException('Aborted', 'AbortError') }) })
+    await expect(aborted.getSession()).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
+  test('marks an unknown generation job as failed with the strict resolution body', async () => {
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ id: 'job-1', status: 'failed' })))
+    await createStudioApi({ fetchImpl }).resolveJob('job/1')
+    expect(fetchImpl).toHaveBeenCalledWith('/api/v1/generation-jobs/job%2F1/resolve', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ resolution: 'marked_failed' }) }))
+  })
+
   test('reads generation readiness through the authenticated endpoint', async () => {
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({ state: 'paused', spendingControl: 'external' })))
     const api = createStudioApi({ fetchImpl })
