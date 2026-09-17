@@ -68,7 +68,7 @@ function assertOwnedAssetDirectory(directory) {
   }
 }
 
-export async function startIsolatedStudio({ connectionString = process.env.TEST_DATABASE_URL ?? defaultConnectionString,briefingEnabled=false } = {}) {
+export async function startIsolatedStudio({ connectionString = process.env.TEST_DATABASE_URL ?? defaultConnectionString,briefingEnabled=true } = {}) {
   if (process.env.NODE_ENV === 'production' || process.env.K_SERVICE) throw new Error('The isolated studio cannot run in production')
   validateConnectionString(connectionString)
   const id = randomUUID().replaceAll('-', '')
