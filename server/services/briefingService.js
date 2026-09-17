@@ -90,12 +90,12 @@ export function createBriefingService({pool,idGenerator=randomUUID,clock=()=>new
         const brief={...campaign.brief,briefing:{...state,answers:input.answers}}
         const copyKey=hashCanonical(copyProjection(brief)),visualKey=hashCanonical(visualProjection(brief)),answersKey=hashCanonical(input.answers)
         if(state.confirmation?.answersKey===answersKey) return {confirmationId:state.confirmation.id,campaignRevision:campaign.revision,initialCopy:'skip',importedCopySetId:state.confirmation.importedCopySetId}
-        const previous=(await client.query('SELECT id FROM brief_confirmations WHERE campaign_id=$1 AND copy_key=$2 LIMIT 1',[campaignId,copyKey])).rows.length>0
+        const previouslyWritten=(await client.query("SELECT id FROM brief_confirmations WHERE campaign_id=$1 AND copy_key=$2 AND response->>'initialCopy'='offer_generation' LIMIT 1",[campaignId,copyKey])).rows.length>0
         const importKey=hashCanonical({sourceKey:state.sourceKey,copies:proposal.foundCopy})
         const imported=(await client.query('SELECT id FROM copy_sets WHERE campaign_id=$1 AND import_key=$2',[campaignId,importKey])).rows[0]
         const shouldImport=keepsCopy&&!imported
-        // Copy writing starts only for copy settings that were never confirmed before.
-        const writesCopy=input.answers.copyMode!=='keep_original'&&!previous
+        // Copy writing starts only for copy settings that never wrote copy; keeping copy verbatim doesn't count.
+        const writesCopy=input.answers.copyMode!=='keep_original'&&!previouslyWritten
         if(shouldImport) {
           const capacity=(await client.query(`SELECT COALESCE(sum(jsonb_array_length(candidates)-jsonb_array_length(deleted_candidate_ids)),0)::int AS n FROM copy_sets WHERE campaign_id=$1 AND stale=false`,[campaignId])).rows[0].n
           const reserved=(await client.query("SELECT COALESCE(sum(COALESCE((input_snapshot->>'copySlots')::int,5)),0)::int AS n FROM generation_jobs WHERE campaign_id=$1 AND step='copy' AND status IN ('pending','unknown')",[campaignId])).rows[0].n

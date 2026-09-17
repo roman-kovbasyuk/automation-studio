@@ -102,3 +102,17 @@ test('keeping found copy with new copy needs room for five new options',async()=
     expect(await copySets()).toEqual([{origin:'supplied'}])
   } finally {await studio.close()}
 },30000)
+
+test('writing new copy after previously keeping the same settings verbatim still writes copy',async()=>{
+  const studio=await createIsolatedStudio()
+  try {
+    const {confirm,copySets}=await analysedCampaign(studio,'Headline: Learn Norwegian — together.','kept-then-written')
+    const kept=await confirm('kept',{copyMode:'keep_original'})
+    expect(kept.initialCopy).toBe('skip')
+    expect(await copySets()).toEqual([{origin:'supplied'}])
+    // Same copy settings as the kept confirmation, only the copy choice changes.
+    const written=await confirm('written',{copyMode:'keep_and_create'})
+    expect(written).toMatchObject({initialCopy:'offer_generation',importedCopySetId:kept.importedCopySetId})
+    expect(await copySets()).toEqual([{origin:'supplied'}])
+  } finally {await studio.close()}
+},30000)
