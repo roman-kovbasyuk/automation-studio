@@ -25,7 +25,7 @@ function FoundCopyPreview({ candidate, onOpenSource }) {
 /** Step 1: found copy is always kept; the question is whether to also write new options. */
 export function FoundCopyStep({ draft, foundCopy, errors, suggested, disabled, onChange, onOpenSource }) {
   const [allOpen, setAllOpen] = useState(false)
-  return <Stack gap={5}>
+  return <Stack gap={6}>
     <ul className="bs-found-copy-list" aria-label="Found copy">
       {foundCopy.slice(0, PREVIEW_LIMIT).map(candidate => <li key={candidate.id}><FoundCopyPreview candidate={candidate} onOpenSource={onOpenSource} /></li>)}
     </ul>

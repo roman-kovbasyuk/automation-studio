@@ -5,6 +5,7 @@ Before 1.0, patch versions add capabilities and minor versions contain breaking 
 ## 0.1.1 — 17 September 2026
 
 - `RadioGroup` gains `variant: 'default' | 'tags'`. The tags variant draws the options as wrapping, tag-shaped choices that remain native radios; its custom answer field appears only while the custom option is selected.
+- `RangeSlider` handles share one scale: both span the full range and are clamped so they never cross. Previously each handle's range stopped at the other, so the handles were drawn on different scales and the upper handle locked when both sat at the maximum.
 
 ## 0.1.0
 
