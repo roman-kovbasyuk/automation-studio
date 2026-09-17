@@ -1,6 +1,6 @@
 # AI generation
 
-**Status:** Current · **Source reviewed:** 16 September 2026
+**Status:** Current · **Source reviewed:** 17 September 2026
 
 How the code uses AI today. The target role of AI is described in the [product concept](../product/concept.md): AI produces text and imagery, templates produce layout, people decide.
 
@@ -46,11 +46,15 @@ AI never lays out banners, approves work or publishes brands. Layout is produced
 | --- | --- |
 | `pending` | Dispatched and running |
 | `succeeded` | Result stored |
-| `failed` | Known failure |
+| `failed` | Known failure: configuration missing before dispatch, invalid input or output, a provider rejection (HTTP 400, 401, 403, 404) or a known limit |
 | `blocked` | Rejected by provider safety |
-| `unknown` | Outcome uncertain: the call threw an error or timed out |
+| `unknown` | Outcome uncertain: a timeout, abort, network or server error after the request was sent |
 
-A `pending` or `unknown` job blocks copy edits, keeping supplied copy and visual uploads for that campaign. See [known issues](known-issues.md#generation-jobs-can-lock-a-project) for the current problem with `unknown` jobs.
+A `pending` or `unknown` job blocks copy changes, keeping supplied copy and visual uploads for that project.
+
+- **Reasons.** Every failed, blocked or unknown job carries a code (`errorCode`, `unknownReason`) that the studio shows in plain language through `generationReasonMessage` in `shared/generationErrors.js`; raw codes and provider text are never shown ([D33](../product/decisions.md)).
+- **Mark as failed.** 40 seconds after an unknown job's timeout, the requester or an admin can call `POST /api/v1/generation-jobs/:jobId/resolve` with `{ "resolution": "marked_failed" }`. The job becomes `failed`, keeps its unknown reason, counts its reservation as cost and is audited as `generation.marked_failed`; replaying the original request returns the resolved job. Video jobs also move their phase to `failed`.
+- **Readiness before dispatch.** When generation readiness is not `ready`, a generation request returns `409 generation_unavailable` before any job is created; a paused kill switch keeps its own error ([D37](../product/decisions.md)).
 
 ## Credentials
 

@@ -1,6 +1,6 @@
 # M0 Stabilise — implementation plan
 
-**Status:** In progress (T1 done) · **Date:** 17 September 2026 · **Milestone:** M0 in the [roadmap](../product/roadmap.md) · **Decisions:** D31–D38
+**Status:** Implemented, in review · **Date:** 17 September 2026 · **Milestone:** M0 in the [roadmap](../product/roadmap.md) · **Decisions:** D31–D38
 
 ## Goal
 
@@ -83,6 +83,7 @@ Delete the modules listed in the [adoption audit](../design-system/adoption-audi
 | Remove `<script src="http://localhost:8400/live.js…">` and the design-tool comment from `index.html` | Development tooling committed to production HTML |
 | Delete `scripts/render-campaign-logic.mjs` | Reads an archived document; diagrams now come from recipes |
 | Delete `.github/workflows/deploy-pages.yml` | Targets a `main` branch that does not exist; docs are served by the application (D32) |
+| Remove Figma's `html-to-design` capture script from `index.html` | Found during T3: design tooling loaded from an external domain in production |
 
 **Verify:** `npm run build`, `node scripts/verify-build.mjs`.
 
@@ -190,6 +191,24 @@ Record the kept identifiers in [known issues](../engineering/known-issues.md) as
 - Update [AI generation](../engineering/ai-generation.md) for the new statuses, reasons and resolve endpoint.
 - Update the [adoption audit](../design-system/adoption-audit.md) unreachable-code section.
 - Open the pull request with verification evidence.
+
+## Results
+
+Implemented on 17 September 2026 on branch `feat/m0-stabilise`, one commit or more per task.
+
+| Task | Outcome |
+| --- | --- |
+| T1 | Suite green; see the result under T1 |
+| T2 | 133 files deleted and about 10,600 lines removed, including the banner template editor with its API endpoints (D38) and orphan stylesheets. Unused Tailwind and shadcn dependencies removed. Static reachability reports no unreachable source files. The outdated eight-stage helpers in `src/studio/workflow.js` were also removed |
+| T3 | Both development script tags and the design-tool comment removed from `index.html`; diagram script and GitHub Pages workflow deleted |
+| T4 | Known provider failures are `failed`; job responses carry `unknownReason`, `resolution`, `resolvedBy` and `resolvedAt`; `POST /api/v1/generation-jobs/:jobId/resolve` with migration 054; video jobs included. The readiness check moved to T6 because D37 changed readiness |
+| T5 | Plain-language reasons, a shared notice with **Check again** and **Mark as failed**, per-image states in Visuals, safe messages for programming faults and network errors, readable source errors |
+| T6 | Briefing flag removed (D37); readiness checked on Home and before any job; projects open at once with uploads and analysis in Brief; interrupted uploads listed after a reload |
+| T7 | Visible names are Automation Studio; persisted identifiers kept and listed in [known issues](../engineering/known-issues.md#intentional-legacy-identifiers) |
+| T8 | `postcss` 8.5.28 and the Mermaid `lodash-es` chain updated; the lockfile is accepted by `npm ci` on npm 10 and 11. Remaining: `firebase-admin` chain (D34) and development-only VitePress tooling |
+| T9 | Known issues, AI generation, adoption audit and this plan updated |
+
+**Test runner:** tests run with half the CPU cores (`maxWorkers: '50%'`); with more workers the shared PostgreSQL made timeouts flaky and the run was no faster.
 
 ## Final verification
 
