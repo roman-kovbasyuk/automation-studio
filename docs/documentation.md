@@ -25,6 +25,7 @@
 | Product concept, terms, decisions, roadmap | `docs/product/` |
 | Recipe model; later, the recipe files themselves | `docs/product/recipes.md`; `recipes/` |
 | Requirements and specifications | [PRD](product/prd.md) and [`docs/specs/`](specs/index.md) |
+| Implementation plans for a milestone | `docs/plans/`, one file per milestone, named with its date |
 | How the current code works | `docs/engineering/` |
 | Engineering proposals not yet accepted | `docs/engineering/proposals/` |
 | Application design-system rules and design briefs | `FRONTEND.md`, `DESIGN.md`, `docs/design-system/` |

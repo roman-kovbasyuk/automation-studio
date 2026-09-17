@@ -98,7 +98,7 @@ There is no automatic bulk conversion. Legacy projects are always banner project
 
 ## Test strategy
 
-- Fix or retire the 16 failing historical migration fixtures before the migration work, so the suite is green.
+- Make the suite green before the migration work (M0 task T1: 84 failing tests on 17 September 2026, mostly fixtures that predate the canonical briefing cutover).
 - **Migration tests** on SQL fixtures for every legacy status: backfill values, receipts, no changes to sealed records.
 - **Conversion tests:** editable legacy project converts; projects in review refuse; version pinning recorded.
 - **Dual-path tests:** a legacy project and a recipe project run side by side through their own stages without affecting each other.

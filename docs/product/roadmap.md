@@ -35,7 +35,7 @@ Drafted on 17 September 2026 and updated for decisions D17–D30 the same day:
 
 | Milestone | Work | Exit check |
 | --- | --- | --- |
-| **M0 Stabilise** | Fix the issues in [known issues](../engineering/known-issues.md) marked *before build*: generation jobs that lock a project, project creation errors, dead code, the committed dev script tag, product naming in code. | No job can leave a project unusable. |
+| **M0 Stabilise** | [Plan](../plans/2026-09-17-m0-stabilise.md). Fix the issues in [known issues](../engineering/known-issues.md) marked *before build*: generation jobs that lock a project, project creation errors, dead code, the committed dev script tag, product naming in code. | No job can leave a project unusable. |
 | **M1 Brand as input** | Brand guidance fields; licensed brand fonts in the renderer (Matter); projects pin a brand version; templates reference brand roles; brand context in AI prompts. Folkeuniversitetet made automation-ready. | One template renders two brands correctly; Matter renders in banners; prompts include brand context. |
 | **M2 Banner recipe and Assets stage** | Recipe loader and schema check; `banner-set` recipe drives the stages; checks, repair, accept, download, request design help; Figma escalation replaces mandatory review. | A banner brief reaches downloaded files with no designer; a Figma escalation round trip works. |
 | **M3 Deck recipe** | Folkeuniversitetet slide template set with placeholders; outline and slide-fill capabilities; server-side text fit; PPTX export; PPTX escalation (download, edit, upload). | A deck brief reaches a downloaded PPTX with no designer; a PPTX escalation round trip works. |
