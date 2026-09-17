@@ -54,7 +54,7 @@ export function createWorkspaceApi({ store, scenarios, idFactory = () => crypto.
   }
   const api = {
     async getSession() { return { ...currentActor(), requestId: requestId() } },
-    async getRuntimeConfig() { return { capabilities: { sourceBriefing: true }, prototype: true, mode: 'local-simulation', requestId: requestId() } },
+    async getRuntimeConfig() { return { prototype: true, mode: 'local-simulation', requestId: requestId() } },
     async getGenerationReadiness() { return { state: 'ready', message: 'Prepared local generation is ready.', requestId: requestId() } },
     async listCampaigns() {
       const state = await store.read()

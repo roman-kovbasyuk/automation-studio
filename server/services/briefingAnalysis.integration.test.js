@@ -10,7 +10,7 @@ import {createMockProvider} from '../providers/mockProvider.js'
 test('rejected provider is settled without dispatch or a stranded reservation',async()=>{
   const studio=await createIsolatedStudio()
   try {
-    const actor=studio.actor('marketer'),workflow=createWorkflowService({pool:studio.pool,briefingEnabled:true})
+    const actor=studio.actor('marketer'),workflow=createWorkflowService({pool:studio.pool})
     const campaign=await workflow.createCampaign({actor,input:{title:'Boundary fixture',brief:{notes:'Synthetic school brief',briefing:{schemaVersion:2}}}})
     const mock=createMockProvider(),analyseBrief=vi.fn()
     const service=createGenerationService({pool:studio.pool,controlPlane:createGenerationControlPlane({pool:studio.pool}),providers:{mock:{...mock,sourceDestination:null,analyseBrief}}})
@@ -24,7 +24,7 @@ test('rejected provider is settled without dispatch or a stranded reservation',a
 test('combined source analysis produces a reviewable proposal and stops before copy generation',async()=>{
   const studio=await createIsolatedStudio(),assetStore=createMemoryAssetStore()
   try {
-    const actor=studio.actor('marketer'),workflow=createWorkflowService({pool:studio.pool,briefingEnabled:true})
+    const actor=studio.actor('marketer'),workflow=createWorkflowService({pool:studio.pool})
     let campaign=await workflow.createCampaign({actor,input:{title:'Sources',brief:{briefing:{schemaVersion:2}}}})
     const sources=createBriefSourceService({pool:studio.pool,assetStore})
     for(const [index,text] of ['Norwegian language school in Oslo.','Headline: Learn Norwegian — together.'].entries()) {

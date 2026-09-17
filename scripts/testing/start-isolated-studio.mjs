@@ -68,7 +68,7 @@ function assertOwnedAssetDirectory(directory) {
   }
 }
 
-export async function startIsolatedStudio({ connectionString = process.env.TEST_DATABASE_URL ?? defaultConnectionString,briefingEnabled=true } = {}) {
+export async function startIsolatedStudio({ connectionString = process.env.TEST_DATABASE_URL ?? defaultConnectionString } = {}) {
   if (process.env.NODE_ENV === 'production' || process.env.K_SERVICE) throw new Error('The isolated studio cannot run in production')
   validateConnectionString(connectionString)
   const id = randomUUID().replaceAll('-', '')
@@ -119,7 +119,7 @@ export async function startIsolatedStudio({ connectionString = process.env.TEST_
         [actor.id, actor.email, actor.role, actor.displayName])
     }
     await seedAssetWorkflows({ pool, actor: actors.admin })
-    const workflowService = createWorkflowService({ pool,briefingEnabled })
+    const workflowService = createWorkflowService({ pool })
     const settings = await workflowService.getSettings({ actor: actors.admin })
     await workflowService.updateSettings({ actor: actors.admin, expectedRevision: settings.revision, patch: {
       provider: 'mock', model: 'mock-v1', region: 'europe-west6', dailyBudgetMicrounits: 1_000_000_000,
@@ -142,8 +142,8 @@ export async function startIsolatedStudio({ connectionString = process.env.TEST_
       return user && { id: user.id, email: user.email, role: user.role, workspaceId: 'default', displayName: user.display_name, disabled: user.disabled, disabledAt: user.disabled_at }
     }
     app = buildApp({
-      runtimeConfig:{firebase:{},capabilities:{sourceBriefing:briefingEnabled}},
-      ...(briefingEnabled?{briefSourceService:createBriefSourceService({pool,assetStore}),briefingService:createBriefingService({pool})}:{}),
+      runtimeConfig:{firebase:{}},
+      briefSourceService:createBriefSourceService({pool,assetStore}),briefingService:createBriefingService({pool}),
       resolveActor, workflowService, workspaceService: createWorkspaceService({ pool }),
       readiness: async () => { await pool.query('SELECT 1'); return true },
       generationService: createGenerationService({

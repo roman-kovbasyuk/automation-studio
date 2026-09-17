@@ -5,7 +5,8 @@ import './home-screen.css'
 
 // Home is the canonical banner entry: one centered PromptComposer keeps the
 // creation surface focused while BriefView owns persistence and attachments.
-export function HomeScreen({ api, pending, onSave, onDirty, collectSources = false, readiness = null }) {
+// Projects start with the AI briefing (D37), so Home explains unavailable AI before any work starts.
+export function HomeScreen({ api, pending, onSave, onDirty, readiness = null }) {
   const projectType = 'banners'
   const submitBlockedReason = readiness && readiness.state !== 'ready' ? readiness.message : ''
   return (
@@ -18,9 +19,8 @@ export function HomeScreen({ api, pending, onSave, onDirty, collectSources = fal
           onSave={input => onSave({ ...input, projectType })}
           onDirty={onDirty}
           submitBlockedReason={submitBlockedReason}
-          showSubmitBlockedReason={false}
           showMaterialsHint={false}
-          collectSources={collectSources && projectType === 'banners'}
+          collectSources
           heading={false}
           Composer={AtomicPromptInputAdapter}
           composerProps={{

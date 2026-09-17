@@ -13,7 +13,7 @@ import {studioTemplates} from '../../shared/studioTemplates.js'
 test('confirmed supplied copy reaches visual generation and an immutable banner review',async()=>{
   const studio=await createIsolatedStudio(),assetStore=createMemoryAssetStore()
   try {
-    const actor=studio.actor('marketer'),workflow=createWorkflowService({pool:studio.pool,briefingEnabled:true})
+    const actor=studio.actor('marketer'),workflow=createWorkflowService({pool:studio.pool})
     const campaign=await workflow.createCampaign({actor,input:{title:'Local course',brief:{notes:'Headline: Learn together.',briefing:{schemaVersion:2}}}})
     const common={actor,campaignId:campaign.id},read=()=>createWorkspaceService({pool:studio.pool}).getWorkspace(common)
     const generation=createGenerationService({pool:studio.pool,assetStore,controlPlane:createGenerationControlPlane({pool:studio.pool}),providers:{mock:createMockProvider()}})

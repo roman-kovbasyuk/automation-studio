@@ -157,6 +157,7 @@ export function createGenerationService({
   assetIdGenerator = randomUUID,
   clock = () => new Date(),
   timeoutMs = 30_000,
+  readinessService,
   maximumCosts = defaultMaximumCosts,
   assetStore,
   personalProviderFactory,
@@ -221,6 +222,13 @@ export function createGenerationService({
 
     if (step === 'image' && !assetStore) {
       throw new GenerationServiceError(503, 'image_storage_unavailable', 'Image generation is unavailable until durable storage is configured')
+    }
+    // No job is created when AI generation cannot run; a paused kill switch keeps its own error.
+    if (readinessService) {
+      const readiness = await readinessService.getReadiness({ actor })
+      if (!['ready', 'paused'].includes(readiness?.state)) {
+        throw new GenerationServiceError(409, 'generation_unavailable', readiness?.message ?? 'AI generation is not set up for this workspace.')
+      }
     }
 
     const startedAt = safeInstant(clock(), 'Generation clock')

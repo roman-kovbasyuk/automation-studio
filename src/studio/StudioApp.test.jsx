@@ -425,7 +425,7 @@ describe('connected studio workflow', () => {
     fireEvent.change(screen.getByLabelText('Prompt'), { target: { value: 'Autumn sound. Headphones for commuters.' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send prompt' }))
     await screen.findByText('Promote headphones for a quieter commute.')
-    expect(api.createCampaign).toHaveBeenCalledWith({ projectType: 'banners', title: 'Autumn sound', brief: { notes: 'Autumn sound. Headphones for commuters.' } })
+    expect(api.createCampaign).toHaveBeenCalledWith({ projectType: 'banners', title: 'Autumn sound', brief: { notes: 'Autumn sound. Headphones for commuters.', briefing: { schemaVersion: 2 } } })
     // Copy is drafted only after the brief answers are confirmed.
     expect(api.generate.mock.calls.map(call => call.slice(0, 2))).toEqual([['campaign-1', 'brief']])
     expect(location.search).toBe('?module=brief')

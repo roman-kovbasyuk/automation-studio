@@ -56,7 +56,7 @@ A `pending` or `unknown` job blocks copy edits, keeping supplied copy and visual
 
 | Context | How credentials are supplied |
 | --- | --- |
-| Source-backed briefing | Vertex AI with application default credentials: `BRIEFING_ENABLED=true`, `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION=eu`. Personal keys and other regions are rejected. |
+| Project briefing (always on, [D37](../product/decisions.md)) | Vertex AI with application default credentials: `VERTEX_AI_PROJECT_ID` and `VERTEX_AI_LOCATION=eu`. Personal keys and other regions are rejected; the local mock provider is used in development and tests. |
 | Local development API | `GEMINI_TEXT_API_KEY` and `GEMINI_MEDIA_API_KEY` in the root `.env`. When set, they take precedence; missing keys fail closed. |
 | Personal connections | Users connect a key in **Settings → Text & analysis**. Keys are checked server-side, encrypted with `PERSONAL_CREDENTIAL_ENCRYPTION_KEY` and never returned to the browser. |
 

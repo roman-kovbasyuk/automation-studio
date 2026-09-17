@@ -4,7 +4,7 @@ import { describe, expect, test, vi } from 'vitest'
 import { HomeScreen } from './HomeScreen.jsx'
 
 describe('Home creation entry', () => {
-  test('keeps a typed draft while pausing AI submission with an actionable reason', () => {
+  test('keeps a typed draft and explains why AI submission is paused', () => {
     render(<HomeScreen onSave={vi.fn()} readiness={{
       state: 'paused', reasonCode: 'kill_switch_active', message: 'AI generation is paused.',
       destination: 'vertex-eu', textModel: 'gemini-3.5-flash', imageModel: null,
@@ -15,7 +15,7 @@ describe('Home creation entry', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send prompt' }))
     expect(screen.getByRole('textbox')).toHaveValue('Synthetic bookshop launch')
     expect(screen.getByRole('textbox')).toHaveValue('Synthetic bookshop launch')
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('AI generation is paused.')
   })
 
   test('uses one PromptComposer for the banner brief without a secondary asset selector', () => {
@@ -36,7 +36,7 @@ describe('Home creation entry', () => {
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ projectType: 'banners', brief: { notes: 'Autumn launch for a local bookshop.' } })))
   })
 
-  test('extracts and removes files, then creates from a file-only brief', async () => {
+  test('attaches and removes files, then creates a project from a files-only brief', async () => {
     const api = { extractBriefFile: vi.fn(async () => ({ text: 'Launch a bookshop campaign.' })) }
     const onSave = vi.fn(async () => ({ ok: true }))
     render(<HomeScreen api={api} onSave={onSave} />)
@@ -47,7 +47,10 @@ describe('Home creation entry', () => {
     attach()
     await screen.findByRole('button', { name: 'Remove brief.txt' })
     fireEvent.click(screen.getByRole('button', { name: 'Send prompt' }))
-    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ projectType: 'banners', brief: { notes: expect.stringContaining('Launch a bookshop campaign.') } })))
+    // Files are uploaded as project sources in the Brief stage, not extracted on Home.
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ projectType: 'banners', brief: { notes: '' },
+      sources: [expect.objectContaining({ name: 'brief.txt', mimeType: 'text/plain' })] })))
+    expect(api.extractBriefFile).not.toHaveBeenCalled()
   })
 
   test('keeps the picker available without adding helper copy around the composer', () => {
@@ -56,17 +59,17 @@ describe('Home creation entry', () => {
     expect(screen.getByLabelText('Attach files', { selector: 'input' })).toHaveAttribute('accept', '.txt,.md,.markdown,.pdf,.docx')
   })
 
-  test('passes source collection only to banner creation when enabled', async () => {
+  test('collects attached files as project sources without extracting them', async () => {
     const api = { extractBriefFile: vi.fn() }
-    render(<HomeScreen api={api} onSave={vi.fn()} collectSources />)
+    render(<HomeScreen api={api} onSave={vi.fn()} />)
     changeControl(screen.getByLabelText('Attach files', { selector: 'input' }), { target: { files: [new File(['Source'], 'brief.txt', { type: 'text/plain' })] } })
     await screen.findByRole('button', { name: 'Remove brief.txt' })
     expect(api.extractBriefFile).not.toHaveBeenCalled()
   })
 
-  test('uses the question-review campaign route for text-only briefs when enabled', async () => {
+  test('submits a text-only brief with no sources for question review', async () => {
     const onSave = vi.fn(async () => ({ ok: true }))
-    render(<HomeScreen onSave={onSave} collectSources />)
+    render(<HomeScreen onSave={onSave} />)
     changeControl(screen.getByRole('textbox'), { target: { value: 'A synthetic bookshop launch.' } })
     fireEvent.click(screen.getByRole('button', { name: 'Send prompt' }))
     await waitFor(() => expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ projectType: 'banners', brief: { notes: 'A synthetic bookshop launch.' } })))

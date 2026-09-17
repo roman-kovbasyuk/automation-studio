@@ -8,7 +8,7 @@ export function Button({ children, primary=false, busy=false, ...props }) {
 }
 export function ErrorNotice({error, onRetry}) {
   if (!error) return null
-  const settingsRequired = ['provider_unavailable', 'not_connected', 'provider_configuration', 'credential_version_changed', 'provider_configuration_missing']
+  const settingsRequired = ['generation_unavailable', 'provider_unavailable', 'not_connected', 'provider_configuration', 'credential_version_changed', 'provider_configuration_missing']
     .some(code => code === error.code || code === error.reasonCode)
   return <Alert tone="danger" title={error.status === 409 ? 'This campaign has changed' : 'Something needs attention'}><p>{safeErrorMessage(error)}</p>{settingsRequired && <p><a href="/mvp/settings">Open Settings</a> to configure a personal AI provider.</p>}{error.details && <ul>{(Array.isArray(error.details)?error.details:[]).map((detail,index)=><li key={index}>{detail.path}: {detail.message}</li>)}</ul>}{onRetry && <Button onClick={onRetry}>Reload campaign</Button>}</Alert>
 }

@@ -42,8 +42,7 @@ Copy `.env.example` to `.env` (Git-ignored; keep permissions at `0600`).
 | --- | --- |
 | `DATABASE_URL`, `POSTGRES_*` | Production server and Docker Compose PostgreSQL |
 | `FIREBASE_*` | Production authentication |
-| `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION` | Gemini through Vertex AI (region must be `eu`) |
-| `BRIEFING_ENABLED` | Source-backed briefing in the local API |
+| `VERTEX_AI_PROJECT_ID`, `VERTEX_AI_LOCATION` | Gemini through Vertex AI (region must be `eu`). Required by the local API, because projects are created through the AI briefing ([D37](../product/decisions.md)); use `npm run dev:prototype` or the isolated studio launcher for mock generation |
 | `GENERATION_PROVIDER`, `GEMINI_TEXT_MODEL`, `GEMINI_IMAGE_MODEL` | Provider and model selection |
 | `GEMINI_TEXT_API_KEY`, `GEMINI_MEDIA_API_KEY` | Local API generation; take precedence over personal connections |
 | `GEMINI_VIDEO_MODEL` | Video generation model |

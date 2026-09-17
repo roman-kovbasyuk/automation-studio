@@ -60,3 +60,50 @@ it('falls back to an available step for a locked deep link without generating', 
   expect(api.generate).not.toHaveBeenCalled()
   runtime.dispose()
 })
+
+it('a new project opens in Brief and runs its pending submission there, once', async () => {
+  const scenario = makeScenario('draft')
+  scenario.workspace.campaign.brief = { ...scenario.workspace.campaign.brief, briefing: { schemaVersion: 2, sourceKey: 'a'.repeat(64), sourceIds: [], analysisJobId: null,
+    answers: { summary: '', audience: '', copyMode: null, ageGroups: [], gender: 'all', reach: null, goal: null, goalCustom: '', visualTags: [] }, confirmation: null } }
+  scenario.workspace.sources = []
+  const calls = []
+  const api = {
+    getWorkspace: vi.fn(async () => structuredClone(scenario.workspace)),
+    putBriefSource: vi.fn(async (id, sourceId, input, revision) => {
+      calls.push(`upload:${sourceId}`)
+      scenario.workspace.sources.push({ id: sourceId, name: input.name, kind: 'text', mimeType: 'text/plain', byteSize: 1, status: 'ready', errorCode: null, contentHash: 'b'.repeat(64), contentRevision: 1 })
+      scenario.workspace.campaign.revision = revision + 1
+      return { source: { id: sourceId, status: 'ready', name: input.name }, campaignRevision: revision + 1 }
+    }),
+    generate: vi.fn(async (id, step) => { calls.push(step); return { job: { id: 'analysis', status: 'succeeded' } } }),
+  }
+  const runtime = createCampaignRuntime({ ...scenario, api })
+  const started = vi.fn(), settled = vi.fn()
+  const pendingSubmission = { sources: [{ id: 'source-1', kind: 'text', name: 'brief.txt', text: 'Brief' }] }
+  const { rerender } = render(<CampaignPage runtime={runtime} activeModule="brief" onNavigate={() => {}}
+    pendingSubmission={pendingSubmission} onSubmissionStarted={started} onSubmissionSettled={settled} />)
+  await waitFor(() => expect(settled).toHaveBeenCalledOnce())
+  expect(started).toHaveBeenCalledOnce()
+  expect(calls).toEqual(['upload:source-1', 'brief'])
+  rerender(<CampaignPage runtime={runtime} activeModule="brief" onNavigate={() => {}}
+    pendingSubmission={pendingSubmission} onSubmissionStarted={started} onSubmissionSettled={settled} />)
+  expect(api.putBriefSource).toHaveBeenCalledOnce()
+  runtime.dispose()
+})
+
+it('after a reload, lists interrupted uploads without sending anything again', async () => {
+  const scenario = makeScenario('draft')
+  scenario.workspace.sources = [{ id: 'kept', name: 'uploaded.pdf', kind: 'file', mimeType: 'application/pdf', byteSize: 1, status: 'ready', errorCode: null, contentHash: 'c'.repeat(64), contentRevision: 1 }]
+  const api = { getWorkspace: vi.fn(async () => structuredClone(scenario.workspace)), generate: vi.fn(), putBriefSource: vi.fn() }
+  const runtime = createCampaignRuntime({ ...scenario, api })
+  const dismiss = vi.fn()
+  render(<CampaignPage runtime={runtime} activeModule="brief" onNavigate={() => {}}
+    interruptedUploads={['uploaded.pdf', 'missing.docx']} onDismissInterruptedUploads={dismiss} />)
+  expect(await screen.findByText('Upload interrupted — add your files again')).toBeVisible()
+  expect(screen.getByText('These files were not uploaded: missing.docx.')).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
+  expect(dismiss).toHaveBeenCalledOnce()
+  expect(api.generate).not.toHaveBeenCalled()
+  expect(api.putBriefSource).not.toHaveBeenCalled()
+  runtime.dispose()
+})

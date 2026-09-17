@@ -7,8 +7,6 @@ import { startVideoWorker } from '../server/services/videoWorker.js'
 import { createTemplateBrandService } from '../server/services/templateBrandService.js'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
-import { readFile } from 'node:fs/promises'
-import sharp from 'sharp'
 import { buildApp } from '../server/app.js'
 import { createPool } from '../server/db/pool.js'
 import { runMigrations } from '../server/db/migrate.js'
@@ -20,7 +18,6 @@ import { createWorkspaceService } from '../server/services/workspaceService.js'
 import { createGenerationService } from '../server/services/generationService.js'
 import { createGenerationControlPlane } from '../server/repositories/generationJobRepository.js'
 import { createLocalDemoAssetStore } from '../server/storage/localDemoAssetStore.js'
-import { createMockProvider } from '../server/providers/mockProvider.js'
 import { createAssetService } from '../server/services/assetService.js'
 import { createVisualUploadService } from '../server/services/visualUploadService.js'
 import { createVersionService } from '../server/services/versionService.js'
@@ -91,10 +88,11 @@ export async function startDemoServer({ port = 3010 } = {}) {
   if (process.env.NODE_ENV === 'production' || process.env.K_SERVICE) throw new Error('The local demo cannot run in production')
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Invalid demo port')
   const environmentGemini = createEnvironmentGemini()
-  const briefingEnabled=process.env.BRIEFING_ENABLED==='true'
+  // Projects are created through the AI briefing, which runs only on managed Vertex AI EU (D37).
+  // Mock generation stays available through npm run dev:prototype and the isolated studio launcher.
   const vertexProject=process.env.VERTEX_AI_PROJECT_ID?.trim()
-  if(briefingEnabled && (!vertexProject || process.env.VERTEX_AI_LOCATION!=='eu')) throw new Error('Source briefing requires an explicitly configured Vertex AI EU project')
-  const managedBriefingProvider=briefingEnabled?createGeminiProvider({project:vertexProject,location:'eu',textModel:'gemini-3.5-flash',imageModel:'gemini-3.1-flash-image'}):null
+  if(!vertexProject || process.env.VERTEX_AI_LOCATION!=='eu') throw new Error('The local API needs Vertex AI EU: set VERTEX_AI_PROJECT_ID and VERTEX_AI_LOCATION=eu. Use npm run dev:prototype for mock generation.')
+  const managedBriefingProvider=createGeminiProvider({project:vertexProject,location:'eu',textModel:'gemini-3.5-flash',imageModel:'gemini-3.1-flash-image'})
   const maintenance = createPool({ connectionString: 'postgresql:///postgres' })
   try {
     const exists = await maintenance.query('SELECT 1 FROM pg_database WHERE datname = $1', ['banner_studio_demo'])
@@ -122,7 +120,7 @@ export async function startDemoServer({ port = 3010 } = {}) {
     }, 30_000)
     notificationTimer.unref?.()
     const providerRegistry = createGenerationProviderRegistry({ provider: 'gemini', textModel: 'gemini-3.5-flash', imageModel: 'gemini-3.1-flash-image', region: 'eu' })
-    const workflowService = createWorkflowService({ pool, providerRegistry, personalAiService, personalSettingsService, briefingEnabled })
+    const workflowService = createWorkflowService({ pool, providerRegistry, personalAiService, personalSettingsService })
     const admin = { id: 'studio-demo-admin', role: 'admin' }
     await initializeDemoGenerationSettings(workflowService, admin)
     const { legacyStudioTemplates, taggedStudioTemplates, studioTemplates } = await import('../shared/studioTemplates.js')
@@ -131,18 +129,6 @@ export async function startDemoServer({ port = 3010 } = {}) {
       if (!existing) await workflowService.createTemplateVersion({ actor: admin, input: { id: manifest.id, name: manifest.name, version: manifest.version, manifest } })
     }
     const assetStore = await createLocalDemoAssetStore({ directory: fileURLToPath(new URL('../.studio-demo-assets', import.meta.url)) })
-    const mockProvider = createMockProvider()
-    const sampleImage = await readFile(new URL('../src/studio/assets/headphones.png', import.meta.url))
-    const demoProvider = {
-      ...mockProvider,
-      async generateImage(input, signal) {
-        const result = await mockProvider.generateImage(input, signal)
-        if (!result.image) return result
-        const bytes = await sharp(sampleImage).resize(input.width, input.height, { fit: 'cover' }).png().toBuffer()
-        signal.throwIfAborted()
-        return { ...result, image: { ...result.image, bytes } }
-      },
-    }
     const brandProvider = createBrandDesignSystemProvider({
       provider: 'mock',
       model: 'mock-v1',
@@ -165,8 +151,8 @@ export async function startDemoServer({ port = 3010 } = {}) {
     const videoGenerationService = createVideoGenerationService({ pool, assetStore, providerFactory: () => process.env.GEMINI_MEDIA_API_KEY
       ? createVeoProvider({ apiKey: process.env.GEMINI_MEDIA_API_KEY, model: process.env.GEMINI_VIDEO_MODEL }) : null })
     app = buildApp({
-      runtimeConfig:{firebase:{},capabilities:{sourceBriefing:briefingEnabled}},
-      ...(briefingEnabled?{briefSourceService:createBriefSourceService({pool,assetStore}),briefingService:createBriefingService({pool})}:{}),
+      runtimeConfig:{firebase:{}},
+      briefSourceService:createBriefSourceService({pool,assetStore}),briefingService:createBriefingService({pool}),
       localServiceController: createLocalServiceController({
         services: LOCAL_SERVICE_DEFINITIONS,
         supervisor: createLocalServiceSupervisor({
@@ -184,7 +170,7 @@ export async function startDemoServer({ port = 3010 } = {}) {
       generationService: createGenerationService({
         pool, assetStore, notificationService: personalSettingsService,
         controlPlane: createGenerationControlPlane({ pool, providerRegistry, personalSettingsResolver: ({ actor, step }) => environmentGemini.enabled ? environmentGemini.selection(step) : personalAiService.getGenerationSelection({ actor, step }) }),
-        providers: { gemini: managedBriefingProvider ?? demoProvider },
+        providers: { gemini: managedBriefingProvider },
         personalProviderFactory: async ({ actor, provider, model, region, step, credentialVersion }) => {
           if (environmentGemini.enabled) return environmentGemini.provider({ provider, model, region, step, credentialVersion })
           const credentialProvider = provider === 'gemini' ? 'google' : provider

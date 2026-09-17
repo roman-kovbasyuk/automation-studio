@@ -401,3 +401,35 @@ describe('generation outcome classification', () => {
     expect(controlPlane.completeProviderResult).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed', errorCode: 'invalid_request', actualCostMicrounits: 0 }))
   })
 })
+
+describe('generation readiness gate', () => {
+  const withReadiness = state => {
+    const readinessService = { getReadiness: vi.fn(async () => ({ state, message: state === 'approval_required' ? 'Project materials require the managed Vertex AI EU connection.' : 'Ready.' })) }
+    const built = harness()
+    const service = createGenerationService({
+      pool: { query: vi.fn() }, controlPlane: built.controlPlane, providers: { mock: built.provider },
+      idGenerator: () => 'job-1', ownerTokenGenerator: () => 'owner-1', timeoutMs: 25, readinessService,
+      clock: () => new Date('2026-09-04T10:00:00.000Z'),
+    })
+    return { ...built, service, readinessService }
+  }
+
+  test('refuses generation without creating a job when AI is not available', async () => {
+    const { service, controlPlane, provider } = withReadiness('approval_required')
+    await expect(service.generateCopy({ actor, campaignId: 'campaign-1', idempotencyKey: 'unavailable', input: {} }))
+      .rejects.toMatchObject({ statusCode: 409, code: 'generation_unavailable', message: 'Project materials require the managed Vertex AI EU connection.' })
+    expect(controlPlane.prepareGeneration).not.toHaveBeenCalled()
+    expect(provider.generateCopy).not.toHaveBeenCalled()
+  })
+
+  test('replays a stored result before checking readiness, and a paused kill switch keeps its own error path', async () => {
+    const replay = { status: 201, body: { job: { ...job, status: 'succeeded' } } }
+    const { service, readinessService, controlPlane } = withReadiness('unavailable')
+    controlPlane.preflightGeneration.mockResolvedValueOnce({ kind: 'replay', response: replay })
+    expect(await service.generateCopy({ actor, campaignId: 'campaign-1', idempotencyKey: 'stored', input: {} })).toEqual({ ...replay, replayed: true })
+    expect(readinessService.getReadiness).not.toHaveBeenCalled()
+    const paused = withReadiness('paused')
+    await paused.service.generateCopy({ actor, campaignId: 'campaign-1', idempotencyKey: 'paused', input: {} })
+    expect(paused.controlPlane.prepareGeneration).toHaveBeenCalledOnce()
+  })
+})

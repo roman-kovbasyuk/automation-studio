@@ -2,8 +2,7 @@ import { expect, test, vi } from 'vitest'
 import { createIsolatedStudio } from '../testing/isolatedStudio.js'
 import { createBriefSourceService } from './briefSourceService.js'
 import { createMemoryAssetStore } from '../storage/memoryAssetStore.js'
-import { createWorkflowService as createBaseWorkflowService } from './workflowService.js'
-const createWorkflowService=options=>createBaseWorkflowService({...options,briefingEnabled:true})
+import { createWorkflowService } from './workflowService.js'
 
 test('permits sources over five MB but enforces 25 MB combined and frees the budget on removal',async()=>{
   const studio=await createIsolatedStudio(),assetStore=createMemoryAssetStore()
@@ -24,11 +23,12 @@ test('permits sources over five MB but enforces 25 MB combined and frees the bud
   } finally {await assetStore.close();await studio.close()}
 },30000)
 
-test('v2 campaign creation is unavailable until the server enables the completed integration',async()=>{
+test('v2 campaign creation always starts the canonical briefing',async()=>{
   const studio=await createIsolatedStudio()
   try {
-    await expect(createBaseWorkflowService({pool:studio.pool}).createCampaign({actor:studio.actor('marketer'),
-      input:{title:'Not yet enabled',brief:{briefing:{schemaVersion:2}}}})).rejects.toMatchObject({code:'briefing_unavailable'})
+    const created=await createWorkflowService({pool:studio.pool}).createCampaign({actor:studio.actor('marketer'),
+      input:{title:'Always canonical',brief:{briefing:{schemaVersion:2}}}})
+    expect(created.brief.briefing).toMatchObject({schemaVersion:2,analysisJobId:null,confirmation:null})
   } finally {await studio.close()}
 },30000)
 

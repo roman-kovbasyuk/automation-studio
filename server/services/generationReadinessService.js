@@ -4,11 +4,9 @@ const destinationFor = settings => {
   return null
 }
 
-function connectionFor(ai, provider) {
-  return ai?.connections?.find(connection => connection.provider === provider && connection.status === 'connected') ?? null
-}
-
-export function createGenerationReadinessService({ workflowService, personalAiService, sourceBriefing = false } = {}) {
+// Every project is created through the confirmed AI briefing (D37), which only runs on the
+// managed Vertex AI EU connection, or on the local mock provider in development and tests.
+export function createGenerationReadinessService({ workflowService, personalAiService } = {}) {
   if (!workflowService) throw new TypeError('A workflow service is required')
   if (personalAiService !== undefined && typeof personalAiService?.getSettings !== 'function') throw new TypeError('A personal AI service with getSettings is required')
 
@@ -19,40 +17,22 @@ export function createGenerationReadinessService({ workflowService, personalAiSe
         : null
       const ai = personalAiService ? await personalAiService.getSettings({ actor }) : { connections: [], defaults: {} }
       const destination = destinationFor(settings)
-      const textModel = settings?.model ?? ai.defaults?.text?.model ?? null
-      const imageModel = ai.defaults?.image?.model ?? null
-      const personalGoogle = connectionFor(ai, 'google')
       const base = {
         state: 'unavailable', reasonCode: 'provider_unavailable',
-        message: 'Generation is not configured for this workspace.',
-        destination, textModel, imageModel, maskedCredential: null,
-        spendingControl: 'external',
+        message: 'AI generation is not set up for this workspace.',
+        destination, textModel: settings?.model ?? ai.defaults?.text?.model ?? null, imageModel: ai.defaults?.image?.model ?? null,
+        maskedCredential: null, spendingControl: 'external',
       }
       if (settings?.generationDisabled) return {
         ...base, state: 'paused', reasonCode: 'kill_switch_active', message: 'AI generation is paused.',
       }
-      if (sourceBriefing) {
-        if (destination !== 'vertex-eu') return {
-          ...base, state: 'approval_required', reasonCode: 'brief_provider_approval_required',
-          message: 'Campaign materials require the approved managed Vertex AI EU connection.',
-        }
-        return {
-          ...base, state: 'ready', reasonCode: null,
-          message: 'Managed Vertex AI EU is configured for source-backed campaigns.',
-        }
+      if (destination === 'vertex-eu') return { ...base, state: 'ready', reasonCode: null, message: 'Managed Vertex AI EU is configured.' }
+      if (destination === 'local-mock') return { ...base, state: 'ready', reasonCode: null, message: 'Local demo generation is configured.' }
+      if (!settings?.provider) return base
+      return {
+        ...base, state: 'approval_required', reasonCode: 'brief_provider_approval_required',
+        message: 'Project materials require the managed Vertex AI EU connection.',
       }
-      if (destination === 'local-mock') return {
-        ...base, state: 'ready', reasonCode: null, message: 'Local demo generation is configured.',
-      }
-      if (settings?.provider === 'gemini' && !personalGoogle) return {
-        ...base, state: 'unconfigured', reasonCode: 'provider_configuration_missing',
-        message: 'Connect the configured Google Gemini provider before generating.',
-      }
-      if (settings?.provider === 'gemini') return {
-        ...base, state: 'ready', reasonCode: null,
-        message: 'Google Gemini is configured for generation.', maskedCredential: personalGoogle.maskedSuffix ?? null,
-      }
-      return base
     },
   }
 }

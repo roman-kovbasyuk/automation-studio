@@ -155,7 +155,7 @@ describe('workflow service', () => {
   })
 
   test.each(['banners', 'reels', 'landing-page', 'website-page', 'presentations', 'business-cards', 'email-signature'])('creates and duplicates a %s project without losing its category', async projectType => {
-    const { service, campaignRepository } = harness({ briefingEnabled: projectType === 'banners' })
+    const { service, campaignRepository } = harness()
     const created = await service.createCampaign({ actor, input: { title: 'Typed project', brief, projectType } })
     expect(created.projectType).toBe(projectType)
     campaignRepository.findByIdForUpdate.mockResolvedValueOnce({ ...created, projectType })
@@ -164,7 +164,7 @@ describe('workflow service', () => {
   })
 
   test('server initializes the canonical briefing for a banner campaign even when the client omits the marker', async () => {
-    const { service } = harness({ briefingEnabled: true })
+    const { service } = harness()
 
     const created = await service.createCampaign({
       actor,
@@ -179,7 +179,7 @@ describe('workflow service', () => {
     })
   })
 
-  test('duplicates a campaign as a fresh draft with the original brief', async () => {
+  test('duplicates a campaign as a fresh draft with the original brief and a new canonical briefing', async () => {
     const { service, calls, campaignRepository, auditRepository } = harness()
     const duplicated = { ...currentCampaign, id: 'generated-1', title: 'Autumn copy', status: 'draft', revision: 0, brief }
     campaignRepository.create.mockResolvedValueOnce(duplicated)
@@ -188,7 +188,8 @@ describe('workflow service', () => {
 
     expect(calls).toEqual(['lock/load', 'audit'])
     expect(campaignRepository.create).toHaveBeenCalledWith({
-      id: 'generated-1', title: 'Autumn copy', brief, createdBy: actor.id, projectType: 'banners',
+      id: 'generated-1', title: 'Autumn copy', createdBy: actor.id, projectType: 'banners',
+      brief: { ...brief, briefing: expect.objectContaining({ schemaVersion: 2, analysisJobId: null, confirmation: null }) },
     })
     expect(result).toEqual(duplicated)
     expect(auditRepository.append).toHaveBeenCalledWith(expect.objectContaining({

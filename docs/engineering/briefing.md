@@ -16,9 +16,9 @@ How the Brief stage reads uploaded materials today. In the target model this bec
 
 ## Connection and rollout
 
-The local API enables the capability with `BRIEFING_ENABLED=true`, a configured `VERTEX_AI_PROJECT_ID`, and `VERTEX_AI_LOCATION=eu`. Source-backed requests use managed Vertex application-default credentials. Personal API keys, other providers and region fallback are rejected. `GET /api/v1/runtime-config` advertises `capabilities.sourceBriefing`.
+The briefing is always on ([D37](../product/decisions.md)): the local API requires a configured `VERTEX_AI_PROJECT_ID` and `VERTEX_AI_LOCATION=eu`. Source-backed requests use managed Vertex application-default credentials. Personal API keys, other providers and region fallback are rejected.
 
-Additive migrations 049–052 provide source storage, the 25 MB budget, confirmations/authored provenance and native attachment references. The local database was migrated and the API restarted. Production deployment is not part of this rollout; production enablement is opt-in and requires the same managed-EU boundary.
+Additive migrations 049–052 provide source storage, the 25 MB budget, confirmations/authored provenance and native attachment references. The local database was migrated and the API restarted. Production requires the same managed-EU boundary; there is no switch to turn the briefing off.
 
 ## Verified
 

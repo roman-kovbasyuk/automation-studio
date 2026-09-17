@@ -26,7 +26,7 @@ import { assertIsolatedSchema, isolatedDatabaseUrl } from './postgresIsolation.j
 
 const roles = ['marketer', 'designer', 'admin']
 
-export async function createIsolatedStudio({briefingEnabled=true,sourceExtractor}={}) {
+export async function createIsolatedStudio({sourceExtractor}={}) {
   const schema = `runtime_flow_${randomUUID().replaceAll('-', '')}`
   if (!/^runtime_flow_[0-9a-f]{32}$/.test(schema)) throw new Error('Unsafe isolated schema name')
   const connectionString = process.env.TEST_DATABASE_URL ?? 'postgresql:///banner_studio_test'
@@ -48,7 +48,7 @@ export async function createIsolatedStudio({briefingEnabled=true,sourceExtractor
         [value.id, value.email, value.role, value.displayName])
     }
     await seedAssetWorkflows({ pool, actor: actors.admin })
-    const workflowService = createWorkflowService({ pool,briefingEnabled })
+    const workflowService = createWorkflowService({ pool })
     for (const manifest of studioTemplates) await workflowService.createTemplateVersion({
       actor: actors.admin, input: { id: manifest.id, name: manifest.name, version: manifest.version, manifest },
     })
@@ -60,7 +60,7 @@ export async function createIsolatedStudio({briefingEnabled=true,sourceExtractor
       readiness: async () => { await pool.query('SELECT 1'); return true },
       resolveActor: async request => actors[request.headers['x-test-studio-role']] ?? null,
       workflowService, workspaceService, generationService,
-      ...(briefingEnabled?{briefSourceService:createBriefSourceService({pool,assetStore,...(sourceExtractor?{extractor:sourceExtractor}:{})}),briefingService:createBriefingService({pool})}:{}),
+      briefSourceService:createBriefSourceService({pool,assetStore,...(sourceExtractor?{extractor:sourceExtractor}:{})}),briefingService:createBriefingService({pool}),
       assetService: createAssetService({ pool, assetStore }),
       visualUploadService: createVisualUploadService({ pool, assetStore }),
       versionService: createVersionService({ pool, assetStore }),

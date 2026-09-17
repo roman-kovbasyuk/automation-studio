@@ -51,7 +51,6 @@ describe('production server composition', () => {
       environment: {
         NODE_ENV: 'production', DATABASE_URL: 'postgresql:///banner_studio', FIREBASE_PROJECT_ID: 'banner-project',
         GENERATION_PROVIDER: 'gemini', VERTEX_AI_PROJECT_ID: 'banner-project', VERTEX_AI_LOCATION: 'eu',
-        BRIEFING_ENABLED:'true',
         GEMINI_TEXT_MODEL: 'gemini-3.5-flash', GEMINI_IMAGE_MODEL: 'gemini-3.1-flash-image',
         ASSET_STORE: 'gcs', GCS_ASSET_BUCKET: 'banner-private-assets', GCS_PROJECT_ID: 'banner-project',
       },
@@ -60,8 +59,8 @@ describe('production server composition', () => {
 
     expect(calls.slice(0, 3)).toEqual(['open-static', 'reconcile', 'buildApp'])
     expect(dependencies.runMigrations).not.toHaveBeenCalled()
-    expect(dependencies.createWorkflowService).toHaveBeenCalledWith({ pool, providerRegistry,briefingEnabled:true })
-    expect(dependencies.buildApp).toHaveBeenCalledWith(expect.objectContaining({briefingService:expect.any(Object),briefSourceService:expect.any(Object),runtimeConfig:expect.objectContaining({capabilities:{sourceBriefing:true}})}))
+    expect(dependencies.createWorkflowService).toHaveBeenCalledWith({ pool, providerRegistry })
+    expect(dependencies.buildApp).toHaveBeenCalledWith(expect.objectContaining({ briefingService: expect.any(Object), briefSourceService: expect.any(Object), runtimeConfig: { firebase: expect.any(Object) } }))
     expect(dependencies.createGenerationProviderRegistry).toHaveBeenCalledWith({
       provider: 'gemini', textModel: 'gemini-3.5-flash', imageModel: 'gemini-3.1-flash-image', region: 'eu',
     })
@@ -74,7 +73,7 @@ describe('production server composition', () => {
     expect(dependencies.createMockProvider).not.toHaveBeenCalled()
     expect(dependencies.createGenerationControlPlane).toHaveBeenCalledWith({ pool, providerRegistry })
     expect(dependencies.createGenerationService).toHaveBeenCalledWith({
-      pool, controlPlane: generationControlPlane, providers: { gemini: generationProvider }, assetStore,
+      pool, controlPlane: generationControlPlane, providers: { gemini: generationProvider }, assetStore, readinessService: expect.any(Object),
     })
     expect(dependencies.createGcsAssetStore).toHaveBeenCalledWith({ bucketName: 'banner-private-assets', projectId: 'banner-project' })
     expect(dependencies.createMemoryAssetStore).not.toHaveBeenCalled()
