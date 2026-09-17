@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest'
-import { briefAnswersDraftSchema, briefAnswersConfirmedSchema, authoredCopyFieldsSchema, authoredCopyVariantSchema,
-  briefingStateSchema } from './briefingContracts.js'
+import { AGE_GROUPS, ageGroupsFromRange, ageRangeFromGroups, briefAnswersDraftSchema, briefAnswersConfirmedSchema,
+  authoredCopyFieldsSchema, authoredCopyVariantSchema, briefingStateSchema, normalizeAgeGroups } from './briefingContracts.js'
 import { briefSchema, campaignPatchRequestSchema, createCampaignRequestSchema, generatedBannerCopySchema } from './contracts.js'
 
 const answers = { summary: 'Norwegian courses', audience: 'Adult learners', copyMode: 'keep_original',
@@ -42,5 +42,36 @@ describe('briefing command boundaries', () => {
   })
   test('noncreative metadata cannot make an empty authored card valid', () => {
     expect(authoredCopyVariantSchema.safeParse({id:'candidate',headline:'',body:'',offer:'',cta:'',visualPrompt:'A city'}).success).toBe(false)
+  })
+})
+
+describe('copy choice and age range', () => {
+  test('found copy can be kept alone or together with new copy', () => {
+    for (const copyMode of ['keep_original', 'keep_and_create', 'create_new'])
+      expect(briefAnswersConfirmedSchema.safeParse({ ...answers, copyMode }).success).toBe(true)
+    expect(briefAnswersDraftSchema.safeParse({ ...answers, copyMode: 'keep_everything' }).success).toBe(false)
+  })
+  test('converts between slider ranges and age groups, storing the full range as no limit', () => {
+    expect(ageRangeFromGroups([])).toEqual([0, 6])
+    expect(ageGroupsFromRange([0, 6])).toEqual([])
+    expect(ageGroupsFromRange([2, 3])).toEqual(['25_34', '35_44'])
+    for (let low = 0; low < AGE_GROUPS.length; low++) for (let high = low; high < AGE_GROUPS.length; high++)
+      expect(ageRangeFromGroups(ageGroupsFromRange([low, high]))).toEqual([low, high])
+  })
+  test('normalises older age selections to the range that covers them', () => {
+    expect(normalizeAgeGroups(['45_54', '18_24'])).toEqual(['18_24', '25_34', '35_44', '45_54'])
+    expect(normalizeAgeGroups([...AGE_GROUPS])).toEqual([])
+    expect(normalizeAgeGroups([])).toEqual([])
+    expect(normalizeAgeGroups(['65_plus'])).toEqual(['65_plus'])
+  })
+  test('confirms no age limit or one continuous range, while drafts keep older selections', () => {
+    for (const ageGroups of [[], ['65_plus'], ['25_34', '35_44'], ['35_44', '25_34']])
+      expect(briefAnswersConfirmedSchema.safeParse({ ...answers, ageGroups }).success).toBe(true)
+    for (const ageGroups of [['18_24', '35_44'], [...AGE_GROUPS]]) {
+      const result = briefAnswersConfirmedSchema.safeParse({ ...answers, ageGroups })
+      expect(result.success).toBe(false)
+      expect(result.error.issues).toEqual([expect.objectContaining({ path: ['ageGroups'], message: 'Choose one continuous age range.' })])
+      expect(briefAnswersDraftSchema.safeParse({ ...answers, ageGroups }).success).toBe(true)
+    }
   })
 })

@@ -26,9 +26,25 @@ export function normalizeVisualTag(value) {
 }
 export const visualTagsSchema = z.array(z.string().trim().min(1).max(MAX_VISUAL_TAG_LENGTH)).max(MAX_VISUAL_TAGS)
   .refine(tags => distinct(tags.map(tag => normalizeVisualTag(tag).key)), 'Visual keywords must be unique.')
+/** The slider range [first, last] covering the groups; no groups means all ages. */
+export function ageRangeFromGroups(groups) {
+  if (!groups.length) return [0, AGE_GROUPS.length - 1]
+  const indexes = groups.map(group => AGE_GROUPS.indexOf(group))
+  return [Math.min(...indexes), Math.max(...indexes)]
+}
+/** The groups of a slider range; the full range is stored as no limit. */
+export function ageGroupsFromRange([low, high]) {
+  return low === 0 && high === AGE_GROUPS.length - 1 ? [] : AGE_GROUPS.slice(low, high + 1)
+}
+export const normalizeAgeGroups = groups => ageGroupsFromRange(ageRangeFromGroups(groups))
+const continuousAgeRange = groups => {
+  const [low, high] = ageRangeFromGroups(groups)
+  return !groups.length || (groups.length < AGE_GROUPS.length && high - low + 1 === groups.length)
+}
 export const briefAnswersDraftSchema = z.strictObject({
   summary: z.string().trim().max(1000), audience: z.string().trim().max(500),
-  copyMode: z.enum(['keep_original', 'create_new']).nullable(),
+  // keep_and_create keeps found copy and also writes new options.
+  copyMode: z.enum(['keep_original', 'keep_and_create', 'create_new']).nullable(),
   ageGroups: z.array(z.enum(AGE_GROUPS)).max(AGE_GROUPS.length).refine(distinct, 'Choose each age group once.'),
   gender: z.enum(['all', 'women', 'men']),
   reach: z.enum(['local', 'national', 'global']).nullable(),
@@ -40,6 +56,7 @@ export const briefAnswersConfirmedSchema = briefAnswersDraftSchema.superRefine((
     if (!answers[field]) ctx.addIssue({ code:'custom', path:[field], message:'Review this field before confirming.' })
   }
   if (answers.goal === 'other' && !answers.goalCustom) ctx.addIssue({code:'custom',path:['goalCustom'],message:'Describe the campaign goal.'})
+  if (!continuousAgeRange(answers.ageGroups)) ctx.addIssue({code:'custom',path:['ageGroups'],message:'Choose one continuous age range.'})
 })
 export function emptyBriefAnswers() {
   return { summary:'', audience:'', copyMode:null, ageGroups:[], gender:'all', reach:null, goal:null, goalCustom:'', visualTags:[] }
