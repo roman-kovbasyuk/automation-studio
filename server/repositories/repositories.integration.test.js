@@ -20,6 +20,8 @@ import { createGenerationService } from '../services/generationService.js'
 import { createMockProvider } from '../providers/mockProvider.js'
 import { buildApp } from '../app.js'
 import { hashCanonical } from '../../shared/canonicalJson.js'
+import { sourceProjection } from '../../shared/briefingDependencies.js'
+import { briefWithBriefing, confirmBriefing, seedConfirmedBriefing } from '../testing/briefingFixtures.js'
 import { createAuthenticator } from '../auth/verifyToken.js'
 import { createGenerationProviderRegistry } from '../providers/registry.js'
 import { reconcileGenerationSettings } from '../services/generationSettingsService.js'
@@ -1437,10 +1439,15 @@ describe('persisted generation control plane', () => {
     poolMax = 4,
     assetStore,
     decorateControlPlane = (value) => value,
+    // 'legacy' brief, canonical 'v2' brief awaiting analysis, or 'confirmed' canonical brief.
+    briefing = 'legacy',
   } = {}) {
     const pool = makePool({ max: poolMax })
     const actorId = await insertUser(pool)
-    const campaign = await insertCampaign(pool, actorId, { id: randomUUID() })
+    const campaign = await insertCampaign(pool, actorId, { id: randomUUID(), ...(briefing === 'legacy' ? {} : {
+      brief: briefWithBriefing({ product: 'Course', audience: 'Learners', objective: 'Signups', offer: '', locale: 'en', notes: '' }),
+    }) })
+    if (briefing === 'confirmed') await seedConfirmedBriefing({ pool, campaignId: campaign.id, actorId })
     await createSettingsRepository(pool).update({
       expectedRevision: 0, provider: providerName, model, region,
       dailyBudgetMicrounits: budget, perStepRegenerationLimit: limit, generationDisabled: disabled, updatedBy: actorId,
@@ -1561,7 +1568,7 @@ describe('persisted generation control plane', () => {
     const providerRegistry = {
       gemini: [{ model: 'gemini-3.5-flash', imageModel: 'gemini-3.1-flash-image', region: 'eu' }],
     }
-    const harness = await generationHarness({
+    const harness = await generationHarness({ briefing: 'confirmed',
       providerName: 'gemini', model: 'gemini-3.5-flash', region: 'eu', providerRegistry,
     })
     const common = {
@@ -1611,8 +1618,9 @@ describe('persisted generation control plane', () => {
   })
 
   test('persists service-owned jobs, brief metadata, copy sets, and exact idempotent responses', async () => {
-    const harness = await generationHarness()
+    const harness = await generationHarness({ briefing: 'v2' })
     const analysed = await harness.service.analyseBrief({ actor: harness.actor, campaignId: harness.campaign.id, idempotencyKey: 'brief-key', input: {} })
+    await confirmBriefing({ pool: harness.pool, actor: harness.actor, campaignId: harness.campaign.id })
     const copied = await harness.service.generateCopy({ actor: harness.actor, campaignId: harness.campaign.id, idempotencyKey: 'copy-key', input: {} })
     const replay = await harness.service.generateCopy({ actor: harness.actor, campaignId: harness.campaign.id, idempotencyKey: 'copy-key', input: {} })
 
@@ -1630,7 +1638,7 @@ describe('persisted generation control plane', () => {
     const baseProvider = createMockProvider()
     const generateImage = vi.fn(baseProvider.generateImage)
     const assetStore = createMemoryAssetStore()
-    const harness = await generationHarness({ provider: { ...baseProvider, generateImage }, assetStore, timeoutMs: 500, now: new Date() })
+    const harness = await generationHarness({ briefing: 'confirmed', provider: { ...baseProvider, generateImage }, assetStore, timeoutMs: 500, now: new Date() })
     await harness.pool.query(
       `INSERT INTO visual_directions (id, campaign_id, title, prompt, status)
        VALUES ('durable-direction', $1, 'Clean focus', 'Soft daylight on a clean desk.', 'pending')`,
@@ -1666,7 +1674,7 @@ describe('persisted generation control plane', () => {
     const baseProvider = createMockProvider()
     const generateImage = vi.fn(baseProvider.generateImage)
     const assetStore = createMemoryAssetStore()
-    const harness = await generationHarness({ provider: { ...baseProvider, generateImage }, assetStore, timeoutMs: 1000, now: new Date(),
+    const harness = await generationHarness({ briefing: 'confirmed', provider: { ...baseProvider, generateImage }, assetStore, timeoutMs: 1000, now: new Date(),
       decorateControlPlane: controlPlane => ({ ...controlPlane, completeGeneratedImage() { throw new Error('Persistence failed') } }) })
     const operatorId = await insertUser(harness.pool, { role: 'admin' })
     await harness.pool.query(`INSERT INTO visual_directions (id, campaign_id, title, prompt, status)
@@ -1703,7 +1711,7 @@ describe('persisted generation control plane', () => {
 
   test('replays committed image success without registering its referenced object as an orphan after an ambiguous acknowledgement', async () => {
     const assetStore = createMemoryAssetStore()
-    const harness = await generationHarness({
+    const harness = await generationHarness({ briefing: 'confirmed',
       assetStore,
       timeoutMs: 500,
       now: new Date(),
@@ -1735,7 +1743,7 @@ describe('persisted generation control plane', () => {
 
   test('makes an expired image persistence attempt unknown with only an unreferenced orphan', async () => {
     const assetStore = createMemoryAssetStore()
-    const harness = await generationHarness({
+    const harness = await generationHarness({ briefing: 'confirmed',
       assetStore,
       timeoutMs: 500,
       now: new Date(),
@@ -1776,7 +1784,7 @@ describe('persisted generation control plane', () => {
   test('bounds image recovery when the job row stays locked after completion reaches its deadline', async () => {
     const assetStore = createMemoryAssetStore()
     let releaseBlocker = async () => {}
-    const harness = await generationHarness({
+    const harness = await generationHarness({ briefing: 'confirmed',
       assetStore,
       timeoutMs: 500,
       now: new Date(),
@@ -1853,7 +1861,7 @@ describe('persisted generation control plane', () => {
       },
       delete: (input) => backingStore.delete(input),
     }
-    harness = await generationHarness({
+    harness = await generationHarness({ briefing: 'confirmed',
       assetStore,
       timeoutMs: 500,
       now: new Date(),
@@ -1919,7 +1927,7 @@ describe('persisted generation control plane', () => {
         throw new Error('provider acknowledgement is ambiguous')
       },
     }
-    harness = await generationHarness({
+    harness = await generationHarness({ briefing: 'confirmed',
       provider,
       assetStore: createMemoryAssetStore(),
       timeoutMs: 500,
@@ -1966,7 +1974,7 @@ describe('persisted generation control plane', () => {
         throw new Error('provider acknowledgement is ambiguous')
       },
     }
-    harness = await generationHarness({
+    harness = await generationHarness({ briefing: 'confirmed',
       provider,
       assetStore: createMemoryAssetStore(),
       timeoutMs: 500,
@@ -2033,7 +2041,7 @@ describe('persisted generation control plane', () => {
     const baseProvider = createMockProvider()
     const generateImage = vi.fn(baseProvider.generateImage)
     const provider = { ...baseProvider, generateImage }
-    const harness = await generationHarness({ provider })
+    const harness = await generationHarness({ briefing: 'confirmed', provider })
     await harness.pool.query(
       `INSERT INTO visual_directions (id, campaign_id, title, prompt, status)
        VALUES ('direction-input', $1, 'Clean focus', 'Soft daylight on a clean desk.', 'pending')`,
@@ -2072,7 +2080,7 @@ describe('persisted generation control plane', () => {
   })
 
   test('conflicts when a historical image replay key is reused with changed input', async () => {
-    const harness = await generationHarness()
+    const harness = await generationHarness({ briefing: 'confirmed' })
     await harness.pool.query(
       `INSERT INTO visual_directions (id, campaign_id, title, prompt, status)
        VALUES ('direction-input', $1, 'Clean focus', 'Soft daylight on a clean desk.', 'pending')`,
@@ -2272,19 +2280,20 @@ describe('persisted generation control plane', () => {
     pools.delete(harness.pool)
   })
 
-  test('rejects stale brief analysis after the campaign brief changes without calling copy generation', async () => {
+  test('requires reconfirmation after the campaign brief changes without calling copy generation', async () => {
     const baseProvider = createMockProvider()
     const provider = { ...baseProvider, generateCopy: vi.fn(baseProvider.generateCopy) }
-    const harness = await generationHarness({ provider })
+    const harness = await generationHarness({ provider, briefing: 'v2' })
     await harness.service.analyseBrief({ actor: harness.actor, campaignId: harness.campaign.id, idempotencyKey: 'analysis-before-edit', input: {} })
-    await harness.pool.query(
-      `UPDATE campaigns SET brief = jsonb_set(brief, '{objective}', '"Purchases"'::jsonb), revision = revision + 1, updated_at = now()
-       WHERE id = $1`,
-      [harness.campaign.id],
-    )
+    await confirmBriefing({ pool: harness.pool, actor: harness.actor, campaignId: harness.campaign.id })
+    // A brief edit changes the source key, as the workflow service does, and leaves the confirmation behind.
+    const { brief } = (await harness.pool.query('SELECT brief FROM campaigns WHERE id = $1', [harness.campaign.id])).rows[0]
+    const edited = { ...brief, objective: 'Purchases' }
+    await harness.pool.query('UPDATE campaigns SET brief = $1, revision = revision + 1, updated_at = now() WHERE id = $2',
+      [{ ...edited, briefing: { ...brief.briefing, sourceKey: hashCanonical(sourceProjection(edited, [])) } }, harness.campaign.id])
 
     await expect(harness.service.generateCopy({ actor: harness.actor, campaignId: harness.campaign.id, idempotencyKey: 'copy-after-edit', input: {} }))
-      .rejects.toMatchObject({ code: 'brief_analysis_stale' })
+      .rejects.toMatchObject({ code: 'brief_confirmation_required' })
     expect(provider.generateCopy).not.toHaveBeenCalled()
     expect((await harness.pool.query("SELECT count(*)::int AS count FROM generation_jobs WHERE step = 'copy'")).rows[0].count).toBe(0)
     await harness.pool.end()
@@ -2331,10 +2340,11 @@ describe('persisted generation control plane', () => {
   })
 
   test('runs copy and direction selections through pure workflow transitions with revision and audit in one transaction', async () => {
-    const harness = await generationHarness({ budget: 1_000_000 })
+    const harness = await generationHarness({ budget: 1_000_000, briefing: 'v2' })
     await harness.service.analyseBrief({ actor: harness.actor, campaignId: harness.campaign.id, idempotencyKey: 'analysis', input: {} })
+    const { campaignRevision } = await confirmBriefing({ pool: harness.pool, actor: harness.actor, campaignId: harness.campaign.id })
     const copied = await harness.service.generateCopy({ actor: harness.actor, campaignId: harness.campaign.id, idempotencyKey: 'copy', input: {} })
-    const selectedCopy = await harness.service.selectCopy({ actor: harness.actor, campaignId: harness.campaign.id, expectedRevision: 1, input: { copyId: copied.body.job.result.copies[0].id } })
+    const selectedCopy = await harness.service.selectCopy({ actor: harness.actor, campaignId: harness.campaign.id, expectedRevision: campaignRevision, input: { copyId: copied.body.job.result.copies[0].id } })
     const directions = await harness.service.generateDirections({ actor: harness.actor, campaignId: harness.campaign.id, idempotencyKey: 'directions', input: {} })
     const direction = directions.body.job.result.directions[0]
     await harness.pool.query(
@@ -2345,8 +2355,8 @@ describe('persisted generation control plane', () => {
     await harness.pool.query("UPDATE visual_directions SET status = 'ready', preview_asset_id = 'preview-1' WHERE id = $1", [direction.id])
     const selectedDirection = await harness.service.selectDirection({ actor: harness.actor, campaignId: harness.campaign.id, expectedRevision: selectedCopy.revision, input: { directionId: direction.id } })
 
-    expect(selectedCopy).toMatchObject({ status: 'copy_ready', revision: 2, selectedCopyId: copied.body.job.result.copySetId })
-    expect(selectedDirection).toMatchObject({ status: 'direction_selected', revision: 3, selectedDirectionId: direction.id })
+    expect(selectedCopy).toMatchObject({ status: 'copy_ready', revision: campaignRevision + 1, selectedCopyId: copied.body.job.result.copySetId })
+    expect(selectedDirection).toMatchObject({ status: 'direction_selected', revision: campaignRevision + 2, selectedDirectionId: direction.id })
     expect((await harness.pool.query("SELECT action FROM audit_events WHERE action IN ('campaign.copy_selected', 'campaign.direction_selected') ORDER BY created_at, action")).rows.map((row) => row.action).sort())
       .toEqual(['campaign.copy_selected', 'campaign.direction_selected'])
     await harness.pool.end()

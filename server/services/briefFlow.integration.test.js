@@ -10,7 +10,7 @@ import { createWorkspaceService } from './workspaceService.js'
 import { createMockProvider } from '../providers/mockProvider.js'
 import { createMemoryAssetStore } from '../storage/memoryAssetStore.js'
 
-test('structured brief persists, supports overrides and refinement, and prepares prompts without copy or images', async () => {
+test('legacy structured brief persists, supports overrides and refinement, and cannot generate before canonical confirmation', async () => {
   const schema = `brief_test_${randomUUID().replaceAll('-', '')}`
   const connectionString = process.env.TEST_DATABASE_URL ?? 'postgresql:///banner_studio_test'
   const maintenance = new Pool({ connectionString })
@@ -43,20 +43,19 @@ test('structured brief persists, supports overrides and refinement, and prepares
     await pool.query("UPDATE campaigns SET brief = jsonb_set(brief, '{notes}', '\"Changed legacy source\"') WHERE id = 'campaign'")
     expect((await read()).campaign.brief.analysis).toBeNull()
     await pool.query("UPDATE campaigns SET brief = $1 WHERE id = 'campaign'", [campaign.brief])
-    await service.generateDirections({ ...request, idempotencyKey: 'prompts', input: { mode: 'campaign' } })
-    expect((await pool.query('SELECT status, preview_asset_id FROM visual_directions')).rows).toEqual(Array.from({ length: 5 }, () => ({ status: 'pending', preview_asset_id: null })))
+    // Generation requires a confirmed canonical briefing; legacy briefs are migrated first.
+    await expect(service.generateDirections({ ...request, idempotencyKey: 'prompts', input: { mode: 'campaign' } })).rejects.toMatchObject({ code: 'brief_confirmation_required' })
+    expect((await pool.query('SELECT count(*)::int AS n FROM visual_directions')).rows[0].n).toBe(0)
     const workflow = createWorkflowService({ pool })
     await workflow.patchCampaign({ ...request, expectedRevision: campaign.revision,
       patch: { title: 'My campaign', brief: { ...campaign.brief, analysis: { ...campaign.brief.analysis, audience: 'Designers', summary: 'A launch for designers.' } } } })
-    await Promise.all([1, 2].map(() => service.generateCopy({ ...request, idempotencyKey: 'copy', input: {} })))
-    expect((await pool.query("SELECT count(*)::int AS n FROM generation_jobs WHERE step='copy'")).rows[0].n).toBe(1)
-    const snapshot = (await pool.query("SELECT input_snapshot FROM generation_jobs WHERE idempotency_key='copy'")).rows[0].input_snapshot
-    expect(snapshot.analysis).toMatchObject({ audience: 'Designers', summary: 'A launch for designers.' })
+    await expect(service.generateCopy({ ...request, idempotencyKey: 'copy', input: {} })).rejects.toMatchObject({ code: 'brief_confirmation_required' })
+    expect((await pool.query("SELECT count(*)::int AS n FROM generation_jobs WHERE step='copy'")).rows[0].n).toBe(0)
     await service.analyseBrief({ ...request, idempotencyKey: 'refine', input: { instruction: 'Emphasize the quiet design.' } })
     expect(instructions[1]).toMatchObject({ instruction: 'Emphasize the quiet design.', brief: { analysis: { audience: 'Designers' } } })
     campaign = await campaigns.findById('campaign')
     expect(campaign.title).toBe('My campaign')
-    expect((await pool.query('SELECT stale FROM copy_sets')).rows).toEqual([{ stale: true }])
+    expect((await pool.query('SELECT count(*)::int AS n FROM copy_sets')).rows[0].n).toBe(0)
     expect((await pool.query('SELECT count(*)::int AS n FROM assets')).rows[0].n).toBe(0)
     expect((await pool.query("SELECT count(*)::int AS n FROM generation_jobs WHERE step='image'")).rows[0].n).toBe(0)
     // Replaying analysis cannot overwrite a later manual name or repeat writes.
@@ -78,7 +77,7 @@ test('structured brief persists, supports overrides and refinement, and prepares
     await workflow.patchCampaign({ ...request, expectedRevision: campaign.revision,
       patch: { brief: { ...campaign.brief, notes: 'A different product launch.' } } })
     expect((await campaigns.findById('campaign')).brief.analysis).toBeNull()
-    await expect(service.generateCopy({ ...request, idempotencyKey: 'stale-source', input: {} })).rejects.toMatchObject({ code: 'brief_analysis_stale' })
+    await expect(service.generateCopy({ ...request, idempotencyKey: 'stale-source', input: {} })).rejects.toMatchObject({ code: 'brief_confirmation_required' })
   } finally {
     await pool.end()
     await maintenance.query(`DROP SCHEMA ${schema} CASCADE`)
