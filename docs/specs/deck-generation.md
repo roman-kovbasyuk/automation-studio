@@ -87,7 +87,7 @@ The requester reorders, adds, removes and changes layouts. Each edit saves an ou
 - One generation job per slide (parallel, bounded), using the layout's content contract with brand voice, required lines and forbidden terms.
 - **Wording fidelity:** `verbatim` keeps source wording and only splits it into fields; `edit` tightens wording; `rethink` rewrites for the audience. Numbers, sources and contact details are never invented in any mode.
 - Fixed fields are set by composition from slide position and step order, never by AI.
-- **Validation (`slideTextValid`):** `validatePresentationValues` with a **server-side `measure`** built from the renderer's font layout using the brand's font files (Matter, Inter), with a width safety margin for PowerPoint (see [PPTX export](#7-pptx-export)).
+- **Validation (`slideTextValid`):** `validatePresentationValues` with a **server-side `measure`** built from the renderer's font layout using the brand's font files (Matter, Inter), with a width safety margin for PowerPoint (see section 7, PPTX export).
 - **Repair:** `shortenSlideText`, up to two attempts per failing slide; remaining failures are shown on the slide for manual editing.
 
 ### 4. Edit slides (`editSlides`)
@@ -120,7 +120,7 @@ Every image slot uses its template's placeholder definition. The Visuals stage s
 | Required lines | Native text boxes |
 
 - **Document properties:** title (project title), author (requester), company (brand name), custom properties for project ID and output revision.
-- **Fonts:** Matter and Inter are referenced by name, not embedded, for the proof of concept. The package manifest lists required fonts. Embedding is an open question for M3 (see [PRD](../product/prd.md#13-open-questions)).
+- **Fonts:** Matter and Inter are referenced by name, not embedded, for the proof of concept. The package manifest lists required fonts. Embedding is an open question for M3 (see [PRD](../product/prd.md), section 13, open questions).
 - **Layout fidelity:** PowerPoint and Keynote lay out text slightly differently from the renderer. Text fit is therefore measured with a 5% width safety margin, and M3 acceptance includes opening sample decks in PowerPoint (macOS and Windows) and Keynote.
 - **`fileIntegrity` for PPTX:** valid Office Open XML package, slide count equals the outline, every font referenced is a brand font, every image referenced is embedded.
 

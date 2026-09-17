@@ -89,7 +89,7 @@ This replaces creating per-brand template versions in `templateBrandService`. Ex
 - Image slots crop to fill their placement around `focalPoint`; images below `minWidth`/`minHeight` fail `imageResolution`.
 - Browser previews and exports use the same resolved manifest and fonts (`AnimatedBanner` and the renderer today).
 - Banners export as PNG at exact format dimensions.
-- Slides render PNG previews for the application; the deck exports as one PowerPoint file with native text boxes, shapes, the logo image and placeholder shapes (see [deck generation](deck-generation.md#7-pptx-export)). Slide text is measured with a 5% width margin because PowerPoint lays out text slightly differently.
+- Slides render PNG previews for the application; the deck exports as one PowerPoint file with native text boxes, shapes, the logo image and placeholder shapes (see [deck generation](deck-generation.md), section 7, PPTX export). Slide text is measured with a 5% width margin because PowerPoint lays out text slightly differently.
 
 ## Lifecycle and authoring
 
