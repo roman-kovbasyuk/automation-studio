@@ -4,7 +4,7 @@
 
 ## Goal
 
-Build the [Brief review](../specs/brief-review.md) design: one AI analysis prefills the brief's settings, the requester reviews them in up to three stacked steps, found copy is always kept with optional new copy, and image prompts use the keywords and audience settings.
+Build the [Brief review](../specs/brief-review.md) design: one AI analysis prefills the brief's settings, the requester reviews them in up to three stacked steps (one page with every section open after T12), found copy is always kept with optional new copy, and image prompts use the keywords and audience settings.
 
 **Exit check:** with the mock provider, a brief with found copy and a brief without both reach Copy through the steps; suggested marks appear and clear; `keep_and_create` imports found copy and writes five options; the direction instructions name the keywords and settings; `npm run test:run`, `npm run design-system:check`, the package `verify`, `npm run build`, `node scripts/verify-build.mjs`, `npm run build:docs` and `npm run test:workflow` pass; a browser check at desktop width and at 320 px passes using only the keyboard.
 
@@ -12,7 +12,7 @@ Build the [Brief review](../specs/brief-review.md) design: one AI analysis prefi
 
 **In scope:** everything on the design page.
 
-**Out of scope:** as listed on the design page: deck briefs, web research, adding materials after analysis, routed steps (R1), autosave (R2) and a tag input (R7).
+**Out of scope:** as listed on the design page: deck briefs, web research, adding materials after analysis, routed steps (R1) and the `InlineText` autosave option (R2). T12 brought the tag input (R7) and automatic saving of confirmed briefs into scope.
 
 ## Working rules
 
@@ -166,6 +166,17 @@ Pure functions used by the interface:
 - Ask the owner before trying real briefs with Vertex AI EU, because the local API writes to the demo database.
 - Open one pull request into `v3`.
 
+### T12 — One-page review (after the owner used T1–T11)
+
+**Files:** `BriefReview.jsx`, `BriefStep.jsx`, `SettingsStep.jsx`, `VisualContextStep.jsx`, `BriefModule.jsx`, `briefReviewModel.js`, `brief.css`, `briefingService.js`, `WorkflowModuleFrame.jsx`, `ModuleHost.jsx`, `shared/briefingContracts.js`, the mock provider, their tests; in Brutalist, `TagInput`, tag hover styles and the changelog.
+
+- Summary and audience become `InlineText` at the top of the stage with the materials below them; every section is open after analysis, without numbers or per-section actions, and one **Proceed to copy →** confirms.
+- A confirmed brief collapses its sections; **Edit** reveals one with a short animation and becomes **Done**. Changes save automatically, except a change that would write new copy, which shows **Discard changes** and **Proceed to copy →**.
+- Age runs from 18 to 65+. Gender, goal and reach tags get icons; Settings and Visual context get large circle icons; the out-of-date and *Starts writing* lines are removed.
+- Keywords use Brutalist `TagInput`, whose placeholder carries the hint; removable tags and tag choices lift on hover (Brutalist 0.1.2).
+
+**Verify:** the full T11 checks and a browser check at desktop width and 320 px.
+
 ## Results
 
 | Task | Result (17 September 2026) |
@@ -180,18 +191,22 @@ Pure functions used by the interface:
 | T8 | `FoundCopyStep`, `SettingsStep`, `VisualContextStep` and `SuggestedBadge` with 4 tests |
 | T9 | `BriefReview` with 7 tests; `BriefModule` wiring; the coordinator's navigation rule with a test; the single review form, its questions view and stale wizard styles removed. The browser check found two defects, both fixed: Brutalist's `RangeSlider` drew its handles on different scales and locked the upper handle at the maximum (fixed in the package, recorded in 0.1.1), and a spacing step Brutalist does not define collapsed the found copy step |
 | T10 | D39; PRD BRIEF-3 and BRIEF-5; UX spec Brief region, status line and Brutalist mapping; recipe spec and product recipe example; roadmap; AI generation page; design status |
+| T12 | The one-page review, automatic saving, age from 18, icons, `TagInput` and hover elevation; the Brief stage lost its outer card; D39, the design page, the UX spec, the gap list (R7 closed) and the roadmap updated. Using it in the browser found defects that are now fixed and tested: Edit showed before confirmation; sections stayed open after confirming because the stage stays mounted; validation focus landed on a fieldset; switching the copy question to *Yes, also write new options* saved silently and wrote no copy, both in the browser rule and on the server, which counted a kept-copy confirmation as copy already written; an automatic save hid the controls and could drop a change made during it; a failed automatic save retried every second; `div`s sat inside headings and choice labels; the keyword placeholder was cut off |
 
 ## Final verification
 
+After T12, on 17 September 2026. The first version's run (1,791 tests, Brutalist 0.1.1) is superseded.
+
 | Check | Result |
 | --- | --- |
-| `npm run test:run` | 1,791 passed, 1 skipped |
+| `npm run test:run` | 1,802 passed, 1 skipped |
 | `npm run design-system:check`, `npm run test:design-system` | Pass |
-| `npm run verify --workspace brutalist-design-system` | Pass: 143 tests, typecheck, builds, documentation examples, packed consumer at 0.1.1 |
-| `npm run build` (including the docs), `npm run verify:production` | Pass |
-| `npm run test:workflow` | Pass. It drives the API; the steps were checked in the browser |
-| Browser, desktop, isolated launcher with mock providers | A brief with found copy and setting lines reached Copy through the steps: Proceed without an answer showed the error and focused the first choice; Settings showed Suggested marks, and changing the age range with arrow keys and gender with arrow keys cleared them; Visual context showed *Starts writing 5 copy options.*; Finalize opened Copy with the found copy and five new options. On the confirmed brief, a keyword change warned *Visuals will need updating.* and Save changes stayed on Brief; a goal change warned about copy and visuals and Cancel restored it |
-| Browser, 320 px | No horizontal scroll; collapsed summaries wrap with Edit below; tags wrap, and long goal labels wrap inside their tags |
+| `npm run verify --workspace brutalist-design-system` | Pass: 151 tests, typecheck, builds, documentation examples, packed consumer at 0.1.2 |
+| `npm run build` (including the docs), `npm run build:docs`, `npm run verify:production` | Pass, no dead links |
+| `npm run test:workflow` | Pass: the isolated studio delivered the banner set |
+| Browser, desktop, isolated launcher with mock providers | A brief with found copy and setting lines opened with every section and reached Copy with **Proceed to copy →**. Back on Brief the sections were collapsed with Edit. A gender change saved without a button and survived a reload. Switching the copy question to Yes showed **Discard changes** and **Proceed to copy →**, which opened Copy with new options beside the found copy. Keywords were added with Enter and by leaving the entry, and the entry showed its whole placeholder |
+| Browser, 320 px | No horizontal scroll in the review; choices, icon tags and keywords wrap; the keyword entry takes a full row and ends its placeholder with an ellipsis. Outside this work, the page header's *Draft* badge is squeezed into a narrow column |
+| Keyboard only | Not repeated for T12; component tests cover the native radios, sliders, `InlineText` and `TagInput` keys |
 | Real briefs through Vertex AI EU | Not run: needs the owner's approval because the local API writes to the demo database |
 
 ## Risks
@@ -209,5 +224,6 @@ Pure functions used by the interface:
 | Decision | When |
 | --- | --- |
 | Approve the wording of D39 | T10 |
+| Approve the revised wording of D39 (one page, automatic saving) | T12 |
 | Allow real Vertex AI briefs against the demo database | T11 |
 | Keep or discard the uncommitted Brutalist dependency bumps | DS0 |
