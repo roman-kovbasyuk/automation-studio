@@ -108,7 +108,7 @@ Deck projects have no visual records during the proof of concept: image slots sh
 
 Existing `generation_jobs`. Status `pending`, `succeeded`, `failed`, `blocked` or `unknown`.
 
-**Change:** errors whose outcome is certain are recorded as `failed`. `unknown` is only for outcomes that may still complete (timeouts after dispatch, lost connections). Every `unknown` job has a resolution path: automatic reconciliation where the provider supports it, otherwise a user action **Mark as failed** that releases the project. An `unknown` job older than its timeout plus a grace period is shown with that action.
+**Change:** errors whose outcome is certain are recorded as `failed`. `unknown` is only for outcomes that may still complete (timeouts after dispatch, lost connections). Every `unknown` job has a resolution path: automatic reconciliation where the provider supports it, otherwise a user action **Mark as failed** that releases the project. An `unknown` job is offered that action 40 seconds after its timeout (D33). Every `unknown` and `failed` job carries a reason that the interface explains in plain language.
 
 ### Output
 

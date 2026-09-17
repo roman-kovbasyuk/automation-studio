@@ -39,6 +39,10 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D29 | **Pilot measure targets are set after the first pilot week,** from the baseline measured in that week. | 17 Sep 2026 | Targets set before the pilot starts |
 | D30 | **AI agents do not use the Observatory task tracker** in Automation Studio or Brutalist. The instruction is removed from Brutalist's `AGENTS.md`; the change pipeline may still report to Observatory when configured (D26). | 17 Sep 2026 | Brutalist `AGENTS.md` Task Observatory section |
 | D31 | **Evolve the existing codebase; do not rewrite.** Keep the server foundation, AI layer, briefing, Figma handoff and delivery; extend brands, templates and the renderer; build a new project page shell on the existing APIs that reuses the Brief, Copy and Visuals views; replace the review gate and hard-coded sequencing; delete unreachable code. | 17 Sep 2026 | — |
+| D32 | **Remove the GitHub Pages workflow.** Documentation is served by the application at `/docs`. | 17 Sep 2026 | `.github/workflows/deploy-pages.yml` |
+| D33 | **Unknown generation outcomes can be marked as failed 40 seconds after the job's timeout,** and the interface always explains why the outcome is uncertain or why the job failed, in plain language. | 17 Sep 2026 | Unknown jobs with no resolution path |
+| D34 | **The `firebase-admin` 14 upgrade is a separate follow-up** with its own authentication tests, not part of M0. | 17 Sep 2026 | — |
+| D35 | **M0 is delivered as one pull request into `v3`;** its plan is reviewed with the documentation pull request. | 17 Sep 2026 | — |
 
 ## Provisional decisions
 

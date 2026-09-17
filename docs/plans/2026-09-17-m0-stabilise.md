@@ -1,6 +1,6 @@
 # M0 Stabilise — implementation plan
 
-**Status:** Proposal for owner review · **Date:** 17 September 2026 · **Milestone:** M0 in the [roadmap](../product/roadmap.md) · **Decision:** D31 (evolve the existing codebase)
+**Status:** Accepted plan · **Date:** 17 September 2026 · **Milestone:** M0 in the [roadmap](../product/roadmap.md) · **Decisions:** D31–D35
 
 ## Goal
 
@@ -20,7 +20,7 @@ Make the existing codebase a safe base for the proof of concept before any recip
 - Behaviour changes start with a failing test.
 - Tests and manual checks use mock providers, `npm run dev:prototype` or the isolated launchers in `scripts/testing/`. Never the demo database.
 - Each task ends with its verification commands passing; the final task runs everything.
-- One pull request into `v3` when all tasks pass, unless the owner prefers one per task.
+- One pull request into `v3` when all tasks pass (D35).
 
 ## Tasks
 
@@ -70,7 +70,7 @@ Delete the modules listed in the [adoption audit](../design-system/adoption-audi
 | --- | --- |
 | Remove `<script src="http://localhost:8400/live.js…">` and the design-tool comment from `index.html` | Development tooling committed to production HTML |
 | Delete `scripts/render-campaign-logic.mjs` | Reads an archived document; diagrams now come from recipes |
-| Delete `.github/workflows/deploy-pages.yml` | Targets a `main` branch that does not exist; docs are served by the application (confirm with owner) |
+| Delete `.github/workflows/deploy-pages.yml` | Targets a `main` branch that does not exist; docs are served by the application (D32) |
 
 **Verify:** `npm run build`, `node scripts/verify-build.mjs`.
 
@@ -90,10 +90,30 @@ Implements the change in [domain model](../specs/domain-model.md#generation-job)
 
    Providers mark pre-dispatch failures explicitly (`error.dispatched = false`) so the service does not guess.
 2. **Readiness before dispatch:** check `generationReadinessService` before creating a job; when generation is unavailable return `409 generation_unavailable` without creating a job.
-3. **Resolve unknown jobs:** new `POST /api/v1/generation-jobs/:jobId/resolve` (requester or admin) marks an `unknown` job `failed` with `resolution: marked_failed` once `timeoutAt` plus a 2-minute grace period has passed. Migration 054 adds `resolved_by`, `resolved_at`, `resolution`. A provider result arriving after resolution is discarded and its cost recorded. Audit event `generation.marked_failed`.
+3. **Resolve unknown jobs:** new `POST /api/v1/generation-jobs/:jobId/resolve` (requester or admin) marks an `unknown` job `failed` with `resolution: marked_failed` once `timeoutAt` plus **40 seconds** has passed (D33). Migration 054 adds `resolved_by`, `resolved_at`, `resolution`. A provider result arriving after resolution is discarded and its cost recorded. Audit event `generation.marked_failed`.
 4. **Video jobs:** apply the same resolution rule to `unknown` video jobs.
+5. **Reasons (D33):** the job serializer in `server/repositories/generationJobRepository.js` adds `unknownReason` (image jobs keep the uncertain cause there; video jobs keep it in `errorCode`). A new `generationReasonMessage(job)` in `shared/generationErrors.js`, extending `generationLimitMessage`, maps codes to plain language. Raw codes and provider messages are never shown. A job marked as failed keeps its original reason, shown after *Marked as failed*.
 
-**Tests:** unit tests for each classification row; integration test: an `unknown` job blocks a copy edit, cannot be resolved before the grace period, is resolved after it, and the copy edit then succeeds; a late provider result does not revive a resolved job.
+   | Codes | Shown as |
+   | --- | --- |
+   | `provider_timeout`; video `operation_timeout` | The AI service did not answer within the time limit, so we cannot tell whether it finished. |
+   | `provider_call_ambiguous`; video `outcome_unknown` | The connection to the AI service was interrupted after the request was sent, so we cannot tell whether it finished. |
+   | `timeout_recovery`, `ownership_recovery_timeout` | The server restarted while waiting for the result. |
+   | `asset_object_exists`, `asset_upload_timeout`, `asset_upload_ambiguous`, `asset_readback_failed`, `asset_persistence_declined`, `asset_persistence_timeout`, `asset_persistence_ambiguous` | The result arrived but could not be saved. |
+   | `provider_identity_mismatch` | The answer came from a different AI model or account than expected, so it was not used. |
+   | `provider_configuration` (new; replaces the pre-dispatch `provider_configuration_missing` and `credential_version_changed`) | Generation is not set up, or its AI connection changed before the request was sent. |
+   | `invalid_key` | The saved AI credential was rejected. |
+   | `quota_exhausted`, `billing_required`, `rate_limited` | Existing messages |
+   | `provider_unavailable` | The AI service is temporarily unavailable. |
+   | `provider_rejected` (new) | The AI service rejected the request. |
+   | `invalid_request` (new), `invalid_output` | The request or the AI result was not in the expected format. |
+   | `provider_blocked` | The AI service blocked this request for safety reasons. |
+   | `provider_failed` (video) | The video service reported an error. |
+   | `brief_source_changed` | The brief changed during generation, so the result was not used. |
+   | `brief_preparation_failed` | The brief could not be prepared for generation. |
+   | Any other code | Something unexpected went wrong. The code is logged for support, not shown. |
+
+**Tests:** unit tests for each classification row; integration test: an `unknown` job blocks a copy edit, cannot be resolved until 40 seconds after its timeout, is resolved after that, and the copy edit then succeeds; a late provider result does not revive a resolved job; every code in the reasons table has a message and an unmapped code falls back to the generic one.
 
 **Verify:** `npm run test:run -- server/services/generationService server/repositories/generationJobRepository`, then the full suite.
 
@@ -101,10 +121,11 @@ Implements the change in [domain model](../specs/domain-model.md#generation-job)
 
 Replace *Generation unknown. Check its status before trying again.* in `src/studio/campaign/campaignRuntime.js` with the patterns in [UX errors and recovery](../specs/asset-creation-flow-ux.md#errors-and-recovery):
 
-- `failed`: the cause and **Try again**.
+- `failed`: the plain-language reason and **Try again**.
 - `blocked`: the safety message and the edit or upload action.
-- `unknown`: *Checking whether … was created…* while the grace period runs; then *We could not confirm the result* with **Check again** and **Mark as failed** (calls the resolve endpoint).
+- `unknown`: *Checking whether … was created…* with the reason (D33) while the 40-second wait runs; then *We could not confirm the result* with the reason, **Check again** and **Mark as failed** (calls the resolve endpoint).
 - `generation_unavailable`: *Analysis is unavailable: …* with **Check again**; no job is created.
+- Failed brief sources in `src/studio/campaign/modules/brief/BriefSourcesView.jsx` show a message instead of the raw `errorCode` (for example `brief_collection_text_too_large`).
 
 **Tests:** runtime mapping tests; Brief, Copy and Visuals module tests for each state; no request is sent on page load or refresh.
 
@@ -139,7 +160,7 @@ Record the kept identifiers in [known issues](../engineering/known-issues.md) as
 | `postcss` (high, direct) | Update to ≥ 8.5.28 |
 | `lodash-es` (high, via Mermaid/VitePress) and `mermaid` (moderate, direct) | Update Mermaid and dependents where a non-breaking fix exists |
 | `vite` inside VitePress (high, no fix) | Development server only; document and revisit on the next VitePress release |
-| `firebase-admin` chain (8 moderate, production) | Needs `firebase-admin` 14 (major). Separate follow-up with authentication tests, not in M0 |
+| `firebase-admin` chain (8 moderate, production) | Needs `firebase-admin` 14 (major). Separate follow-up with authentication tests, not in M0 (D34) |
 
 **Verify:** `npm audit` shows no high findings outside the documented development-only item; full suite and build pass.
 
@@ -161,7 +182,7 @@ TEST_DATABASE_URL=postgresql:///banner_studio_test npm run test:workflow
 npm run build:figma
 ```
 
-Manual: create a banner project in the isolated studio launcher with mock providers; confirm it opens immediately, analysis progress shows in Brief, a forced provider failure shows **Try again**, and a forced timeout offers **Mark as failed** after the grace period.
+Manual: create a banner project in the isolated studio launcher with mock providers; confirm it opens immediately, analysis progress shows in Brief, a forced provider failure shows its reason and **Try again**, and a forced timeout shows its reason and offers **Mark as failed** 40 seconds after the job's timeout.
 
 ## Risks
 
@@ -172,14 +193,16 @@ Manual: create a banner project in the isolated studio launcher with mock provid
 | Renaming a persisted identifier breaks existing data | Explicit keep list in T7 |
 | Creation flow change loses unsent files on reload | Clear interrupted-upload message; no automatic resend |
 
-## Owner decisions needed
+## Owner decisions
 
-| Question | Recommendation |
+Taken on 17 September 2026.
+
+| Question | Decision |
 | --- | --- |
-| Delete the GitHub Pages workflow? | Yes |
-| Grace period before **Mark as failed** is offered | 2 minutes after the job's timeout |
-| Upgrade `firebase-admin` to 14 inside M0? | No, separate follow-up |
-| One pull request for M0, or one per task? | One |
+| Delete the GitHub Pages workflow? | Yes (D32) |
+| When is **Mark as failed** offered? | 40 seconds after the job's timeout, always with the reason (D33) |
+| Upgrade `firebase-admin` to 14 inside M0? | No, separate follow-up (D34) |
+| One pull request for M0, or one per task? | One; the plan is reviewed with the documentation pull request (D35) |
 
 ## Baseline test run
 

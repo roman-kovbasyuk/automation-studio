@@ -158,9 +158,9 @@ Confirming validates required answers inline before anything starts.
 | --- | --- | --- |
 | Source unreadable | *campaign-brief.pdf could not be read (password protected).* | Replace file |
 | Analysis unavailable (access, quota) | *Analysis is unavailable: the AI quota for today is used up.* | Check again |
-| Generation failed (known cause) | *Copy could not be written: the provider rejected the request.* | Try again |
+| Generation failed | *Copy could not be written:* followed by the plain-language reason | Try again |
 | Generation blocked by safety | *The image request was blocked by the provider's safety rules.* | Edit prompt / Upload instead |
-| Outcome uncertain | *Checking whether the images were created…* then, after the timeout, *We could not confirm the result.* | Check again / Mark as failed |
+| Outcome uncertain | *Checking whether the images were created…* with the reason (for example *the AI service did not answer within the time limit*); 40 seconds after the timeout, *We could not confirm the result* (D33) | Check again / Mark as failed |
 | Stale input | *Copy changed after these banners were composed.* | Recompose affected banners |
 | Edit conflict | *Someone else changed this brief. Your draft is kept.* | Review changes |
 | Permission denied | *Only requesters can accept assets.* | — |

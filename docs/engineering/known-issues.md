@@ -47,7 +47,7 @@ These are expected gaps between the current code and the [target model](../produ
 | A third, outdated stage list exists | `stages` in `src/studio/workflow.js` (eight stages) | Before build |
 | Client brands are hard-coded alongside the brand database | `shared/msdBrand.js`, `shared/novartisBrand.js`, `shared/folkeuniversitetetBrand.js` | With M1 |
 | Diagram script reads an archived document | `scripts/render-campaign-logic.mjs` reads `docs-site/recipes/campaign-flow.md`, now archived | Remove or replace in M0 |
-| GitHub Pages workflow targets a branch that does not exist | `.github/workflows/deploy-pages.yml` runs on `main`; the default branch is `v3` | Decide with hosting |
+| GitHub Pages workflow targets a branch that does not exist | `.github/workflows/deploy-pages.yml` runs on `main`; the default branch is `v3` | Remove in M0 (D32) |
 | Design tool records point at unused code | `.impeccable/surfaces/src-mvp-mvpapp-jsx.md` | With dead code removal |
 | Full test suite is not green | 84 failing tests in 22 files on 17 September 2026, mostly fixtures that predate the canonical briefing cutover; grouped in task T1 of the [M0 plan](../plans/2026-09-17-m0-stabilise.md) | Before build |
 | Dependency audit warnings | `npm install` reports 20 vulnerabilities (17 moderate, 3 high) | Review in M0 |
