@@ -10,6 +10,9 @@ export function generationLimitMessage(code) {
   return Object.hasOwn(limitMessages, code) ? limitMessages[code] : null
 }
 
+// An unknown outcome can be marked as failed this long after the job's timeout (D33).
+export const UNKNOWN_RESOLUTION_WAIT_MS = 40_000
+
 const timedOut = 'The AI service did not answer within the time limit, so we cannot tell whether it finished.'
 const interrupted = 'The connection to the AI service was interrupted after the request was sent, so we cannot tell whether it finished.'
 const restarted = 'The server restarted while waiting for the result.'

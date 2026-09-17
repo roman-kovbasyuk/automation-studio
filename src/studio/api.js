@@ -82,6 +82,7 @@ export function createStudioApi({ getToken, getHeaders, fetchImpl = globalThis.f
       return request('POST', `${campaignPath(id)}/${generationPaths[step]}`, { body: input, idempotencyKey: key })
     },
     getJob: (id, { signal } = {}) => request('GET', `/api/v1/generation-jobs/${segment(id)}`, { signal }),
+    resolveJob: id => request('POST', `/api/v1/generation-jobs/${segment(id)}/resolve`, { body: { resolution: 'marked_failed' } }),
     selectCopy: (id, input, revision) => request('PUT', `${campaignPath(id)}/copy-selection`, { body: input, revision }),
     deselectCopy: (id, revision) => request('DELETE', `${campaignPath(id)}/copy-selection`, { revision }),
     retainCopy: (id, revision) => request('PUT', `${campaignPath(id)}/copy-retention`, { body: {}, revision }),

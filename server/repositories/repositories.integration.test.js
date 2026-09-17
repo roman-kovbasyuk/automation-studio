@@ -59,6 +59,7 @@ const latestMigrationNames = [
   '043_figma_handoffs.sql', '044_figma_plugin_sessions.sql', '045_figma_submissions.sql', '046_project_types.sql',
   '047_asset_workflows.sql', '048_copy_review_reopen.sql', '049_campaign_brief_sources.sql', '050_brief_source_upload_budget.sql',
   '051_brief_confirmations.sql', '052_brief_source_attachments.sql', '053_canonical_workflow_migrations.sql',
+  '054_generation_job_resolution.sql',
 ]
 
 function makePool({ max = 4 } = {}) {
@@ -2233,6 +2234,51 @@ describe('persisted generation control plane', () => {
     const retried = await harness.service.generateCopy({ ...common, idempotencyKey: 'retried-copy', input: {} })
     expect(retried.body.job).toMatchObject({ status: 'failed', errorCode: 'provider_rejected' })
     expect(generateCopy).toHaveBeenCalledTimes(2)
+    await harness.pool.end()
+    pools.delete(harness.pool)
+  })
+
+  test('an unknown outcome blocks copy changes until the requester marks it failed after its timeout and wait', async () => {
+    const baseProvider = createMockProvider()
+    const generateCopy = vi.fn(baseProvider.generateCopy)
+    const now = new Date('2026-09-04T10:00:00Z')
+    const harness = await generationHarness({ provider: { ...baseProvider, generateCopy }, briefing: 'v2', now, timeoutMs: 20 })
+    const common = { actor: harness.actor, campaignId: harness.campaign.id }
+    await harness.service.analyseBrief({ ...common, idempotencyKey: 'analysis', input: {} })
+    await confirmBriefing({ pool: harness.pool, ...common })
+    const first = await harness.service.generateCopy({ ...common, idempotencyKey: 'copy', input: {} })
+    const candidate = first.body.job.result.copies[0]
+    generateCopy.mockImplementation(() => new Promise(() => {}))
+    const unknown = await harness.service.generateCopy({ ...common, idempotencyKey: 'hanging-copy', input: {} })
+    expect(unknown.body.job).toMatchObject({ status: 'unknown', unknownReason: 'provider_timeout', resolution: null })
+    const revision = async () => (await harness.pool.query('SELECT revision FROM campaigns WHERE id = $1', [harness.campaign.id])).rows[0].revision
+    await expect(harness.service.approveCopy({ ...common, expectedRevision: await revision(), input: { copyId: candidate.id } }))
+      .rejects.toMatchObject({ code: 'generation_pending' })
+
+    const timeoutAt = new Date(unknown.body.job.timeoutAt)
+    const resolve = actor => harness.service.resolveJob({ actor, jobId: unknown.body.job.id, input: { resolution: 'marked_failed' } })
+    harness.setTime(new Date(timeoutAt.getTime() + 39_999))
+    await expect(resolve(harness.actor)).rejects.toMatchObject({ code: 'generation_resolution_too_early', statusCode: 409 })
+    harness.setTime(new Date(timeoutAt.getTime() + 40_000))
+    const otherMarketer = { id: await insertUser(harness.pool), role: 'marketer', disabled: false }
+    await expect(resolve(otherMarketer)).rejects.toMatchObject({ code: 'forbidden', statusCode: 403 })
+
+    const resolved = await resolve(harness.actor)
+    expect(resolved).toMatchObject({ id: unknown.body.job.id, status: 'failed', resolution: 'marked_failed', resolvedBy: harness.actor.id,
+      unknownReason: 'provider_timeout', errorCode: null, actualCostMicrounits: resolved.reservedCostMicrounits })
+    expect(Date.parse(resolved.resolvedAt)).toBe(timeoutAt.getTime() + 40_000)
+    expect(await resolve(harness.actor)).toEqual(resolved)
+    expect((await harness.service.generateCopy({ ...common, idempotencyKey: 'hanging-copy', input: {} })).body.job).toMatchObject({ status: 'failed', resolution: 'marked_failed' })
+    const audit = await harness.pool.query("SELECT actor_id, entity_type, entity_id, payload FROM audit_events WHERE action = 'generation.marked_failed'")
+    expect(audit.rows).toEqual([{ actor_id: harness.actor.id, entity_type: 'generation_job', entity_id: unknown.body.job.id,
+      payload: { campaignId: harness.campaign.id, step: 'copy', unknownReason: 'provider_timeout' } }])
+
+    await harness.service.approveCopy({ ...common, expectedRevision: await revision(), input: { copyId: candidate.id } })
+    await expect(harness.service.resolveJob({ actor: harness.actor, jobId: first.body.job.id, input: { resolution: 'marked_failed' } }))
+      .rejects.toMatchObject({ code: 'generation_not_unknown', statusCode: 409 })
+    const admin = { id: await insertUser(harness.pool, { role: 'admin' }), role: 'admin', disabled: false }
+    await expect(harness.service.resolveJob({ actor: admin, jobId: 'missing-job', input: { resolution: 'marked_failed' } }))
+      .rejects.toMatchObject({ code: 'not_found', statusCode: 404 })
     await harness.pool.end()
     pools.delete(harness.pool)
   })

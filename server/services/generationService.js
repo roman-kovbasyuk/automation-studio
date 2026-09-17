@@ -5,6 +5,7 @@ import {
   copySelectionRequestSchema,
   directionGenerationRequestSchema,
   directionSelectionRequestSchema,
+  generationJobResolutionRequestSchema,
   imageGenerationRequestSchema,
 } from '../../shared/contracts.js'
 import {authoredCopyFieldsSchema as copyEditRequestSchema} from '../../shared/briefingContracts.js'
@@ -477,6 +478,13 @@ export function createGenerationService({
     async retainCopy({ actor, campaignId, expectedRevision }) {
       requireRole(actor, editorRoles)
       return controlPlane.retainCopy({ actor, campaignId, expectedRevision })
+    },
+
+    async resolveJob({ actor, jobId, input }) {
+      requireRole(actor, editorRoles)
+      validate(generationJobResolutionRequestSchema, input ?? {})
+      if (typeof jobId !== 'string' || jobId.trim().length === 0) throw new GenerationServiceError(400, 'invalid_job_id', 'Generation job id is required')
+      return controlPlane.resolveUnknownJob({ actor, jobId })
     },
 
     async approveCopy({ actor, campaignId, expectedRevision, input }) {

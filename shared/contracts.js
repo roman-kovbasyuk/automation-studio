@@ -777,11 +777,16 @@ export const generationResultMetadataSchema = z.union([
 export const generationJobDetailsSchema = generationJobSchema.extend({
   result: generationResultMetadataSchema.nullable(),
   errorCode: nonEmptyString.nullable(),
-  // Optional so responses stored before reasons were exposed still replay.
+  // Optional so responses stored before reasons and resolutions existed still replay.
   unknownReason: nonEmptyString.nullable().optional(),
+  resolution: z.enum(['marked_failed']).nullable().optional(),
+  resolvedBy: nonEmptyString.nullable().optional(),
+  resolvedAt: timestampSchema.nullable().optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema,
 })
+
+export const generationJobResolutionRequestSchema = z.strictObject({ resolution: z.literal('marked_failed') })
 
 export const generationCommandResponseSchema = z.strictObject({
   job: generationJobDetailsSchema,

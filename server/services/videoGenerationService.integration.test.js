@@ -86,7 +86,7 @@ test('video plan requires explicit acceptance and survives worker restart withou
   } finally { if (dir) await rm(dir, { recursive: true, force: true }); await h.cleanup() }
 }, 30_000)
 
-test('expired submitting lease becomes unknown and cannot trigger replacement generation', async () => {
+test('expired submitting lease becomes unknown, cannot trigger replacement generation, and can be marked failed', async () => {
   const h = await setup()
   try {
     const plan = await h.service.plan(h.request)
@@ -100,6 +100,15 @@ test('expired submitting lease becomes unknown and cannot trigger replacement ge
     const second = await h.service.plan(h.request)
     await expect(h.service.submitPlan({ actor: h.actor, campaignId: h.request.campaignId, planId: second.id,
       idempotencyKey: 'another', acceptedCostMicrounits: 200000 })).rejects.toMatchObject({ code: 'video_in_progress' })
+    const later = createGenerationControlPlane({ pool: h.pool, clock: () => new Date(Date.now() + 24 * 60 * 60 * 1000) })
+    expect(await later.resolveUnknownJob({ actor: h.actor, jobId: job.id }))
+      .toMatchObject({ status: 'failed', resolution: 'marked_failed', errorCode: 'outcome_unknown', resolvedBy: h.actor.id })
+    expect(await h.service.get({ actor: h.actor, jobId: job.id })).toMatchObject({ phase: 'failed' })
+    await h.service.runNext()
+    expect(h.provider.submit).not.toHaveBeenCalled()
+    const third = await h.service.plan(h.request)
+    expect(await h.service.submitPlan({ actor: h.actor, campaignId: h.request.campaignId, planId: third.id,
+      idempotencyKey: 'after-resolution', acceptedCostMicrounits: 200000 })).toMatchObject({ phase: 'queued' })
   } finally { await h.cleanup() }
 }, 30_000)
 
