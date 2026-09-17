@@ -78,7 +78,7 @@ There is no automatic bulk conversion. Legacy projects are always banner project
 | --- | --- | --- |
 | 1 | Fix `unknown` job handling and project creation (M0) | Legacy projects |
 | 2 | Recipe loader, `recipe_versions`, pinning on new projects; recipes validated at startup | Legacy projects untouched |
-| 3 | Four-stage project page for recipe projects; Brief, Copy and Visuals reuse the current module views and commands | Legacy projects keep the six-module page |
+| 3 | New four-stage project page shell for recipe projects, built on the existing APIs (D31); Brief, Copy and Visuals reuse the current module views and commands | Legacy projects keep the six-module page |
 | 4 | Assets stage replaces Banners, Review and Distribute for recipe projects: compose, checks, repair, acceptance, Figma escalation, package | Legacy review and delivery services stay for legacy projects |
 | 5 | Stage sequencing reads the pinned recipe; `workflowCoordinator.js` sequencing is used only for legacy projects | — |
 | 6 | Deck recipe (M3) on the same page: outline, slide text, placeholders, PPTX export, PPTX escalation | — |
