@@ -9,7 +9,9 @@
     "checkJs": false,
     "noEmit": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    // Test matcher types augment this package's vitest, not the application's hoisted copy.
+    "paths": { "vitest": ["./node_modules/vitest"], "vitest/*": ["./node_modules/vitest/*"] }
   },
   "include": ["src"],
   "exclude": ["dist", "dist-consumer", "node_modules"]

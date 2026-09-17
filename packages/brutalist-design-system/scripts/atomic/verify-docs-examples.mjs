@@ -1,17 +1,20 @@
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { toPublicSource } from '../../src/atomic/screens/docs/sourceFormatting.ts'
 
 // A temporary public-package consumer, with existing dependencies to make this check offline.
 // The separate verify-consumer command verifies fresh dependency installation from a tarball.
 const root = resolve(import.meta.dirname, '../..')
+// Resolve dependencies as Node does, so the check also works when a workspace hoists them.
+const installed = name => dirname(createRequire(join(root, 'package.json')).resolve(`${name}/package.json`))
 const fixture = mkdtempSync(join(tmpdir(), 'basics-docs-examples-'))
 try {
-  mkdirSync(join(fixture, 'node_modules'))
+  mkdirSync(join(fixture, 'node_modules/@types'), { recursive: true })
   symlinkSync(join(root, 'dist-atomic-library'), join(fixture, 'node_modules/brutalist-design-system'))
-  for (const name of ['react', 'react-dom', '@types']) symlinkSync(join(root, 'node_modules', name), join(fixture, 'node_modules', name))
+  for (const name of ['react', 'react-dom', '@types/react', '@types/react-dom']) symlinkSync(installed(name), join(fixture, 'node_modules', name))
   writeFileSync(join(fixture, 'package.json'), JSON.stringify({type:'module'}))
   const directory = join(root, 'src/atomic/screens/docs/examples')
   const files = readdirSync(directory).filter(file => file.endsWith('.tsx'))
