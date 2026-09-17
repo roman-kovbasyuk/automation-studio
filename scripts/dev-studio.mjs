@@ -150,6 +150,7 @@ export async function startDemoServer({ port = 3010 } = {}) {
     }
     const videoGenerationService = createVideoGenerationService({ pool, assetStore, providerFactory: () => process.env.GEMINI_MEDIA_API_KEY
       ? createVeoProvider({ apiKey: process.env.GEMINI_MEDIA_API_KEY, model: process.env.GEMINI_VIDEO_MODEL }) : null })
+    const generationReadinessService = createGenerationReadinessService({ workflowService, personalAiService })
     app = buildApp({
       runtimeConfig:{firebase:{}},
       briefSourceService:createBriefSourceService({pool,assetStore}),briefingService:createBriefingService({pool}),
@@ -165,10 +166,10 @@ export async function startDemoServer({ port = 3010 } = {}) {
       }),
       videoGenerationService,
       resolveActor, workflowService, personalAiService, personalSettingsService, workspaceService: createWorkspaceService({ pool }),
-      generationReadinessService: createGenerationReadinessService({ workflowService, personalAiService }),
+      generationReadinessService,
       readiness: async () => { await pool.query('SELECT 1'); return true },
       generationService: createGenerationService({
-        pool, assetStore, notificationService: personalSettingsService,
+        pool, assetStore, notificationService: personalSettingsService, readinessService: generationReadinessService,
         controlPlane: createGenerationControlPlane({ pool, providerRegistry, personalSettingsResolver: ({ actor, step }) => environmentGemini.enabled ? environmentGemini.selection(step) : personalAiService.getGenerationSelection({ actor, step }) }),
         providers: { gemini: managedBriefingProvider },
         personalProviderFactory: async ({ actor, provider, model, region, step, credentialVersion }) => {
