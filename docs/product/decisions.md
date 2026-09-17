@@ -31,6 +31,10 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D21 | **Folkeuniversitetet uses its licensed heading font Matter in the pilot.** Licensed font files are uploaded to the brand, so brand font support (BRAND-4) is required for the pilot, and PPTX recipients need Matter available. | 17 Sep 2026 | Unconfirmed Matter with Inter fallback |
 | D22 | **One project is one creation flow of one asset type, fixed at creation.** A banner project delivers any number of banners; a deck project delivers exactly one deck; a newsletter project exactly one newsletter. Reusing a brief in another project is not needed for the pilot. | 17 Sep 2026 | Provisional P9 (flow as top-level record) |
 | D23 | **Users and documentation call the top-level record a Project.** "Asset creation flow" names the four-stage process inside a project. | 17 Sep 2026 | Naming part of D6 ("asset creation flow" as the record name) |
+| D24 | **The design-system gap list is stored as JSON** and rendered into its documentation page. | 17 Sep 2026 | Provisional P1 |
+| D25 | **Brutalist releases use semantic versions:** before 1.0, patch for additive changes and minor for breaking changes. | 17 Sep 2026 | Provisional P2; fixed `0.1.0-atomic.0` |
+| D26 | **The change queue runs on the owner's machine for the pilot; Observatory reporting is optional.** | 17 Sep 2026 | Provisional P3, P4 |
+| D27 | **Pull-mode claims do not expire.** A claimed request stays with its claimant until submitted or released. | 17 Sep 2026 | Provisional P5 (2-hour renewable claims) |
 
 ## Provisional decisions
 
@@ -38,11 +42,6 @@ Taken on 17 September 2026 as the recommended option while the owner was unavail
 
 | ID | Provisional decision | Alternatives | Used by |
 | --- | --- | --- | --- |
-| P1 | The design-system gap list is stored as JSON and rendered into its documentation page. | Markdown table parsed by the check | [Design system integration](../specs/design-system-integration.md) |
-| P2 | Brutalist releases use pre-1.0 semantic versions: patch for additive changes, minor for breaking changes. | Keep `0.1.0-atomic.N` | Change protocol v2 |
-| P3 | Observatory task reporting is optional in the change pipeline. | Required | Change protocol v2 |
-| P4 | The change queue runs on the owner's machine for the pilot. | Shared host | Change protocol v2 |
-| P5 | Pull-mode claims last 2 hours and can be renewed. | Fixed lease | Change protocol v2 |
 
 ## Earlier decisions still in force
 
