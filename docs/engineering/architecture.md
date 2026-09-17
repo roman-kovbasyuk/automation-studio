@@ -62,17 +62,17 @@ flowchart TB
 
 See [local development](local-development.md) for setup and safety notes.
 
-## Current flow versus target model
+## Current implementation versus target model
 
 | Target concept | Current implementation |
 | --- | --- |
-| Asset creation flow | `campaigns` table and campaign runtime; banners only |
+| Projects with one fixed asset type | `campaigns` table and campaign runtime; banners only |
 | Four stages: Brief, Copy, Visuals, Assets | Six modules: Brief, Copy, Visuals, Banners, Review, Distribute (Review shown inside Banners) |
 | Recipe files drive the stages | Stage order and rules are hard-coded in `workflowCoordinator.js`, `shared/workflowRules.js` and services |
-| Brand pinned per flow; templates reference brands | Brand is copied into new global template versions; campaigns have no brand |
+| Brand pinned per project; templates reference brands | Brand is copied into new global template versions; campaigns have no brand |
 | Brand guidance in AI prompts | Prompts receive no brand information |
 | Automatic checks decide acceptance; designer on escalation | Designer review is mandatory: `composed → in_review → ready → approved → delivered` |
-| Deck asset type | Slide templates and AI content contracts exist; no generation or renderer |
+| Deck projects delivering one PowerPoint file | Five MSD slide templates and AI content contracts exist; no deck generation or PPTX export |
 
 ## Build and hosting
 

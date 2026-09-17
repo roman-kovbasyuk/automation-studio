@@ -1,6 +1,6 @@
 # Product
 
-> Short product context for design tooling. The full, current description is in [docs/product/concept.md](docs/product/concept.md); decisions are in [docs/product/decisions.md](docs/product/decisions.md). Updated 16 September 2026.
+> Short product context for design tooling. The full, current description is in [docs/product/concept.md](docs/product/concept.md); decisions are in [docs/product/decisions.md](docs/product/decisions.md). Updated 17 September 2026.
 
 <!-- impeccable:product-schema 1 -->
 
@@ -30,17 +30,18 @@ Brand-governed automation rather than free-form generation. AI supplies text and
 
 ## Operating Context
 
-Pre-pilot. The current code implements a banner-only flow with mandatory designer review; the target model is being specified. Brands, templates and AI generation already work locally with real providers.
+Pre-pilot, with Folkeuniversitetet as the pilot brand. The current code implements a banner-only campaign flow with mandatory designer review; the target model is specified in the PRD and specifications. Brands, templates and AI generation already work locally with real providers.
 
 ## Capabilities and Constraints
 
-- One flow for every asset type: Brief → Copy → Visuals → Assets.
-- Brand versions pinned per flow; templates reference brand roles.
+- Work happens in projects; each project has one asset type, fixed at creation, and runs the same four-stage flow: Brief → Copy → Visuals → Assets.
+- A banner project delivers any number of banners (PNG); a deck project delivers exactly one editable PowerPoint deck.
+- Brand versions pinned per project; templates reference brand roles.
 - AI analyses materials, writes copy and generates imagery; it never lays out assets or approves them.
-- Automatic checks decide acceptability; escalation hands work to designers through Figma.
+- Automatic checks decide acceptability; escalation hands banners to designers through Figma and decks as PowerPoint files.
 - No generation starts without an explicit user action.
-- Asset types for the proof of concept: banner sets, then decks.
-- Not in scope for the proof of concept: recipe editor interface, regulated-brand compliance workflows, websites, editable PPTX, ad-platform publishing.
+- Asset types for the proof of concept: banner sets, then decks; deck image slots use template placeholders.
+- Not in scope for the proof of concept: recipe editor interface, regulated-brand compliance workflows, newsletters and websites, PDF decks, image generation for decks, ad-platform publishing.
 
 ## Brand Commitments
 
@@ -48,7 +49,7 @@ Product name: Automation Studio. The application interface is quiet and operatio
 
 ## Evidence on Hand
 
-Working brand systems (MSD, Folkeuniversitetet), three banner templates, five MSD slide templates with AI content contracts, Gemini integration with validated contracts and cost limits, a Figma handoff plugin, and the Project-X FigJam flow board.
+Working brand systems (Folkeuniversitetet, MSD), three banner templates, five MSD slide templates with AI content contracts, Gemini integration with validated contracts and cost limits, a Figma handoff plugin, and the Project-X FigJam flow board.
 
 ## Product Principles
 

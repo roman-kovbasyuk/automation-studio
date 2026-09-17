@@ -1,6 +1,6 @@
 # Design system integration
 
-**Status:** Target · **Accepted:** 17 September 2026 ([D13–D16](../product/decisions.md)) · **Not yet implemented**
+**Status:** Target · **Accepted:** 17 September 2026 ([D13–D16, D24–D27](../product/decisions.md)) · **Not yet implemented**
 
 How Automation Studio uses, extends and updates the Brutalist design system. The design-system side of the change process is specified in the Brutalist repository: `docs/superpowers/specs/2026-09-17-change-protocol-v2-design.md` (branch `docs/change-protocol-v2`).
 
@@ -33,13 +33,13 @@ Found in the review of 16–17 September 2026 ([adoption audit](../design-system
 
 | Goes into Brutalist | Stays in the app |
 | --- | --- |
-| Interaction or visual primitives any application could use | Compositions that know about brands, templates, recipes, flows, AI jobs or escalations |
+| Interaction or visual primitives any application could use | Compositions that know about brands, templates, recipes, projects, AI jobs or escalations |
 | Missing props, slots or variants on existing components | Screen layouts, page patterns and navigation structure |
 | Accessibility fixes in shared components | Product copy and state wording |
 
 Test: *Would a different application need this? Can it be described without product terms?* If both answers are yes, it belongs in Brutalist.
 
-Examples from the current gap list: routed step navigation, autosaving inline text and a free-text tag input belong in Brutalist. The asset creation flow screen, brand preview cards and the escalation panel stay in the app.
+Examples from the current gap list: routed step navigation, autosaving inline text and a free-text tag input belong in Brutalist. The project page, brand preview cards and the escalation panel stay in the app.
 
 ## Workflow for a missing capability
 
@@ -74,7 +74,7 @@ The list records the package commit it was reviewed against.
 - Warn when the reviewed commit differs from the installed commit.
 - Fail when an entry is `closed` but its fallback is still referenced in source.
 
-Provisionally the entries are stored as JSON and rendered into the page (P1). Until then, the Markdown table follows these fields exactly.
+The entries are stored as JSON and rendered into the page (D24). Until that is built, the Markdown table follows these fields exactly.
 
 ## Change requests
 
@@ -136,16 +136,16 @@ Recorded in [AGENTS.md](../../AGENTS.md) and [FRONTEND.md](../../FRONTEND.md):
 | 4 | Checkable gap list; breaking-change gate | A stale gap entry and a removed export are both caught automatically |
 | 5 | First requests from the audit (routed steps first) | Fallbacks replaced and gap entries closed |
 
-Step 5 is needed before the asset creation flow interface (roadmap milestone M2).
+Step 5 is needed before the project page interface (roadmap milestone M2).
 
-## Provisional choices
+## Decided choices
 
-Taken as recommended on 17 September 2026 ([decision log](../product/decisions.md#provisional-decisions)); confirm before implementation.
+Settled on 17 September 2026 ([decision log](../product/decisions.md)).
 
-| Question | Provisional choice |
+| Question | Decision |
 | --- | --- |
-| Gap list storage | JSON file rendered into the documentation page (P1) |
-| Release version scheme (currently fixed `0.1.0-atomic.0`) | Pre-1.0 semantic versions: patch for additive, minor for breaking (P2) |
-| Observatory in the pipeline | Optional (P3) |
-| Where the queue runs | Owner's machine for the pilot (P4) |
-| Pull-mode claim length | 2 hours, renewable (P5) |
+| Gap list storage | JSON file rendered into the documentation page (D24) |
+| Release version scheme (currently fixed `0.1.0-atomic.0`) | Semantic versions before 1.0: patch for additive, minor for breaking (D25) |
+| Where the queue runs; Observatory | Owner's machine for the pilot; Observatory reporting optional (D26) |
+| Pull-mode claims | Do not expire; released explicitly (D27) |
+| Agents and Observatory | Agents do not use Observatory (D30) |

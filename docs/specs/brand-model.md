@@ -1,6 +1,6 @@
 # Brand model
 
-**Status:** Target (draft for owner review) · **Updated:** 17 September 2026 · **Requirements:** BRAND-1–4, COPY-2, VIS-1, FLOW-8 · **Decision:** D2
+**Status:** Target (draft for owner review) · **Updated:** 17 September 2026 · **Requirements:** BRAND-1–4, COPY-2, VIS-1, FLOW-8 · **Decisions:** D2, D17, D20, D21
 
 What a brand contains, when it is ready for automation, and how it reaches templates and AI.
 
@@ -78,6 +78,10 @@ Font assets (`kind: font`) gain renderer registration:
 
 The renderer registers a brand's confirmed font files when composing for that brand. Typography choices must resolve to a registered file or a bundled family (Inter, Arimo).
 
+**Pilot:** Folkeuniversitetet uses its licensed **Matter** for headings and Inter for body text (D21). The Matter files are uploaded to the brand with `licenseConfirmed: true`, and the heading font choice is confirmed.
+
+**PowerPoint decks:** exported PPTX files reference fonts by family name (D17). The family and style names stored with each font file must match the names installed on computers that open the deck, so a deck shows Matter only where Matter is installed. The package manifest lists required fonts ([quality and escalation](quality-and-escalation.md#packaging-and-delivery)). Whether to embed fonts is an open question for the deck milestone.
+
 ## Readiness
 
 A brand has one readiness level, computed on publish and shown in the brand library.
@@ -86,9 +90,9 @@ A brand has one readiness level, computed on publish and shown in the brand libr
 | --- | --- | --- |
 | **Reference** | Name and at least one source | Browsing |
 | **Previewable** | Confirmed colour roles, confirmed typography resolvable by the renderer, approved primary logo | Template previews |
-| **Automation-ready** | Previewable, plus `voice.summary`, at least one language, `imagery.summary`, confirmed `wording` (lists may be empty but must be reviewed), at least one supported format for each asset type the brand uses | Asset creation flows |
+| **Automation-ready** | Previewable, plus `voice.summary`, at least one language, `imagery.summary`, confirmed `wording` (lists may be empty but must be reviewed), at least one supported format for each asset type the brand uses | Projects |
 
-A flow can only be created for an automation-ready brand version.
+A project can only be created for an automation-ready brand version.
 
 ## How the brand reaches outputs
 
@@ -121,7 +125,7 @@ Rules:
 ## Versioning and upgrades
 
 - Publishing creates a new immutable version; the draft remains editable.
-- Flows pin the version at creation. A requester can upgrade a flow to the latest published version; dependent results become stale ([domain model](domain-model.md#change-propagation)).
+- Projects pin the version at creation. A requester can upgrade a project to the latest published version; dependent results become stale ([domain model](domain-model.md#change-propagation)).
 - Restoring an older version publishes it as a new version.
 
 ## Hard-coded brands
@@ -138,7 +142,8 @@ Rules:
 
 ## Acceptance
 
-- MSD is automation-ready with voice, wording, image style, languages and formats confirmed.
-- The same banner template renders MSD and a second test brand correctly without a template change.
-- Copy generated for MSD contains its required line only through composition and none of its forbidden terms in a fixture run.
-- A brand missing `imagery.summary` cannot be used to create a flow, and the reason is shown.
+- Folkeuniversitetet is automation-ready with voice, wording, image style, languages, formats and licensed Matter font files confirmed.
+- Banners for Folkeuniversitetet render headings in Matter.
+- The same banner template renders Folkeuniversitetet and a second brand (for example MSD) correctly without a template change.
+- Copy generated for Folkeuniversitetet contains its required line only through composition and none of its forbidden terms in a fixture run.
+- A brand missing `imagery.summary` cannot be used to create a project, and the reason is shown.

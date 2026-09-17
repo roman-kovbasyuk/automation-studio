@@ -4,7 +4,7 @@ Automation Studio produces on-brand content automatically.
 
 - A company's **brand** (its design system) is the foundation of every asset.
 - **Templates** for each asset type are built on that brand.
-- **Recipes** turn a brief into finished assets through four stages: **Brief → Copy → Visuals → Assets**.
+- In each **project**, a **recipe** turns a brief into finished assets through four stages: **Brief → Copy → Visuals → Assets**.
 - When automatic quality is not good enough, work is **escalated** to the design team.
 
 Banners are the first asset type and decks the second.
@@ -23,7 +23,7 @@ npm run dev       # application on http://127.0.0.1:5173
 
 For a browser-only version with fixtures and no API, run `npm run dev:prototype`.
 
-Read [local development](docs/engineering/local-development.md) before running flows: the local API writes to a real demo database and can call live AI.
+Read [local development](docs/engineering/local-development.md) before creating projects locally: the local API writes to a real demo database and can call live AI.
 
 ## Documentation
 

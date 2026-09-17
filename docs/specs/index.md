@@ -2,18 +2,18 @@
 
 **Status:** Current · **Updated:** 17 September 2026
 
-Specifications turn the [PRD](../product/prd.md) into buildable detail. All are drafts for owner review; provisional answers (P1–P9) are listed in the [decision log](../product/decisions.md#provisional-decisions).
+Specifications turn the [PRD](../product/prd.md) into buildable detail. All are drafts for owner review, updated for decisions D17–D30 in the [decision log](../product/decisions.md).
 
 | Specification | Covers | Milestone |
 | --- | --- | --- |
-| [Domain model](domain-model.md) | Records, relationships, states, change propagation, version pinning, permissions | M0–M2 |
+| [Domain model](domain-model.md) | Projects, records, states, change propagation, version pinning, permissions | M0–M2 |
 | [Recipes](recipes.md) | Recipe file schema, validation, versioning, diagrams, capability catalog, `banner-set` and `deck` recipes | M2, M3 |
 | [Brand model](brand-model.md) | Brand guidance fields, readiness, fonts, AI context | M1 |
 | [Template model](template-model.md) | Template fields, brand scope, resolution at composition, fit and rendering | M1, M3 |
-| [Quality checks and escalation](quality-and-escalation.md) | Check catalog, repair, AI review, acceptance, escalation round trip, packages | M2 |
-| [Asset creation flow UX](asset-creation-flow-ux.md) | Screens, states, actions, wording, errors, accessibility | M2 |
-| [Deck generation](deck-generation.md) | Outline, slide text, artwork, rendering, PDF | M3 |
-| [Migration from campaigns](campaign-migration.md) | Data backfill, legacy flows, dual paths, routes, tests, rollback | M0–M2 |
+| [Quality checks and escalation](quality-and-escalation.md) | Check catalog, repair, AI review, acceptance, Figma and PPTX escalation, packages | M2, M3 |
+| [Asset creation flow UX](asset-creation-flow-ux.md) | Project screens, states, actions, wording, errors, accessibility | M2, M3 |
+| [Deck generation](deck-generation.md) | Slide templates, outline, slide text, placeholders, PPTX export, PPTX escalation | M3 |
+| [Migration from campaigns](campaign-migration.md) | Data backfill, legacy projects, dual paths, routes, tests, rollback | M0–M2 |
 | [Design system integration](design-system-integration.md) | Using, extending and updating Brutalist | Design-system track |
 
 ## Traceability

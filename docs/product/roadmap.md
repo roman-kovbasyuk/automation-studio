@@ -1,19 +1,19 @@
 # Roadmap
 
-**Status:** Target · **Updated:** 16 September 2026
+**Status:** Target · **Updated:** 17 September 2026
 
-The next goal is a **proof of concept**: banner sets and decks produced automatically from brand, templates and recipes, with escalation to designers when needed.
+The next goal is a **proof of concept**: banner sets and decks produced automatically from brand, templates and recipes for the pilot brand Folkeuniversitetet, with escalation to designers when needed.
 
 ## Where we are
 
 | Area | Current state |
 | --- | --- |
-| Banner flow | Built as a hard-coded six-module campaign flow with real Gemini integration. Designer review is mandatory. |
-| Brands | Versioned brand systems with AI-assisted extraction. Colors, typography and logo only. |
-| Templates | Three banner layouts; the brand is copied into new template versions. Five MSD slide layouts exist as data with AI content contracts, but no deck generation or renderer. |
-| Recipes | A node-graph editor with simulation only. Not connected to flows. Frozen by D4. |
+| Banner projects | Built as a hard-coded six-module "campaign" flow with real Gemini integration. Designer review is mandatory. |
+| Brands | Versioned brand systems with AI-assisted extraction. Colors, typography and logo only. Rendering supports only Inter and Arimo. |
+| Templates | Three banner layouts; the brand is copied into new template versions. Five MSD slide layouts exist as data with AI content contracts, but no deck generation or export. No Folkeuniversitetet slide templates. |
+| Recipes | A node-graph editor with simulation only. Not connected to projects. Frozen by D4. |
 | Quality | Some automatic validation (text overflow, crops, sizes). No quality decision or escalation logic. |
-| Documentation | Consolidated in `docs/` on 16 September 2026. |
+| Documentation | Consolidated in `docs/`; PRD and specifications drafted on 17 September 2026. |
 
 Details and evidence: [architecture](../engineering/architecture.md) and [known issues](../engineering/known-issues.md).
 
@@ -25,29 +25,21 @@ Remove the legacy pipeline, archive superseded specs, make `docs/` the single so
 
 ### Phase 2 — Product requirements and specifications ✔ drafted, in owner review
 
-Drafted on 17 September 2026: the [PRD](prd.md) and the [specifications](../specs/index.md). FigJam boards wait for the Figma connector to be authorised. Written before any implementation:
+Drafted on 17 September 2026 and updated for decisions D17–D30 the same day:
 
-1. **PRD** for Automation Studio and the proof of concept: users, jobs to be done, flows, requirements, non-goals, measures, risks.
-2. **Specifications**:
-   - Domain model: brand, template, capability, recipe, asset creation flow, escalation, and their versions.
-   - Recipe schema and the `banner-set` and `deck` recipes.
-   - Brand model extension: voice, wording rules, image style, mandatory lines, fonts.
-   - Template model: brand-role references, slots, content contracts, per asset type.
-   - Quality checks, AI review and escalation workflow.
-   - Asset creation flow UX: the four stages, state visibility, error recovery.
-   - Deck generation and rendering.
-   - Migration from campaigns to asset creation flows.
-3. **FigJam diagrams** of both recipes, generated from the recipe drafts with the Figma MCP.
+1. The [PRD](prd.md): goals, users, journeys, requirements, non-goals, measures, risks.
+2. The [specifications](../specs/index.md): domain model, recipes, brand model, template model, quality and escalation, asset creation flow UX, deck generation, migration from campaigns, design system integration.
+3. **FigJam diagrams** of both recipes, generated from the recipe definitions with the Figma MCP. Waiting for the Figma connector to be authorised.
 
 ### Phase 3 — Proof of concept build
 
 | Milestone | Work | Exit check |
 | --- | --- | --- |
-| **M0 Stabilise** | Fix the issues in [known issues](../engineering/known-issues.md) marked *before build*: generation jobs that lock a flow, flow creation errors, dead code, the committed dev script tag, product naming in code. | No job can leave a flow unusable. |
-| **M1 Brand as input** | Brand guidance fields; flows pin a brand version; templates reference brand roles; brand context in AI prompts. | One template renders two brands correctly; prompts include brand context. |
-| **M2 Banner recipe and Assets stage** | Recipe loader and schema check; `banner-set` recipe drives the stages; checks, repair, accept, download, request design help; escalation replaces mandatory review. | A banner brief reaches downloaded files with no designer; an escalation round trip works. |
-| **M3 Deck recipe** | Slide templates in the template model; outline and slide-fill capabilities; artwork; server-side text fit; PDF and PNG output. | A deck brief reaches a downloaded PDF with no designer. |
-| **M4 Pilot** | Real briefs for both asset types with live AI. | Measures recorded; go/no-go decision written. |
+| **M0 Stabilise** | Fix the issues in [known issues](../engineering/known-issues.md) marked *before build*: generation jobs that lock a project, project creation errors, dead code, the committed dev script tag, product naming in code. | No job can leave a project unusable. |
+| **M1 Brand as input** | Brand guidance fields; licensed brand fonts in the renderer (Matter); projects pin a brand version; templates reference brand roles; brand context in AI prompts. Folkeuniversitetet made automation-ready. | One template renders two brands correctly; Matter renders in banners; prompts include brand context. |
+| **M2 Banner recipe and Assets stage** | Recipe loader and schema check; `banner-set` recipe drives the stages; checks, repair, accept, download, request design help; Figma escalation replaces mandatory review. | A banner brief reaches downloaded files with no designer; a Figma escalation round trip works. |
+| **M3 Deck recipe** | Folkeuniversitetet slide template set with placeholders; outline and slide-fill capabilities; server-side text fit; PPTX export; PPTX escalation (download, edit, upload). | A deck brief reaches a downloaded PPTX with no designer; a PPTX escalation round trip works. |
+| **M4 Pilot** | Real Folkeuniversitetet briefs for both asset types with live AI; baseline week; targets set (D29). | Measures recorded; go/no-go decision written. |
 
 **Design-system track (runs alongside M0–M2).** Defined in [design system integration](../specs/design-system-integration.md#rollout):
 
@@ -56,60 +48,62 @@ Drafted on 17 September 2026: the [PRD](prd.md) and the [specifications](../spec
 | DS1 | Adopt available components (audit items A1–A7) | M2 |
 | DS2 | App artifact install mode; pipeline uses it; releases pushed to GitHub | First change request |
 | DS3 | Protocol v2: shared allowed paths, pull mode, adapters, `CLAUDE.md` in Brutalist | First change request |
-| DS4 | Checkable gap list; breaking-change gate | M2 |
-| DS5 | First requests: routed steps (R1), autosave inline text (R2), controlled dialogs (R3) | M2 flow interface |
+| DS4 | Checkable gap list (JSON); breaking-change gate | M2 |
+| DS5 | First requests: routed steps (R1), autosave inline text (R2), controlled dialogs (R3) | M2 interface |
+
+**Preparation outside the build:** the pilot designer (D28) creates the Folkeuniversitetet slide template set and uploads the licensed Matter font files before M3.
 
 ### Later
 
 Carried forward from the [delivery stages proposal](../archive/docs-site-2026-09/decisions/delivery.md); to be re-planned after the pilot.
 
-- Shared identities for projects, documents and versions across asset types.
+- Grouping several projects, and reusing a brief across projects.
 - Durable recipe execution with a worker, saved questions and recovery.
 - Admin operations: work queue, task assignment, run inspection.
 - A recipe editing interface.
 - Custom recipes for regulated brands.
-- More asset types: landing pages, websites, template creation.
+- Image generation or upload for decks.
+- More asset types: newsletters, landing pages, websites, template creation.
 - Hosting, deployment, backup and operations.
 
 ## Proof of concept scope
 
 **In scope**
 
-- One pilot brand with banner and deck templates.
+- Pilot brand Folkeuniversitetet (D20) with its licensed Matter heading font (D21).
+- Banner sets (PNG) and decks (editable PPTX, D17).
 - `banner-set` and `deck` recipes, written by our team.
 - Brand guidance in the brand model and in AI prompts.
-- Templates that reference brand roles.
-- Hard checks, AI review in shadow mode, repair and escalation through Figma.
+- Templates that reference brand roles; slide templates with placeholders (D19).
+- Hard checks, AI review in shadow mode, repair and escalation: Figma for banners, PPTX editing for decks (D18).
 - Live Gemini generation during the pilot.
 
 **Out of scope**
 
 - Recipe editor interface.
 - Compliance workflows for regulated brands.
-- Landing pages and websites.
-- Editable PPTX or Google Slides output, unless the pilot requires it.
+- Newsletters, landing pages and websites.
+- Deck output as PDF or Google Slides.
+- Image generation or upload for decks.
 - Publishing to advertising platforms.
 - Customer-facing workspace administration.
 - New video capabilities. Existing video generation stays as it is.
 
 ## Measures
 
-Targets are set before the pilot starts.
+Targets are set from the baseline of the first pilot week (D29).
 
 - **Auto-acceptance rate:** share of assets accepted without escalation, per asset type.
 - **Escalation reasons:** counted by failed check or user reason.
-- **Time from brief to files.**
+- **Designer turnaround:** target one business day (D28).
+- **Time from brief to first package.**
 - **Generation cost per accepted asset.**
 - **AI review agreement:** how often the shadow score matches the user's accept or escalate decision.
 
 ## Open questions
 
-Provisionally answered on 17 September 2026 ([decision log](decisions.md#provisional-decisions)); confirm before build.
-
-| Question | Provisional answer |
+| Question | Needed by |
 | --- | --- |
-| Is PDF enough for pilot decks, or is an editable format required? | PDF plus PNG per slide; PPTX only if the pilot requires it (P6) |
-| Deck visuals: AI-generated artwork, a brand image library, or both? | AI-generated artwork or user uploads; brand library later (P7) |
-| Which brand runs the pilot? | MSD (P8) |
-| Is an asset creation flow the top-level record, or does a project hold several flows? | The flow is top-level for the proof of concept (P9) |
-| Who is the pilot designer, and what escalation turnaround is expected? | **Still open:** needs a named person. Specifications assume a target of one business day. |
+| Should generated PPTX files embed fonts, or is installing Matter a documented requirement? | M3 |
+| Is a file-based banner escalation fallback (without the Figma plugin) needed for the pilot? | M2 |
+| Should assets failing only the AI review be acceptable once review leaves shadow mode? | After M4 |

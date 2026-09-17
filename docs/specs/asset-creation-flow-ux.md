@@ -1,8 +1,8 @@
 # Asset creation flow — user experience
 
-**Status:** Target (draft for owner review) · **Updated:** 17 September 2026 · **Requirements:** FLOW-1, FLOW-4–6, FLOW-9, BRIEF-4, COPY-3, VIS-4, ESC-5 · **Governed by:** [FRONTEND.md](../../FRONTEND.md)
+**Status:** Target (draft for owner review) · **Updated:** 17 September 2026 · **Requirements:** FLOW-1, FLOW-4–6, FLOW-9, FLOW-10, BRIEF-4, COPY-3, VIS-2, VIS-4, ASSET-7, ESC-3, ESC-5 · **Governed by:** [FRONTEND.md](../../FRONTEND.md) · **Decisions:** D17–D19, D22, D23, D28
 
-Screens, states, actions and wording for starting a flow, working through its four stages and handling escalations. Component names refer to the installed Brutalist package; gaps are listed at the end.
+Screens, states, actions and wording for starting a project, working through the four stages of its asset creation flow and handling escalations. Component names refer to the installed Brutalist package; gaps are listed at the end.
 
 ## Principles
 
@@ -17,32 +17,32 @@ Screens, states, actions and wording for starting a flow, working through its fo
 | Area | Route (target) | Current route |
 | --- | --- | --- |
 | Home | `/` | `/` |
-| Start a flow | `/flows/new?type=banners` | `/mvp/new` |
-| Flow stage | `/flows/:id/:stage` (`brief`, `copy`, `visuals`, `assets`) | `/mvp/campaign/:id?module=:module` |
+| Start a project | `/projects/new?type=banners` | `/mvp/new` |
+| Project stage | `/projects/:id/:stage` (`brief`, `copy`, `visuals`, `assets`) | `/mvp/campaign/:id?module=:module` |
 | Escalations (designers) | `/escalations` | — |
 | Brands, templates, settings, admin | unchanged | `/mvp/system`, `/mvp/templates`, `/mvp/settings`, `/mvp/admin` |
 
 Old routes redirect to new ones once the new routes exist.
 
-**Sidebar** (`SidebarPanel`): Create new; Home; Templates; Brands; Escalations (designers and admins, with count); recent flows (title, asset type icon, state).
+**Sidebar** (`SidebarPanel`): New project; Home; Templates; Brands; Escalations (designers and admins, with count); recent projects (title, asset type icon, state).
 
-## Start a flow
+## Start a project
 
-**Home** shows the brief composer directly; **Create new** shows asset types first. Both lead to the same form.
+**Home** shows the brief composer directly; **New project** shows asset types first. Both lead to the same form.
 
-1. **Asset type:** Banner set or Deck. Other types are not shown until they work.
-2. **Brand:** the user's default brand, changeable. Only automation-ready brands are selectable; others show why they are not ready (for example *Image style not confirmed*).
+1. **Asset type:** Banner set or Deck. It cannot be changed after creation (D22), and the form says so. Other types are not shown until they work.
+2. **Brand:** the user's default brand, changeable. Only automation-ready brands are selectable; others show why they are not ready (for example *Heading font file missing*).
 3. **Brief:** `PromptInput` with text and files (text, PDF, DOCX, PNG, JPEG, WebP; 25 MB total).
-4. **Start** creates the flow and **immediately opens the Brief stage**. Upload and analysis progress appear there, never on Home.
+4. **Start project** creates the project and **immediately opens the Brief stage**. Upload and analysis progress appear there, never on Home.
 
-If creation fails, the form keeps its content and shows the error inline. An uncertain creation result checks the flow list before offering to try again.
+If creation fails, the form keeps its content and shows the error inline. An uncertain creation result checks the project list before offering to try again.
 
-## Flow page
+## Project page
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
-│ Title (editable)          Banner set · MSD v3                │
-│ Status line: Copy ready — select at least one option  [Next] │
+│ Title (editable)        Deck · Folkeuniversitetet v3         │
+│ Status line: Slide text ready — review 2 flagged slides [Go] │
 ├──────────────────────────────────────────────────────────────┤
 │ ① Brief ✓   ② Copy ●   ③ Visuals   ④ Assets                  │
 ├──────────────────────────────────────────────────────────────┤
@@ -62,14 +62,17 @@ If creation fails, the form keeps its content and shows the error inline. An unc
 | Analysing materials | Analysing your materials… | — |
 | Brief ready for review | Review the brief and confirm | Confirm and write copy / Confirm and outline deck |
 | Writing copy | Writing 5 copy options… | — |
-| Copy ready | Select at least one option | Continue to visuals |
-| Generating images | Creating images (2 of 3)… | — |
+| Copy ready (banners) | Select at least one option | Continue to visuals |
+| Outline ready (deck) | Review the outline: 7 slides | Write slide text |
+| Slide text flagged (deck) | Slide text ready — 2 slides need shorter text | Review slides |
+| Generating images (banners) | Creating images (2 of 3)… | — |
 | Visuals ready | Images ready for 3 selected options | Continue to assets |
-| Composing | Composing 18 banners… | — |
-| Outputs checked | 14 ready to accept · 4 need attention | Accept all ready (14) |
-| With designer | 2 banners with the designer — expected by Thu 10:00 | View escalation |
-| Returned | The designer returned 2 banners | Review returned banners |
-| Ready to download | 16 banners accepted | Download package |
+| Composing | Composing 18 banners… / Composing your deck… | — |
+| Banners checked | 14 ready to accept · 4 need attention | Accept all ready (14) |
+| Deck checked | Deck ready — all 7 slides pass checks | Accept deck |
+| With designer | With the designer — expected by Thu 10:00 | View escalation |
+| Returned | The designer returned your deck | Review returned deck |
+| Ready to download | 16 banners accepted / Deck accepted | Download package / Download PowerPoint |
 | Stale input | Copy changed — 6 banners use the old text | Recompose affected banners |
 
 ## Stages
@@ -82,10 +85,10 @@ If creation fails, the form keeps its content and shows the error inline. An unc
 | Analysis | Progress while running; result when ready | `Spinner`, `Text` |
 | Understanding | Summary and audience, editable with autosave | `InlineText` (autosave, gap R2) |
 | Campaign | Goal, reach, age groups, gender | `Select`, `RadioGroup`, `Checkbox` |
-| Visual keywords | Suggested keywords as removable tags; add with Enter | `TextField` + `Tag` (gap R7) |
+| Visual keywords (banners) | Suggested keywords as removable tags; add with Enter | `TextField` + `Tag` (gap R7) |
 | Copy found | *We found wording in your materials* with a preview; keep verbatim or create new | `RadioGroup`, `Dialog` |
-| Recipe inputs | Only missing inputs, for example sizes or slide count | `MultiSelect`, `NumberStepper`, `Select` |
-| Action | **Confirm and write copy** (or **Confirm and import copy**, **Confirm and outline deck**) | `Button` primary |
+| Recipe inputs | Only missing inputs, for example sizes, slide count or wording fidelity | `MultiSelect`, `NumberStepper`, `Select` |
+| Action | **Confirm and write copy**, **Confirm and import copy** or **Confirm and outline deck** | `Button` primary |
 
 Confirming validates required answers inline before anything starts.
 
@@ -101,14 +104,12 @@ Confirming validates required answers inline before anything starts.
 1. **Outline:** ordered list of slides: number, layout (`Select` with layout name and purpose), key message; **Move up/down** buttons, **Add slide**, **Remove**. Count against the requested slide count.
 2. **Write slide text** fills every slide.
 3. **Slide text:** one panel per slide with fields per slot, character and line counters, and a fit indicator (*Fits*, *Too long by 2 lines*). Fixed fields (page numbers) are read-only.
-4. **Action:** **Continue to visuals**, or **Continue to assets** when no layout has an image slot.
+4. **Action:** **Continue to visuals**.
 
 ### Visuals
 
-- **Banner set:** one row per selected copy option: image preview, prompt (collapsed), status; **Regenerate this image**, **Upload instead**, **Use this image**.
-- **Deck:** one row per image slot: slide number and layout, preview, same actions.
-- Failed or blocked images explain the reason and keep the others. Uploads show type, size and minimum-dimension errors inline.
-- **Action:** **Continue to assets** (disabled until every required image exists).
+- **Banner set:** one row per selected copy option: image preview, prompt (collapsed), status; **Regenerate this image**, **Upload instead**, **Use this image**. Failed or blocked images explain the reason and keep the others. Uploads show type, size and minimum-dimension errors inline. **Continue to assets** is disabled until every required image exists.
+- **Deck:** an information panel: *Image areas use the template placeholder. Insert your images in PowerPoint after download.* It lists slides with placeholders and shows a thumbnail of the placeholder. The stage is complete; **Continue to assets**.
 
 ### Assets — banner set
 
@@ -123,29 +124,33 @@ Confirming validates required answers inline before anything starts.
 
 - Grouped by option (copy and image); filters by template, size and state (`SegmentedControl`, `Select`).
 - **Card:** thumbnail at true aspect ratio; check summary (`StatusBadge`: *Ready* or *2 issues*); *AI review 8/10 (experimental)*; actions **Accept** or **Request design help**; **Details**.
-- **Details** (`Drawer`, gap R3): large preview; each check with a plain explanation (*Headline needs 3 lines; the template allows 2*); repair history; AI review scores and concerns; revision history; **Edit copy for this banner** (applies an output override) or **Change image**.
+- **Details** (`Drawer`, gap R3): large preview; each check with a plain explanation (*Headline needs 3 lines; the template allows 2*); repair history; AI review scores and concerns; revision history; **Edit copy for this banner** (applies a banner override) or **Change image**.
 - **Bulk:** **Accept all ready (14)**.
 - **Package bar:** *16 accepted* → **Download package**.
 
 ### Assets — deck
 
-- **Slide strip** with state per slide, a large preview of the selected slide and **Preview document** (all slides in order).
-- Same checks, details and escalation actions per slide.
-- **Download** requires every slide to be accepted; the button explains how many remain.
+- **Compose deck** creates slide previews and the PowerPoint file.
+- **Slide strip** with state per slide, a large preview of the selected slide, and its checks and AI review.
+- **Download draft PowerPoint** lets the requester inspect the file before accepting.
+- **Accept deck** is enabled when every slide passes its hard checks; otherwise it names the slides that need attention.
+- **Request design help** escalates the whole deck.
+- After acceptance: **Download PowerPoint**, with a note listing the fonts the file needs (Matter, Inter).
 
 ## Escalation
 
 ### Requester
 
-- **Request design help** opens a `Dialog`: selected outputs, reason (prefilled with failed checks when offered), optional notes. **Send to designer.**
-- Escalated cards show *With designer — expected by …* and cannot be accepted meanwhile. **Cancel request** is available until the designer returns work.
-- Returned outputs show which designer returned them and the designer's note; **Accept** or **Ask for changes** (comment required).
+- **Request design help** opens a `Dialog`: the selected banners or the deck, reason (prefilled with failed checks when offered), optional notes. **Send to designer.**
+- Escalated assets show *With the designer — expected by …* (one business day, D28) and cannot be accepted meanwhile. **Cancel request** is available until the designer returns work.
+- Returned assets show which designer returned them and the designer's note. Banners: **Accept** or **Ask for changes**. Decks: **Download returned PowerPoint**, then **Accept deck** or **Ask for changes** (comment required).
 
 ### Designer
 
-- **Escalations** page (`Table`): flow, brand, asset type, outputs, reason, age, due time, state; filter by state.
-- **Escalation view:** outputs with failed checks and the requester's reason; Figma instructions (open the plugin in the destination file, import); import status; after editing, submit from the plugin. **Upload returned files** is the fallback when the plugin is unavailable.
-- Designers see the flow read-only apart from escalation actions.
+- **Escalations** page (`Table`): project, brand, asset type, assets, reason, age, due time, state; filter by state.
+- **Banner escalation:** banners with failed checks and the requester's reason; Figma instructions (open the plugin in the destination file, import); import status; after editing, submit from the plugin. **Upload returned files** is the fallback when the plugin is unavailable.
+- **Deck escalation:** reason and flagged slides; **Download PowerPoint**; after editing in PowerPoint or Keynote, **Upload improved PowerPoint** (`FileDropzone`, PPTX only, up to 100 MB). File problems are shown inline; advisory notices (slide count changed, fonts outside the brand) do not block.
+- Designers see the project read-only apart from escalation actions.
 
 ## Errors and recovery
 
@@ -158,16 +163,17 @@ Confirming validates required answers inline before anything starts.
 | Outcome uncertain | *Checking whether the images were created…* then, after the timeout, *We could not confirm the result.* | Check again / Mark as failed |
 | Stale input | *Copy changed after these banners were composed.* | Recompose affected banners |
 | Edit conflict | *Someone else changed this brief. Your draft is kept.* | Review changes |
-| Permission denied | *Only requesters can accept banners.* | — |
+| Permission denied | *Only requesters can accept assets.* | — |
 | Connection lost | *Connection lost. Your draft is saved in this browser.* | Retry |
+| Returned file invalid | *This file is not a valid PowerPoint presentation.* | Upload another file |
 
 Never show internal status names (for example *Generation unknown*).
 
 ## Wording rules
 
-- Buttons are verb + object: *Write 5 more*, *Compose 18 banners*, *Request design help*.
+- Buttons are verb + object: *Write 5 more*, *Compose 18 banners*, *Accept deck*, *Request design help*.
 - Counts are exact; estimates say *about*.
-- Use glossary terms: flow, brief, copy, visuals, assets, escalation. Do not show "campaign", "direction" or "module".
+- Use glossary terms: project, brief, copy, visuals, assets, escalation. Say *PowerPoint* for the deck file. Do not show "campaign", "flow", "direction" or "module".
 
 ## Accessibility and responsiveness
 
@@ -190,14 +196,15 @@ See the [gap list](../design-system/missing-components.md).
 
 ## Changes from the current interface
 
-- Six campaign modules become four stages; Banners, Review and Distribute merge into Assets.
+- "Campaigns" become projects; six campaign modules become four stages; Banners, Review and Distribute merge into Assets.
 - Home no longer waits for upload and analysis.
-- The Create new page hides asset types that do not work.
-- The designer checklist and separate approval are removed for recipe-driven flows.
+- The New project page hides asset types that do not work.
+- The designer checklist and separate approval are removed for recipe-driven projects.
 
 ## Acceptance
 
 - From Home, a banner set brief opens the Brief stage within one second of submission, with analysis progress visible.
 - Every state in the status line table appears with its action in a fixture run.
 - No page load, refresh or navigation creates a generation job (verified by request logs in tests).
-- All flows are usable at 320 px width and by keyboard only.
+- A deck project reaches **Download PowerPoint** without any image step.
+- All projects are usable at 320 px width and by keyboard only.

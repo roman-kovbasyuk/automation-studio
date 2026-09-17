@@ -1,6 +1,6 @@
 # Template model
 
-**Status:** Target (draft for owner review) · **Updated:** 17 September 2026 · **Requirements:** TPL-1–4, ASSET-1, ASSET-3 · **Decision:** D2
+**Status:** Target (draft for owner review) · **Updated:** 17 September 2026 · **Requirements:** TPL-1–5, ASSET-1, ASSET-3 · **Decisions:** D2, D17, D19, D20
 
 What a template is, how it references a brand, how it is resolved and rendered, and how AI content fits it.
 
@@ -19,7 +19,7 @@ What a template is, how it references a brand, how it is resolved and rendered, 
 | --- | --- | --- |
 | `id` | slug | Stable identity |
 | `version` | semver | Immutable once published |
-| `outputKind` | `banner` \| `slide` | What it produces (banner set flows use `banner`, deck flows use `slide`) |
+| `outputKind` | `banner` \| `slide` | What it produces (banner projects use `banner`, deck projects use `slide`) |
 | `set` | slug, optional | Groups layouts used together (for example `msd-core-direction`) |
 | `name`, `description`, `purpose` | text | Shown to users and to layout-choosing AI (`purpose` ≤ 200) |
 | `brandScope` | `any` or list of brand IDs | Which brands may use it |
@@ -35,12 +35,25 @@ What a template is, how it references a brand, how it is resolved and rendered, 
 | --- | --- | --- |
 | `text` | `id`, `role` (`headline`, `body`, `eyebrow`, `caption`, `metric`, `label`, `footer`, `page`), `required`, `maxCharacters`, `maxLines`, `fontRole` (`heading` \| `body`), `fontSize`, `minFontSize`, `colorRole`, `fixed` (value not written by AI, e.g. page numbers), placements | Existing text slot plus role, colour role and `fixed` |
 | `cta` | as `text`, plus `backgroundRole` | |
-| `image` | `id`, `required`, `minWidth`, `minHeight`, `acceptedMimeTypes`, `focalPoint` (`center` \| `top` \| `subject`), placements | Existing image slot plus focal point |
+| `image` | `id`, `required`, `minWidth`, `minHeight`, `acceptedMimeTypes`, `focalPoint` (`center` \| `top` \| `subject`), `placeholder`, placements | Existing image slot plus focal point and placeholder |
 | `logo` | `id`, `logoRole` (`primary`, `light`, `dark`, `symbol`), placements | Replaces the resolved graphic stored in manifests |
 | `requiredLine` | `id`, `appliesTo`, `maxLines`, `fontRole`, `colorRole`, placements | Receives brand required lines by composition |
 | `shape` | `type` (`rect` \| `ellipse`), `colorRole`, placements | Existing shapes with roles |
 
 Slot `id`s are stable within a template ID across versions unless the major version changes.
+
+### Image placeholders
+
+Every image slot declares what it shows until an image is inserted (D19). Slide templates must declare one; for banners it is used in previews before an image is chosen.
+
+| Field | Meaning |
+| --- | --- |
+| `placeholder.shape` | `rect` or `roundedRect` |
+| `placeholder.fill` | Colour role or neutral value (for example `#D9D9D9`) |
+| `placeholder.label` | Short text such as *Replace image* (≤ 40 characters), or empty |
+| `placeholder.labelFontRole`, `placeholder.labelColor` | Label styling |
+
+In PowerPoint exports the placeholder becomes native shapes that users can select and replace; in previews it is drawn the same way.
 
 ### Content contract
 
@@ -48,12 +61,12 @@ Generated from the slots: a strict JSON schema with one string property per non-
 
 ## Brand scope and availability
 
-A flow can use a template version when:
+A project can use a template version when:
 
 1. `status` is `published`;
-2. `outputKind` matches the flow: `banner` for banner sets, `slide` for decks;
-3. `brandScope` is `any` or includes the flow's brand;
-4. every binding resolves with the flow's pinned brand version (colour roles confirmed, font role resolvable by the renderer, logo role approved).
+2. `outputKind` matches the project: `banner` for banner sets, `slide` for decks;
+3. `brandScope` is `any` or includes the project's brand;
+4. every binding resolves with the project's pinned brand version (colour roles confirmed, font role resolvable by the renderer, logo role approved).
 
 Templates failing step 4 are listed as unavailable with the missing brand field.
 
@@ -75,7 +88,8 @@ This replaces creating per-brand template versions in `templateBrandService`. Ex
 - A text slot may shrink from `fontSize` to `minFontSize`. If it still exceeds `maxLines`, the output fails `textFits`; text is never truncated.
 - Image slots crop to fill their placement around `focalPoint`; images below `minWidth`/`minHeight` fail `imageResolution`.
 - Browser previews and exports use the same resolved manifest and fonts (`AnimatedBanner` and the renderer today).
-- Banners export as PNG at exact format dimensions. Slides export as PNG at 2× canvas size for PDF assembly (see [deck generation](deck-generation.md)).
+- Banners export as PNG at exact format dimensions.
+- Slides render PNG previews for the application; the deck exports as one PowerPoint file with native text boxes, shapes, the logo image and placeholder shapes (see [deck generation](deck-generation.md#7-pptx-export)). Slide text is measured with a 5% width margin because PowerPoint lays out text slightly differently.
 
 ## Lifecycle and authoring
 
@@ -90,12 +104,14 @@ This replaces creating per-brand template versions in `templateBrandService`. Ex
 
 1. Add `outputKind`, `set`, `brandScope`, `status`, slot roles and bindings to template versions (new manifest schema version).
 2. Convert the three banner templates to role bindings with `brandScope: any` (their geometry is unchanged).
-3. Convert the five MSD slide layouts into published `slide` templates in set `msd-core-direction` with `brandScope: [MSD]`.
-4. Stop creating per-brand template versions; resolve at composition.
+3. Convert the five MSD slide layouts into published `slide` templates in set `msd-core-direction` with `brandScope: [MSD]`, adding placeholder definitions to their image slots.
+4. Create the Folkeuniversitetet slide template set (`brandScope: [Folkeuniversitetet]`) with placeholders on every image slot, before the deck milestone (TPL-4).
+5. Stop creating per-brand template versions; resolve at composition.
 
 ## Acceptance
 
 - One banner template version composes correctly for two brands, and neither brand's values are stored in the template.
-- A slide template restricted to MSD is not offered to another brand.
+- A slide template restricted to MSD is not offered to Folkeuniversitetet, and the Folkeuniversitetet set is not offered to MSD.
+- A slide template without a placeholder definition on an image slot cannot be published.
 - An output records its template version and resolved manifest hash, and re-rendering from the record reproduces the same PNG checksum.
 - Text that cannot fit at `minFontSize` fails `textFits` and is never truncated.

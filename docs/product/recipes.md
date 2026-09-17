@@ -13,7 +13,7 @@ The formal schema, capability catalog and the complete `banner-set` and `deck` r
 - Recipes are **files in the repository** ([D8](decisions.md)). The files are what runs.
 - Diagrams, including FigJam boards, are **generated from the files** using the standard Figma MCP and Figma skills. Boards are for reading and commenting. Changes are made in the files, then the diagram is regenerated.
 - Generated boards carry a label: *Generated from `recipes/<id>` version N. Comment here; edit the recipe file.*
-- The existing node-graph recipe editor in the admin area is frozen. Its database records are not used by flows.
+- The existing node-graph recipe editor in the admin area is frozen. Its database records are not used by projects.
 
 ## What a recipe contains
 
@@ -27,7 +27,7 @@ The formal schema, capability catalog and the complete `banner-set` and `deck` r
 
 What a recipe does **not** contain:
 
-- **The brand.** The flow supplies it, so one recipe serves every brand.
+- **The brand.** The project supplies it, so one recipe serves every brand.
 - **Core prompts and engine behaviour.** Built-in prompts, validation, cost limits, retries and job recovery belong to capabilities in code. Recipe guidance adds to them; it never replaces them.
 - **Diagram coordinates.** Layout is computed when a diagram is generated.
 
@@ -35,7 +35,7 @@ What a recipe does **not** contain:
 
 These rules keep recipes machine-checkable and let diagrams be generated from them.
 
-1. **Every element has a stable ID:** stages, steps, conditions, questions, checks, recovery paths and outputs. IDs link the file, the diagram and a running flow.
+1. **Every element has a stable ID:** stages, steps, conditions, questions, checks, recovery paths and outputs. IDs link the file, the diagram and a running project.
 2. **Every element has a kind** from a fixed list, and each kind has one visual form:
 
    | Kind | Meaning | Diagram form |
@@ -58,7 +58,7 @@ Stages read left to right. The main path runs across the top. Recovery cards sit
 
 ## Versions
 
-Git holds recipe history. When a flow first uses a recipe version, the checked, normalised recipe is stored under its content hash and the flow keeps that hash. Flows in progress keep their version after the file changes.
+Git holds recipe history. When a project first uses a recipe version, the checked, normalised recipe is stored under its content hash and the project keeps that hash. Projects in progress keep their version after the file changes.
 
 ## Folder layout
 

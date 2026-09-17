@@ -6,7 +6,7 @@ Issues found in the codebase review of 16 September 2026. **Before build** means
 
 ## Reliability
 
-### Generation jobs can lock a flow
+### Generation jobs can lock a project
 
 **Before build.** Any error thrown during a provider call is recorded as `unknown` with reason `provider_call_ambiguous`, including errors whose outcome is certain, such as missing credentials or an invalid response. `unknown` jobs block copy edits, keeping supplied copy and visual uploads for the campaign, and no code path resolves them. The interface says "Check its status before trying again" but offers no way to do so.
 
@@ -14,12 +14,12 @@ Issues found in the codebase review of 16 September 2026. **Before build** means
 - The local demo database contained six such jobs on 16 September 2026.
 - Fix direction: classify known errors as `failed`; add a user-facing resolve or retry action; check capability readiness before dispatch.
 
-### Flow creation can leave an orphan
+### Project creation can leave an orphan
 
 **Before build.** On Home, the campaign is created before analysis runs. If analysis fails, the user stays on Home, the new campaign is not added to the sidebar and submitting again creates a duplicate.
 
 - Evidence: `create()` in `src/studio/StudioApp.jsx`.
-- Fix direction: open the flow immediately and show analysis progress in the Brief stage.
+- Fix direction: open the project immediately and show analysis progress in the Brief stage.
 
 ## Product model gaps
 
@@ -34,7 +34,7 @@ These are expected gaps between the current code and the [target model](../produ
 | Renderer supports only Inter and Arimo at 400/600/700 | `server/rendering/inProcessRenderer.js`, `shared/resolveTemplateBrand.js` | D2 |
 | No automatic quality decision or escalation | — | D3 |
 | Flow logic is hard-coded; recipes are not used | `src/studio/campaign/workflowCoordinator.js` | D8 |
-| Recipe node editor is disconnected from flows | `server/assetWorkflows/`, `src/studio/admin/` | D4, D8 |
+| Recipe node editor is disconnected from projects | `server/assetWorkflows/`, `src/studio/admin/` | D4, D8 |
 | Create screen offers asset types that do not work | `shared/projectTypes.js` (only `banners` is `available`) | D6, D7 |
 
 ## Codebase hygiene

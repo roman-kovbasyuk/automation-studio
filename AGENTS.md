@@ -4,7 +4,7 @@ These instructions apply to every AI coding agent working in this repository. `C
 
 ## The product
 
-Automation Studio produces on-brand content automatically. A company's **brand** is the foundation of every asset; **templates** are built on the brand; **recipes** turn a brief into finished assets through four stages — **Brief → Copy → Visuals → Assets**; **designers** are involved only through **escalation** when automatic quality is not good enough. Banners are the first asset type, decks the second.
+Automation Studio produces on-brand content automatically. A company's **brand** is the foundation of every asset; **templates** are built on the brand; in each **project** (one asset type), a **recipe** turns a brief into finished assets through four stages — **Brief → Copy → Visuals → Assets**; **designers** are involved only through **escalation** when automatic quality is not good enough. Banners (PNG) are the first asset type, decks (editable PowerPoint) the second.
 
 The code is behind this model. It still implements a banner-only "campaign" flow with mandatory designer review. Read [known issues](docs/engineering/known-issues.md) before assuming the target exists.
 
@@ -57,7 +57,7 @@ The installed public Brutalist package owns UI appearance and shared interaction
 
 ## Current campaign flow code
 
-The existing banner flow lives in `src/studio/campaign/`. Until it is migrated to the asset creation flow, keep its guarantees intact:
+The existing banner flow lives in `src/studio/campaign/`. Until it is migrated to recipe-driven projects, keep its guarantees intact:
 
 - The runtime has six internal module IDs (Brief, Copy, Visuals, Banners, Review, Distribute) and five visible modules; Review is an internal projection shown inside Banners. `moduleContracts.js` separates internal from visible IDs. The target maps Banners, Review and Distribute to the single **Assets** stage.
 - Each module owns its functionality, local state and explicit input/output contract. The page owns layout and navigation; `workflowCoordinator.js` connects module outputs. Contract changes must be checked against dependent modules and chain tests.

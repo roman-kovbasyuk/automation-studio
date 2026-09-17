@@ -50,7 +50,7 @@ AI never lays out banners, approves work or publishes brands. Layout is produced
 | `blocked` | Rejected by provider safety |
 | `unknown` | Outcome uncertain: the call threw an error or timed out |
 
-A `pending` or `unknown` job blocks copy edits, keeping supplied copy and visual uploads for that campaign. See [known issues](known-issues.md#generation-jobs-can-lock-a-flow) for the current problem with `unknown` jobs.
+A `pending` or `unknown` job blocks copy edits, keeping supplied copy and visual uploads for that campaign. See [known issues](known-issues.md#generation-jobs-can-lock-a-project) for the current problem with `unknown` jobs.
 
 ## Credentials
 

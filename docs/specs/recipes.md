@@ -1,6 +1,6 @@
 # Recipes
 
-**Status:** Target (draft for owner review) · **Updated:** 17 September 2026 · **Requirements:** FLOW-2, BRIEF-1–5, COPY-1, VIS-1, VIS-3, VIS-5, RCP-1–3 · **Model:** [product recipes page](../product/recipes.md)
+**Status:** Target (draft for owner review) · **Updated:** 17 September 2026 · **Requirements:** FLOW-2, BRIEF-1–5, COPY-1, VIS-1–3, VIS-5, RCP-1–3 · **Model:** [product recipes page](../product/recipes.md) · **Decisions:** D8, D17–D19, D22
 
 The file format, validation, versioning and diagram generation for recipes, the capability catalog they use, and the complete `banner-set` and `deck` recipes for the proof of concept.
 
@@ -44,7 +44,7 @@ recipes/
 
 ### Inputs
 
-Values the flow needs besides the brief analysis.
+Values the project needs besides the brief analysis.
 
 | Field | Type | Rules |
 | --- | --- | --- |
@@ -106,7 +106,7 @@ A restricted language. No free code.
 
 ### Sources
 
-Settings and input options may reference: `inputs.<id>`, `answers.<field>`, `brand.formats`, `brand.templates.<assetType>` (published templates available to the flow's brand), `templates.sets` (template sets available to the brand) and `flow.outline` (the confirmed deck outline).
+Settings and input options may reference: `inputs.<id>`, `answers.<field>`, `brand.formats`, `brand.templates.<assetType>` (published templates available to the project's brand), `templates.sets` (template sets available to the brand) and `project.outline` (the confirmed deck outline).
 
 ### Checks
 
@@ -125,7 +125,7 @@ Check and repair IDs come from [quality and escalation](quality-and-escalation.m
 
 ```yaml
 outputs:
-  formats: [png]                      # banners: png; presentations: pdf, png
+  formats: [png]                      # banners: png; presentations: pptx
   package: zipWithManifest
 ```
 
@@ -148,9 +148,9 @@ Run in tests (`recipes.test.js`) and when the server starts. The server refuses 
 
 1. Parse YAML, apply defaults, inline guidance text.
 2. Serialise as canonical JSON (sorted keys) and compute SHA-256.
-3. On flow creation, store `{hash, id, version, definition}` if new, and pin the hash on the flow.
+3. On project creation, store `{hash, id, version, definition}` if new, and pin the hash on the project.
 
-Flows in progress keep their pinned definition after files change. See [domain model](domain-model.md#version-pinning).
+Projects in progress keep their pinned definition after files change. See [domain model](domain-model.md#version-pinning).
 
 ## Diagrams
 
@@ -185,17 +185,18 @@ Version 1 capabilities for the proof of concept. "Today" names the existing impl
 | `editOutline` | touchpoint | presentations | — | confirmed outline | new |
 | `fillSlides` | action | presentations | `wordingFidelity` source | slide text | `presentationAiContract` (no service yet) |
 | `editSlides` | touchpoint | presentations | — | slide text (edited) | new |
-| `generateImages` | action | all | `per`: `selectedCopy` \| `imageSlot` \| `flow`; `count` | visuals | `generateDirections` + `generateImage` |
-| `chooseVisuals` | touchpoint | all | `allowUpload` | selected visuals | Visuals module, `visualUploadService` |
+| `generateImages` | action | banners | `per`: `selectedCopy` \| `project`; `count` | visuals | `generateDirections` + `generateImage` |
+| `chooseVisuals` | touchpoint | banners | `allowUpload` | selected visuals | Visuals module, `visualUploadService` |
+| `usePlaceholders` | action | presentations | — | placeholder use recorded per image slot (D19) | new; placeholders come from slide templates |
 | `compose` | action | all | `templates` source, `formats` source | outputs | renderer, banner batches |
 | `runChecks` | action | all | — (uses recipe checks) | check results | new |
 | `repair` | action | all | — (uses recipe repair) | output revisions | new |
 | `reviewWithAi` | action | all | `mode` | AI reviews | new |
 | `presentAssets` | touchpoint | all | — | accepted outputs, escalation requests | new |
-| `escalate` | action | all | — | escalation | `figmaHandoffService` + new escalation service |
-| `packageOutputs` | action | all | `formats` | package | `deliveryService` |
+| `escalate` | action | all | — | escalation (route `figma` for banners, `pptx` for decks) | `figmaHandoffService` for banners; new escalation service and PPTX file exchange for decks (D18) |
+| `packageOutputs` | action | all | `formats` (`png` for banners, `pptx` for decks) | package | `deliveryService`; PPTX writer for decks (new) |
 
-Capability checks used in conditions: `sourcesReadable`, `analysisAccessReady`, `analysisValid`, `copyValid`, `outlineValid`, `slideTextValid`, `hasImageSlots`, `visualsValid`.
+Capability checks used in conditions: `sourcesReadable`, `analysisAccessReady`, `analysisValid`, `copyValid`, `outlineValid`, `slideTextValid`, `visualsValid`.
 
 ### Standard recovery (declared in code)
 
@@ -338,7 +339,7 @@ id: deck
 assetType: presentations
 version: 1
 title: Deck
-description: A branded presentation from a brief and materials, using the brand's slide templates.
+description: One editable PowerPoint deck from a brief and materials, using the brand's slide templates.
 
 inputs:
   - id: slideCount
@@ -412,33 +413,19 @@ stages:
 
   - id: visuals
     label: Visuals
-    contract: A current image for every image slot in the outline
-    entry: V0
+    contract: Every image slot uses its template placeholder (D19)
+    entry: V1
     nodes:
-      - id: V0
-        kind: condition
-        label: Any image slots?
-        when: { check: hasImageSlots }
-        yes: V1
-        no: A1
-      - id: V1
-        kind: action
-        capability: generateImages
-        label: Generate artwork for image slots
-        settings: { per: imageSlot, count: 1 }
-        next: V2
-      - { id: V2, kind: condition, label: Artwork valid and usable?, when: { check: visualsValid }, yes: V3, no: V2r }
-      - { id: V2r, kind: recovery, label: Artwork failed or blocked, detail: Keep successful images; regenerate or upload, returnTo: V3 }
-      - { id: V3, kind: touchpoint, capability: chooseVisuals, label: Choose or upload artwork, settings: { allowUpload: true }, next: A1 }
+      - { id: V1, kind: action, capability: usePlaceholders, label: Use template placeholders for images, next: A1 }
 
   - id: assets
     label: Assets
-    contract: Accepted slides and a delivered PDF package
+    contract: The accepted deck delivered as one PowerPoint file
     entry: A1
     nodes:
-      - { id: A1, kind: action, capability: compose, label: Compose slides, settings: { templates: flow.outline, formats: [widescreen] }, next: A2 }
+      - { id: A1, kind: action, capability: compose, label: Compose deck, settings: { templates: project.outline, formats: [widescreen] }, next: A2 }
       - { id: A2, kind: action, capability: runChecks, label: Run quality checks, next: A3 }
-      - { id: A3, kind: condition, label: All hard checks pass?, when: { checks: [textFits, requiredWording, forbiddenTerms, logoSafeArea, contrast, imageResolution, slideCount, fileIntegrity] }, yes: A4, no: A3r }
+      - { id: A3, kind: condition, label: All hard checks pass?, when: { checks: [textFits, requiredWording, forbiddenTerms, logoSafeArea, contrast, slideCount, fileIntegrity] }, yes: A4, no: A3r }
       - id: A3r
         kind: recovery
         label: Repair, then offer design help
@@ -447,12 +434,12 @@ stages:
         escalate: offer
         returnTo: A2
       - { id: A4, kind: action, capability: reviewWithAi, label: AI review (shadow), settings: { mode: shadow }, next: A5 }
-      - { id: A5, kind: touchpoint, capability: presentAssets, label: Accept, adjust or request design help, next: A6 }
-      - { id: A6, kind: action, capability: packageOutputs, label: Package PDF and slide images, settings: { formats: [pdf, png] }, next: A7 }
+      - { id: A5, kind: touchpoint, capability: presentAssets, label: Accept the deck, adjust or request design help, next: A6 }
+      - { id: A6, kind: action, capability: packageOutputs, label: Package the PowerPoint file, settings: { formats: [pptx] }, next: A7 }
       - { id: A7, kind: output, label: Download package, produces: [package] }
 
 checks:
-  hard: [textFits, requiredWording, forbiddenTerms, logoSafeArea, contrast, imageResolution, slideCount, fileIntegrity]
+  hard: [textFits, requiredWording, forbiddenTerms, logoSafeArea, contrast, slideCount, fileIntegrity]
   aiReview: { mode: shadow }
   repair:
     textFits: { action: shortenSlideText, attempts: 2 }
@@ -461,7 +448,7 @@ checks:
 escalateWhen: [hardCheckFailedAfterRepair, userRequested]
 
 outputs:
-  formats: [pdf, png]
+  formats: [pptx]
   package: zipWithManifest
 ```
 
@@ -474,7 +461,7 @@ Guidance adds recipe-specific direction; capability prompts and brand context al
 | `banner-set/guidance/write-copy.md` | Banner copy is read in seconds: one idea per option; headline carries the message; CTA is a verb phrase; options differ in angle, not wording |
 | `banner-set/guidance/generate-images.md` | One clear subject; negative space where the template places text; no text, logos or UI in images |
 | `deck/guidance/outline-deck.md` | One message per slide; use the opening layout first and the closing layout last; evidence layouts only for real numbers from the materials |
-| `deck/guidance/fill-slides.md` | Respect wording fidelity; never invent numbers, sources or contacts; keep page and stage numbers fixed |
+| `deck/guidance/fill-slides.md` | Respect wording fidelity; never invent numbers, sources or contacts; keep page and step numbers fixed; do not describe images, because image slots are placeholders |
 
 ## Tests
 

@@ -8,7 +8,7 @@ Start with the [product concept](product/concept.md).
 
 | Page | What it answers |
 | --- | --- |
-| [Concept](product/concept.md) | What the product is, the asset creation flow and its principles |
+| [Concept](product/concept.md) | What the product is, projects, the asset creation flow and its principles |
 | [PRD](product/prd.md) | Requirements for the proof of concept: goals, journeys, functional and non-functional requirements, measures, risks |
 | [Glossary](product/glossary.md) | Terms to use, status labels, and old names still in the code |
 | [Decisions](product/decisions.md) | What has been decided, when, and what it replaced |
@@ -20,14 +20,14 @@ Start with the [product concept](product/concept.md).
 | Page | What it answers |
 | --- | --- |
 | [All specifications](specs/index.md) | Index and traceability to the PRD |
-| [Domain model](specs/domain-model.md) | Records, states, change propagation, version pinning |
+| [Domain model](specs/domain-model.md) | Projects, records, states, change propagation, version pinning |
 | [Recipes](specs/recipes.md) | Recipe schema, capability catalog, `banner-set` and `deck` recipes |
 | [Brand model](specs/brand-model.md) | Brand guidance, readiness, AI context |
 | [Template model](specs/template-model.md) | Templates, brand scope, resolution and fit |
 | [Quality checks and escalation](specs/quality-and-escalation.md) | Checks, repair, AI review, acceptance, escalation, packages |
 | [Asset creation flow UX](specs/asset-creation-flow-ux.md) | Screens, states, actions and wording |
-| [Deck generation](specs/deck-generation.md) | Outline, slide text, rendering, PDF |
-| [Migration from campaigns](specs/campaign-migration.md) | From the current campaign flow to recipe flows |
+| [Deck generation](specs/deck-generation.md) | Slide templates, outline, slide text, placeholders, PPTX |
+| [Migration from campaigns](specs/campaign-migration.md) | From the current campaigns to recipe-driven projects |
 | [Design system integration](specs/design-system-integration.md) | How the app uses, extends and updates Brutalist |
 
 ## Engineering
