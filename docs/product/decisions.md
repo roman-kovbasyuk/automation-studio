@@ -38,10 +38,7 @@ Each decision records what was decided, when and what it replaces. A decision is
 
 ## Provisional decisions
 
-Taken on 17 September 2026 as the recommended option while the owner was unavailable, on the owner's instruction. They are used by current documents until confirmed or changed; confirming one moves it to **Active decisions**.
-
-| ID | Provisional decision | Alternatives | Used by |
-| --- | --- | --- | --- |
+None open. Provisional decisions P1–P9, taken on 17 September 2026 while the owner was unavailable, were reviewed the same day and replaced by D17–D27.
 
 ## Earlier decisions still in force
 
