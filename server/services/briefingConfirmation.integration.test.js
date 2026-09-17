@@ -49,3 +49,56 @@ test('confirmation imports exact original copy once, preserves deletion on recon
     expect((await generation.generateCopy({actor,campaignId:campaign.id,idempotencyKey:'explicit',input:{}})).body.job.status).toBe('succeeded')
   } finally {await studio.close()}
 },30000)
+
+async function analysedCampaign(studio,notes,key) {
+  const actor=studio.actor('marketer'),workflow=createWorkflowService({pool:studio.pool})
+  const created=await workflow.createCampaign({actor,input:{title:'Synthetic',brief:{notes,briefing:{schemaVersion:2}}}})
+  const generation=createGenerationService({pool:studio.pool,controlPlane:createGenerationControlPlane({pool:studio.pool}),providers:{mock:createMockProvider()}})
+  await generation.analyseBrief({actor,campaignId:created.id,idempotencyKey:`analyze-${key}`,input:{expectedRevision:created.revision}})
+  const campaign=await workflow.getCampaign({actor,campaignId:created.id}),state=campaign.brief.briefing,service=createBriefingService({pool:studio.pool})
+  const confirm=async(idempotencyKey,answers)=>service.confirm({actor,campaignId:campaign.id,idempotencyKey,
+    expectedRevision:(await workflow.getCampaign({actor,campaignId:campaign.id})).revision,
+    input:{analysisJobId:state.analysisJobId,sourceKey:state.sourceKey,answers:{...state.answers,reach:'local',goal:'signups',...answers}}})
+  const copySets=async()=>(await studio.pool.query('SELECT origin FROM copy_sets WHERE campaign_id=$1',[campaign.id])).rows
+  return {confirm,copySets}
+}
+
+test('keeping found copy with new copy imports it once and writes copy for each new set of copy settings',async()=>{
+  const studio=await createIsolatedStudio()
+  try {
+    const {confirm,copySets}=await analysedCampaign(studio,'Headline: Learn Norwegian — together.','keep-and-create')
+    const first=await confirm('keep-and-create',{copyMode:'keep_and_create'})
+    expect(first).toMatchObject({initialCopy:'offer_generation',importedCopySetId:expect.any(String)})
+    expect(await copySets()).toEqual([{origin:'supplied'}])
+    expect((await confirm('retag',{copyMode:'keep_and_create',visualTags:['Oslo']})).initialCopy).toBe('skip')
+    expect(await confirm('new-goal',{copyMode:'keep_and_create',visualTags:['Oslo'],goal:'sales'}))
+      .toMatchObject({initialCopy:'offer_generation',importedCopySetId:first.importedCopySetId})
+    expect(await copySets()).toEqual([{origin:'supplied'}])
+  } finally {await studio.close()}
+},30000)
+
+test('found copy is always kept, and copy can be kept only when it was found',async()=>{
+  const studio=await createIsolatedStudio()
+  try {
+    const found=await analysedCampaign(studio,'Headline: Learn Norwegian — together.','found')
+    await expect(found.confirm('drop',{copyMode:'create_new'})).rejects.toMatchObject({code:'found_copy_not_kept',statusCode:422})
+    expect(await found.copySets()).toEqual([])
+    const none=await analysedCampaign(studio,'Norwegian courses for adults in Oslo.','none')
+    for(const copyMode of ['keep_original','keep_and_create'])
+      await expect(none.confirm(copyMode,{copyMode})).rejects.toMatchObject({code:'no_supplied_copy',statusCode:422})
+    expect((await none.confirm('create',{copyMode:'create_new'})).initialCopy).toBe('offer_generation')
+  } finally {await studio.close()}
+},30000)
+
+test('keeping found copy with new copy needs room for five new options',async()=>{
+  const studio=await createIsolatedStudio()
+  try {
+    const notes=Array.from({length:26},(_,index)=>`Headline: Option ${index+1}`).join('\n')
+    const {confirm,copySets}=await analysedCampaign(studio,notes,'crowded')
+    await expect(confirm('crowded',{copyMode:'keep_and_create'})).rejects.toMatchObject({code:'copy_capacity_exceeded',statusCode:409,
+      message:'Delete copy options to make room for the found copy and five new options.'})
+    expect(await copySets()).toEqual([])
+    expect((await confirm('fits',{copyMode:'keep_original'})).initialCopy).toBe('skip')
+    expect(await copySets()).toEqual([{origin:'supplied'}])
+  } finally {await studio.close()}
+},30000)

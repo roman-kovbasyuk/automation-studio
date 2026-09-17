@@ -104,11 +104,10 @@ export function createMockProvider({ model = 'mock-v1', region = 'europe-west6' 
       }
       if(command.sources) {
         const foundCopy=[]
-        for(const source of command.sources) for(const block of source.blocks) {
-          const match=/Headline: (.+)/.exec(block.text)
-          if(match) { const start=match.index+'Headline: '.length
-            foundCopy.push({id:`found-${foundCopy.length+1}`,fields:{headline:match[1],body:'',offer:'',cta:''},verification:'text_verified',
-              sourceRefs:[{sourceId:source.id,label:source.name,blockId:block.id,start,end:start+match[1].length,...(block.page?{page:block.page}:{})}]}) }
+        for(const source of command.sources) for(const block of source.blocks) for(const match of block.text.matchAll(/Headline: (.+)/g)) {
+          const start=match.index+'Headline: '.length
+          foundCopy.push({id:`found-${foundCopy.length+1}`,fields:{headline:match[1],body:'',offer:'',cta:''},verification:'text_verified',
+            sourceRefs:[{sourceId:source.id,label:source.name,blockId:block.id,start,end:start+match[1].length,...(block.page?{page:block.page}:{})}]})
         }
         analysis.briefingProposal={sourceKey:command.brief.briefing.sourceKey,foundCopy,answers:{summary:analysis.summary,audience:audience,
           copyMode:foundCopy.length?null:'create_new',ageGroups:[],gender:'all',reach:null,goal:null,goalCustom:'',visualTags:[]},suggestedVisualTags:[]}
