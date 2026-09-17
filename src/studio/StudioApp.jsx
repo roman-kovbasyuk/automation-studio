@@ -570,7 +570,7 @@ export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, pro
     if (action === 'signout' && !campaignBusy() && (!hasUnsavedChanges() || window.confirm('Discard your unsaved changes?'))) onSignOut?.()
   } } : undefined
   const sidebar = <div className="bs-sidebar-shell"><SidebarPanel
-    brand={{ label: 'Studio', href: '/' }}
+    brand={{ label: 'Automation Studio', href: '/' }}
     primaryAction={{ label: 'Create new', icon: <Plus size={18} />, onClick: () => { if (editor && !pending) navigate('/mvp/new') } }}
     navigation={navItems.map(([id, label, Icon, href]) => ({ id, label, href, icon: <Icon size={18} />, current: route.view === id }))}
     projects={campaigns.map(campaign => ({ id: campaign.id, title: campaign.title,

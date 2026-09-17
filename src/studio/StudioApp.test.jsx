@@ -295,7 +295,7 @@ describe('connected studio workflow', () => {
     const { api } = fixture()
     render(<ConnectedStudio api={api} />)
     await screen.findByRole('heading', { name: 'What would you like to create?' })
-    expect(screen.getAllByText('Studio')[0]).toBeVisible()
+    expect(screen.getAllByText('Automation Studio')[0]).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Search projects' }))
     expect(screen.getByRole('searchbox', { name: 'Search projects' })).toBeVisible()
     expect(screen.queryByRole('button', { name: 'Submit search' })).not.toBeInTheDocument()
