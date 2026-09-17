@@ -37,6 +37,7 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D27 | **Pull-mode claims do not expire.** A claimed request stays with its claimant until submitted or released. | 17 Sep 2026 | Provisional P5 (2-hour renewable claims) |
 | D28 | **Roman Kovbasyuk is the pilot designer** and handles escalations. Target turnaround is **one business day** from request to returned asset. | 17 Sep 2026 | Open question (pilot designer and turnaround) |
 | D29 | **Pilot measure targets are set after the first pilot week,** from the baseline measured in that week. | 17 Sep 2026 | Targets set before the pilot starts |
+| D30 | **AI agents do not use the Observatory task tracker** in Automation Studio or Brutalist. The instruction is removed from Brutalist's `AGENTS.md`; the change pipeline may still report to Observatory when configured (D26). | 17 Sep 2026 | Brutalist `AGENTS.md` Task Observatory section |
 
 ## Provisional decisions
 
