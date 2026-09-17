@@ -15,7 +15,8 @@ Use these terms in product documents, specifications and the user interface. The
 | **Template** | A versioned layout for one asset type. It references brand roles, declares slots with content limits and carries a contract that AI output must satisfy. |
 | **Capability** | One operation implemented and tested in code, with fixed inputs and outputs. Examples: analyse materials, write copy, generate image, compose, render, check. |
 | **Recipe** | The versioned production spec for one asset type: inputs, questions, steps, checks, escalation rules and outputs. Brand-independent. Stored as files. See [Recipes](recipes.md). |
-| **Asset creation flow** | One request carried out for one asset type. It pins brand, template and recipe versions and stores answers, drafts, check results, escalations and files. |
+| **Project** | One piece of work for one asset type, such as *Spring course banners*. It delivers many banners, or one deck, or one newsletter. It pins brand, template and recipe versions and stores answers, drafts, check results, escalations and files. |
+| **Asset creation flow** | The four-stage process inside a project: Brief, Copy, Visuals, Assets. |
 | **Stage** | One of the four parts of every flow: Brief, Copy, Visuals, Assets. |
 | **Touchpoint** | A point in a recipe where the user confirms, edits or chooses. |
 | **Hard check** | An automatic pass/fail rule, such as text fitting its slot or required wording being present. |
@@ -43,7 +44,7 @@ Use these terms in product documents, specifications and the user interface. The
 | Old name | Use instead | Still appears in |
 | --- | --- | --- |
 | Banner Studio, Lingu Studio, Lingu Agents | Automation Studio | App title, package name, Dockerfile labels, some code comments |
-| Campaign | Asset creation flow | Database tables, API routes (`/api/v1/campaigns`), URLs (`/mvp/campaign/:id`), source folders (`src/studio/campaign`) |
+| Campaign | Project | Database tables, API routes (`/api/v1/campaigns`), URLs (`/mvp/campaign/:id`), source folders (`src/studio/campaign`) |
 | Six campaign modules (Brief, Copy, Visuals, Banners, Review, Distribute) | Four stages (Brief, Copy, Visuals, Assets) | Module IDs in `src/studio/campaign/moduleContracts.js` |
 | Review, designer approval | Escalation (designer) and acceptance (requester) | Campaign statuses `in_review`, `ready`, `approved` in `shared/workflowRules.js` |
 | Product recipes / product logic designer (node editor) | Recipe files | Admin area (`/mvp/admin/recipes`), `asset_workflow*` tables |

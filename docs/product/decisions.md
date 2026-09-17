@@ -30,6 +30,7 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D20 | **Folkeuniversitetet is the pilot brand.** Banner templates are used with role bindings; a Folkeuniversitetet slide template set is created for decks. | 17 Sep 2026 | Provisional P8 (MSD) |
 | D21 | **Folkeuniversitetet uses its licensed heading font Matter in the pilot.** Licensed font files are uploaded to the brand, so brand font support (BRAND-4) is required for the pilot, and PPTX recipients need Matter available. | 17 Sep 2026 | Unconfirmed Matter with Inter fallback |
 | D22 | **One project is one creation flow of one asset type, fixed at creation.** A banner project delivers any number of banners; a deck project delivers exactly one deck; a newsletter project exactly one newsletter. Reusing a brief in another project is not needed for the pilot. | 17 Sep 2026 | Provisional P9 (flow as top-level record) |
+| D23 | **Users and documentation call the top-level record a Project.** "Asset creation flow" names the four-stage process inside a project. | 17 Sep 2026 | Naming part of D6 ("asset creation flow" as the record name) |
 
 ## Provisional decisions
 
