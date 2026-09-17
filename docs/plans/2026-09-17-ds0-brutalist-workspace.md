@@ -1,6 +1,6 @@
 # DS0 Brutalist workspace package — implementation plan
 
-**Status:** In progress · **Date:** 17 September 2026 · **Design:** [Design system integration](../specs/design-system-integration.md#import-from-the-standalone-repository) · **Decisions:** D24, D25, D30, D36 · **Depends on:** M0
+**Status:** Implemented, awaiting review · **Date:** 17 September 2026 · **Design:** [Design system integration](../specs/design-system-integration.md#import-from-the-standalone-repository) · **Decisions:** D24, D25, D30, D36 · **Depends on:** M0
 
 ## Goal
 
@@ -83,3 +83,29 @@ Prepare the notice for the top of the standalone repository's README, pointing t
 ### D8 — Final verification and pull request
 
 The exit check above, the package `verify`, then one pull request into `v3`.
+
+## Results
+
+| Task | Result (17 September 2026) |
+| --- | --- |
+| D1 | 295 Brutalist commits imported; the package tree is identical to `50c322c` |
+| D2 | Workspace dependency `^0.1.0`; `source` export condition used by Vite when serving and testing; one React copy (peer dependency); the package lockfile replaced by the root lockfile. Two workspace effects fixed: jsdom pinned to 30.0.1, because 30.1.0 fails three Radix Select and Menu tests (the standalone lockfile had pinned it); the package's test matcher types and documentation example check now resolve hoisted dependencies |
+| D3 | Eleven archives, the provenance record, vendor instructions and the updater removed; the package's change queue, CI workflows, change protocol guide and Task Observatory instruction removed |
+| D4 | `design-system:check` rewritten with seven checks and eleven tests. Ninety product words in eleven package test and documentation files replaced with neutral words; seven allowlist entries, all for the generic `Banner` component. CI: `ci.yml` (boundary tests, check, build) and `brutalist.yml` (package `verify` when package files change). The design-system page names the workspace package |
+| D5 | Docker image built with Colima; the runtime image has no workspace link and the server module loads; `verify:production` passes |
+| D6 | Package `CLAUDE.md` and rules; application `AGENTS.md`, `FRONTEND.md`, `DESIGN.md`, `README.md`, architecture, design-system index, gap list rules, migration note, brief template, known issues, design status and roadmap updated; docs build without dead links |
+| D7 | Freeze notice prepared as a patch against the standalone README; not committed |
+
+## Final verification
+
+| Check | Result |
+| --- | --- |
+| `npm run test:run` | 1,764 passed, 1 skipped |
+| `npm run design-system:check` and `npm run test:design-system` | Pass (11 boundary tests, 26 application tests) |
+| `npm run build`, `npm run verify:production` | Pass |
+| `npm run verify --workspace brutalist-design-system` | Pass: 141 tests, typecheck, documentation and library builds, documentation examples, packed consumer |
+| Dev server | `brutalist-design-system` resolves to package source; an added export in `Tag.tsx` was served without a rebuild |
+| Boundary violations on the real repository | A package file importing `src/studio/api.js` and an application import of `brutalist-design-system/src/...` both fail the check |
+| `docker build` | Pass |
+
+**Notes.** jsdom 30.0.1 requires Node 22.22.2 or later; the Docker image's Node 22.22.0 only warns, and the image does not run package tests. The packed consumer check installs from the npm registry.
