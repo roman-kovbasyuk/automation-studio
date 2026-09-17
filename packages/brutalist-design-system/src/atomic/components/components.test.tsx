@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import userEvent from '@testing-library/user-event'
+import { useState } from 'react'
 import { expect, test, vi } from 'vitest'
 import { Button, Panel, TextField, Checkbox, RadioGroup } from './index'
 
@@ -76,6 +77,40 @@ test('RadioGroup respects controlled selection and reports the chosen value', as
   view.rerender(<RadioGroup label="Export format" options={options} value="portrait" onChange={change} />)
   expect(screen.getByRole('radio', { name: 'Portrait' })).toBeChecked()
   expect(screen.getByRole('radio', { name: 'Wide' })).toBeDisabled()
+})
+
+test('RadioGroup tags variant draws wrapping tags over native radios', async () => {
+  const user = userEvent.setup(), change = vi.fn()
+  render(<RadioGroup variant="tags" label="Export format" options={options} value="square" onChange={change} instructions="Choose one" error="Choose a format." />)
+  const group = screen.getByRole('group', { name: 'Export format' })
+  expect(group).toHaveClass('c-radio-group', 'c-radio-group--tags')
+  expect(group).toHaveAccessibleDescription('Choose one Choose a format.')
+  expect(within(group).getAllByRole('radio')).toHaveLength(3)
+  screen.getByRole('radio', { name: 'Portrait' }).focus()
+  await user.keyboard(' ')
+  expect(change).toHaveBeenCalledWith('portrait')
+  expect(screen.getByRole('radio', { name: 'Square' })).toBeChecked()
+  expect(screen.getByRole('radio', { name: 'Wide' })).toBeDisabled()
+  const css = readFileSync(resolve(process.cwd(), 'src/atomic/components/forms.css'), 'utf8')
+  expect(css).toMatch(/\.c-radio-tags\s*\{[^}]*flex-wrap:\s*wrap/)
+  expect(css).toMatch(/\.c-radio-group--tags \.c-choice-row:has\(\.c-radio:checked\)[^{]*\{[^}]*background:\s*var\(--a-color-accent\)/)
+  expect(css).toMatch(/\.c-radio-group--tags \.c-choice-row:has\(\.c-radio:focus-visible\)\s*\{[^}]*outline/)
+  expect(css).toMatch(/forced-colors: active\) \{ \.c-radio-group--tags \.c-radio \{[^}]*opacity:\s*1/)
+})
+
+test('RadioGroup tags variant shows the custom answer only while it is selected', async () => {
+  function Example() {
+    const [value, setValue] = useState('square'), [text, setText] = useState('')
+    return <RadioGroup variant="tags" label="Goal" options={options} value={value} onChange={setValue} customOption={{ value: 'other', label: 'Other', text, onTextChange: setText }} />
+  }
+  const user = userEvent.setup()
+  render(<Example />)
+  expect(screen.queryByRole('textbox', { name: 'Other answer' })).not.toBeInTheDocument()
+  await user.click(screen.getByRole('radio', { name: 'Other' }))
+  await user.type(screen.getByRole('textbox', { name: 'Other answer' }), 'Open day visits')
+  expect(screen.getByRole('textbox', { name: 'Other answer' })).toHaveValue('Open day visits')
+  await user.click(screen.getByRole('radio', { name: 'Square' }))
+  expect(screen.queryByRole('textbox', { name: 'Other answer' })).not.toBeInTheDocument()
 })
 
 test('uncontrolled RadioGroup allows native keyboard selection and group disabling', async () => {
