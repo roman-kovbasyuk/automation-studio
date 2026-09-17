@@ -52,9 +52,9 @@ describe('copy choice and age range', () => {
     expect(briefAnswersDraftSchema.safeParse({ ...answers, copyMode: 'keep_everything' }).success).toBe(false)
   })
   test('converts between slider ranges and age groups, storing the full range as no limit', () => {
-    expect(ageRangeFromGroups([])).toEqual([0, 6])
-    expect(ageGroupsFromRange([0, 6])).toEqual([])
-    expect(ageGroupsFromRange([2, 3])).toEqual(['25_34', '35_44'])
+    expect(ageRangeFromGroups([])).toEqual([0, 5])
+    expect(ageGroupsFromRange([0, 5])).toEqual([])
+    expect(ageGroupsFromRange([1, 2])).toEqual(['25_34', '35_44'])
     for (let low = 0; low < AGE_GROUPS.length; low++) for (let high = low; high < AGE_GROUPS.length; high++)
       expect(ageRangeFromGroups(ageGroupsFromRange([low, high]))).toEqual([low, high])
   })

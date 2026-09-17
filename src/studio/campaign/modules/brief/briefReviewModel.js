@@ -9,7 +9,7 @@ export const STEP_FIELDS = Object.freeze({
   settings: ['ageGroups', 'gender', 'goal', 'goalCustom', 'reach'],
   visuals: ['visualTags'],
 })
-export const AGE_LABELS = Object.freeze(['Under 18', '18–24', '25–34', '35–44', '45–54', '55–64', '65+'])
+export const AGE_LABELS = Object.freeze(['18–24', '25–34', '35–44', '45–54', '55–64', '65+'])
 export const COPY_OPTIONS = Object.freeze([{ value: 'keep_original', label: 'No, use this copy' }, { value: 'keep_and_create', label: 'Yes, also write new options' }])
 export const GENDER_OPTIONS = Object.freeze([{ value: 'men', label: 'Men' }, { value: 'women', label: 'Women' }, { value: 'all', label: 'Both' }])
 export const GOAL_OPTIONS = Object.freeze([{ value: 'awareness', label: 'Brand awareness' }, { value: 'traffic', label: 'Traffic' },
@@ -17,7 +17,7 @@ export const GOAL_OPTIONS = Object.freeze([{ value: 'awareness', label: 'Brand a
 export const REACH_OPTIONS = Object.freeze([{ value: 'local', label: 'Local' }, { value: 'national', label: 'National' }, { value: 'global', label: 'Global' }])
 export const OUT_OF_DATE_MESSAGES = Object.freeze({ copy: 'Copy and visuals will need updating.', visuals: 'Visuals will need updating.' })
 
-const ageBounds = [[null, 17], [18, 24], [25, 34], [35, 44], [45, 54], [55, 64], [65, null]]
+const ageBounds = [[18, 24], [25, 34], [35, 44], [45, 54], [55, 64], [65, null]]
 const requiredMessages = { summary: 'Enter a summary.', audience: 'Describe the audience.', copyMode: 'Choose whether to also write new copy.',
   goal: 'Choose a goal.', goalCustom: 'Describe the goal.', reach: 'Choose a reach.', ageGroups: 'Choose one continuous age range.' }
 const labelOf = (options, value) => options.find(option => option.value === value)?.label
@@ -58,7 +58,6 @@ export function stepOfField(field) {
 export function ageLabel(groups) {
   const [low, high] = ageRangeFromGroups(groups)
   if (low === 0 && high === ageBounds.length - 1) return 'All ages'
-  if (low === 0) return `Under ${ageBounds[high][1] + 1}`
   if (high === ageBounds.length - 1) return `${ageBounds[low][0]}+`
   return `${ageBounds[low][0]}–${ageBounds[high][1]}`
 }

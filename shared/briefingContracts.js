@@ -15,7 +15,8 @@ export const analysisSourceSchema = z.strictObject({
   attachmentRefs:z.array(z.strictObject({kind:z.enum(['image','pdf']),mimeType:z.string().min(1)})),
   attachments:z.array(z.strictObject({mimeType:z.string().min(1),data:z.string().max(Math.ceil(MAX_SOURCE_BYTES/3)*4)})).optional(),
 })
-export const AGE_GROUPS = Object.freeze(['under_18', '18_24', '25_34', '35_44', '45_54', '55_64', '65_plus'])
+// The floor is 18; there is no under-18 targeting.
+export const AGE_GROUPS = Object.freeze(['18_24', '25_34', '35_44', '45_54', '55_64', '65_plus'])
 const id = z.string().trim().min(1).max(200)
 const hash = z.string().regex(/^[a-f0-9]{64}$/)
 const distinct = values => new Set(values).size === values.length

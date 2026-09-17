@@ -35,6 +35,6 @@ test('corrects copy questions and age ranges the model can get wrong, and stays 
   expect(verifyBriefingProposal(corrected,{sourceKey,sources})).toEqual(corrected)
   for(const copyMode of ['keep_original','keep_and_create'])
     expect(verifyBriefingProposal({...proposal(),answers:{...emptyBriefAnswers(),copyMode}},{sourceKey,sources}).answers.copyMode).toBe(copyMode)
-  const none={...proposal(),foundCopy:[],answers:{...emptyBriefAnswers(),copyMode:'keep_original',ageGroups:['under_18','18_24','25_34','35_44','45_54','55_64','65_plus']}}
+  const none={...proposal(),foundCopy:[],answers:{...emptyBriefAnswers(),copyMode:'keep_original',ageGroups:['18_24','25_34','35_44','45_54','55_64','65_plus']}}
   expect(verifyBriefingProposal(none,{sourceKey,sources}).answers).toMatchObject({copyMode:'create_new',ageGroups:[]})
 })

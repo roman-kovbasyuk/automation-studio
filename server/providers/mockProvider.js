@@ -82,7 +82,7 @@ function short(value, limit) {
   return value.length <= limit ? value : `${value.slice(0, limit - 1)}…`
 }
 
-const ageBounds = [[0, 17], [18, 24], [25, 34], [35, 44], [45, 54], [55, 64], [65, Infinity]]
+const ageBounds = [[18, 24], [25, 34], [35, 44], [45, 54], [55, 64], [65, Infinity]]
 const mockGoals = { awareness: 'awareness', traffic: 'traffic', leads: 'leads', signups: 'signups', 'sign-ups': 'signups', sales: 'sales' }
 
 /** Deterministic stand-in for AI inference: explicit `Name: value` lines first, then a few everyday words. */
