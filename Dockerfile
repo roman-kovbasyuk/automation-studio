@@ -3,10 +3,12 @@ FROM node:22.22.0-alpine3.23@sha256:e4bf2a82ad0a4037d28035ae71529873c069b13eb045
 
 WORKDIR /app
 COPY package.json package-lock.json ./
+COPY packages/brutalist-design-system/package.json packages/brutalist-design-system/
 RUN npm ci --no-audit --no-fund
 
 COPY . .
-RUN npm run build && npm prune --omit=dev --no-audit --no-fund
+# The Brutalist workspace link points into packages/, which the runtime image does not copy.
+RUN npm run build && npm prune --omit=dev --no-audit --no-fund && rm -f node_modules/brutalist-design-system
 
 FROM node:22.22.0-alpine3.23@sha256:e4bf2a82ad0a4037d28035ae71529873c069b13eb0455466ae0bc13363826e34 AS runtime
 
