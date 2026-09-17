@@ -45,7 +45,7 @@ Drafted on 17 September 2026 and updated for decisions D17–D30 the same day:
 
 | Step | Work | Needed before |
 | --- | --- | --- |
-| DS0 | Import Brutalist as the workspace package `packages/brutalist-design-system` with its history; boundary checks and CI; remove vendored archives and the change pipeline; freeze the standalone repository (D36) | First gap fix |
+| DS0 | [Plan](../plans/2026-09-17-ds0-brutalist-workspace.md), implemented and in review. Import Brutalist as the workspace package `packages/brutalist-design-system` with its history; boundary checks and CI; remove vendored archives and the change pipeline; freeze the standalone repository (D36) | First gap fix |
 | DS1 | Adopt available components (audit items A1–A7) | M2 |
 | DS2 | Checkable gap list (JSON); breaking-change gate | M2 |
 | DS3 | First gap fixes in the package: routed steps (R1), autosave inline text (R2), controlled dialogs (R3) | M2 interface |

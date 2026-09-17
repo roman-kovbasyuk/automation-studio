@@ -46,7 +46,7 @@ Use with [FRONTEND.md](../../FRONTEND.md). Save a filled brief in `docs/design-s
 | Region / interaction | Owning layer | Public export and verified API, or plain/native composition | Reason / gap |
 | --- | --- | --- | --- |
 
-- Installed package provenance checked:
+- Brutalist package version checked:
 - Artwork isolation and brand/template version, if applicable:
 - Existing adapter used and why translation is necessary:
 - Missing-component record and removal condition, if applicable:

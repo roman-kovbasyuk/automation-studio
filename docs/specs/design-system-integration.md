@@ -1,6 +1,6 @@
 # Design system integration
 
-**Status:** Target · **Accepted:** 17 September 2026 ([D13, D24, D25, D30, D36](../product/decisions.md)) · **Not yet implemented**
+**Status:** DS0 implemented, in review; DS1–DS3 not started · **Accepted:** 17 September 2026 ([D13, D24, D25, D30, D36](../product/decisions.md)) · **Plan:** [DS0](../plans/2026-09-17-ds0-brutalist-workspace.md)
 
 How Automation Studio uses, extends and updates the Brutalist design system.
 
@@ -60,7 +60,7 @@ automation-studio/
 
 - **Package name stays `brutalist-design-system`,** so the application's imports do not change.
 - **Public entry points:** `brutalist-design-system` and `brutalist-design-system/styles.css`, the two the application uses today.
-- **Resolution:** the application's dev server and tests reflect package source edits without a manual rebuild; production builds and Docker images use the built library (`build:atomic-library`). Conditional exports are the preferred mechanism; DS0 settles it.
+- **Resolution:** the application's dev server and tests reflect package source edits without a manual rebuild; production builds and Docker images use the built library (`build:atomic-library`). Settled in DS0: the package exports a `source` condition, which Vite adds when serving and testing.
 - **Versions** follow D25: before 1.0, patch for additive and minor for breaking changes. The version is bumped in the pull request that changes the package.
 
 ## Boundary checks
@@ -71,7 +71,7 @@ automation-studio/
 | --- | --- |
 | Package isolation | A package file imports a path outside `packages/brutalist-design-system` or a module that is not a declared dependency |
 | Public entry points | Application code imports anything other than the two public entry points, or a package path directly |
-| Product vocabulary | Package source adds a product term (Automation Studio, campaign, banner, recipe, escalation) that is not on the reviewed allowlist. Generic words such as template, project and brand are allowed. Today 17 package files mention campaigns or banners, including the export index; DS0 reviews each one and moves product-specific parts to the application |
+| Product vocabulary | Package source adds a product term (Automation Studio, campaign, banner, recipe, escalation) that is not on the reviewed allowlist. Generic words such as template, project and brand are allowed. DS0 reviewed the 17 package files that mentioned campaigns or banners: example text now uses neutral words, and the generic `Banner` component is on the allowlist in `scripts/design-system-vocabulary.json` |
 | Package verification | The package's own `verify` (tests, types, boundary and documentation example checks, consumer build) fails; runs when package files change |
 | Breaking changes | The public API report (exports and their prop types) loses or renames an export or changes a required prop, and the change is not recorded as approved in the package changelog |
 
@@ -131,7 +131,7 @@ When a second product needs Brutalist, or when the owner decides:
 
 ## Rules for agents
 
-Recorded in [AGENTS.md](../../AGENTS.md) and [FRONTEND.md](../../FRONTEND.md) when the import lands. Until then the current rules in those files apply.
+Recorded in [AGENTS.md](../../AGENTS.md), [FRONTEND.md](../../FRONTEND.md) and the package's [AGENTS.md](../../packages/brutalist-design-system/AGENTS.md).
 
 - Brutalist code lives only in `packages/brutalist-design-system`. It never imports application code or uses product terms.
 - The application imports only the public entry points and never targets private component classes.

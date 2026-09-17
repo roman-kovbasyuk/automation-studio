@@ -45,7 +45,7 @@ server/         Fastify API, services, repositories, providers, renderer
 shared/         Contracts and logic shared by browser and server
 figma-plugin/   Figma plugin for design handoff
 scripts/        Build, verification, local runtime and fixture scripts
-vendor/         Pinned Brutalist design-system package
+packages/       Brutalist design system, a detachable workspace package (D36)
 docs/           Documentation (single source)
 docs-site/      VitePress configuration that renders docs/
 ```

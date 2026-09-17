@@ -21,7 +21,7 @@ flowchart TB
 | Layer | Location | Notes |
 | --- | --- | --- |
 | Application | `src/` | React 19 and Vite. Entry `src/main.jsx` → `src/App.jsx` → `src/studio/StudioApp.jsx`. |
-| UI foundation | `vendor/`, `node_modules/brutalist-design-system` | Pinned archive of the external Brutalist package. Rules in [FRONTEND.md](../../FRONTEND.md). |
+| UI foundation | `packages/brutalist-design-system` | Brutalist design system, a detachable workspace package (D36). Dev server and tests use its source; production builds use its built library. Rules in [FRONTEND.md](../../FRONTEND.md) and [design system integration](../specs/design-system-integration.md). |
 | Campaign flow (current banner flow) | `src/studio/campaign/` | Six module hosts, runtime and coordinator. See [campaign modules](campaign-modules.md). |
 | Admin | `src/studio/admin/`, `server/routes/admin.js`, `server/assetWorkflows/` | Read-only records and the frozen recipe node editor. See [admin](admin.md). |
 | HTTP API | `server/app.js`, `server/bootstrap.js`, `server/start.js`, `server/routes/` | Fastify. |

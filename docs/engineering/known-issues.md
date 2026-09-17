@@ -55,17 +55,11 @@ These identifiers keep the old product name because data, integrations or deploy
 
 ## Design-system integration
 
-Found on 17 September 2026. The target fix is specified in [design system integration](../specs/design-system-integration.md): Brutalist moves into this repository as a workspace package (D36), which retires the cross-repository change pipeline.
+Found on 17 September 2026. DS0 moved Brutalist into this repository as a workspace package (D36, [design system integration](../specs/design-system-integration.md)), which retired the cross-repository change pipeline and its issues: Codex-only agents, rejected pipeline installs, releases kept on one machine, mismatched path rules, the missing package `CLAUDE.md` and gap fixes spanning two repositories.
 
 | Issue | Evidence | When |
 | --- | --- | --- |
-| The change pipeline only runs Codex and assumes Observatory | Brutalist `scripts/changes/agent.mjs` builds `codex exec` arguments | Retired by DS0 |
-| Pipeline installs are rejected by the app | Brutalist `scripts/changes/app-update.mjs` installs `file:<absolute path>`; the app's `scripts/design-system-check.mjs` requires `file:vendor/<artifact>` and provenance | Retired by DS0 |
-| Pipeline releases are not pushed to GitHub | Brutalist worker promotes to local `main` only; the app's updater builds from GitHub `main` | Retired by DS0 |
-| Pipeline prompt and file check allow different paths | Prompt allows fixtures and the usage guide; `allowedPath()` in Brutalist `scripts/changes/worker.mjs` allows only `src/atomic/` | Retired by DS0 |
 | Local UI that published components could replace | Seven items A1–A7 in the [adoption audit](../design-system/adoption-audit.md#adopt-now) | DS1 |
-| Brutalist has no `CLAUDE.md` | Claude Code does not load Brutalist's `AGENTS.md` automatically | DS0 adds one to the package |
-| Every gap fix crosses two repositories | A Brutalist commit, a library build, an archive committed to `vendor/` (10 so far) and an app update | DS0 |
 
 ## Documentation
 

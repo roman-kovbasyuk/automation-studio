@@ -1,6 +1,6 @@
 # Current consumer boundary (2026-09-11)
 
-> **Historical record.** The compatibility exports, legacy components and token entry files listed below as retained were removed as unreachable code in M0 ([D31](../product/decisions.md), [M0 plan](../plans/2026-09-17-m0-stabilise.md)).
+> **Historical record.** The compatibility exports, legacy components and token entry files listed below as retained were removed as unreachable code in M0 ([D31](../product/decisions.md), [M0 plan](../plans/2026-09-17-m0-stabilise.md)). The archive update process described below was replaced by the workspace package in DS0 ([design system integration](../specs/design-system-integration.md)).
 
 The app imports public `brutalist-design-system` components and its stylesheet.
 `npm run design-system:update` rebuilds canonical main in a temporary clone,

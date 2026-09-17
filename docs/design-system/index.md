@@ -7,8 +7,8 @@ These pages support application UI work. They do not describe brands or produced
 Start with the root contracts:
 
 - [FRONTEND.md](../../FRONTEND.md): process, ownership, patterns, states and acceptance for every page, component and flow.
-- [DESIGN.md](../../DESIGN.md): how to apply the installed `brutalist-design-system` visual foundation.
-- [Vendor instructions](../../vendor/BRUTALIST_DESIGN_SYSTEM.md): updating and verifying the pinned package.
+- [DESIGN.md](../../DESIGN.md): how to apply the Brutalist visual foundation.
+- [Brutalist package](../../packages/brutalist-design-system/README.md): developing, verifying and consuming the workspace package.
 
 ## Pages
 

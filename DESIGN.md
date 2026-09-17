@@ -24,7 +24,7 @@ Use the foundation’s semantic color roles consistently: canvas, surface, text,
 - Keep text, focus and state indicators legible against their actual backgrounds.
 - Use supported themes and variants. Do not introduce local palettes, redefine upstream tokens or theme the interface from an output system.
 
-Resolve exact values from the installed package. A specimen’s palette is artifact content, not an application theme.
+Resolve exact values from the Brutalist package. A specimen’s palette is artifact content, not an application theme.
 
 ## Typography
 

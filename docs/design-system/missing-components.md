@@ -6,11 +6,11 @@ Patterns the application needs that the installed Brutalist package does not pro
 
 ## Rules
 
-- Check the installed exports and this list before writing local UI.
+- Check the package exports and this list before writing local UI.
 - A fallback uses unstyled native behaviour or a composition of public components. Never style a native element to imitate a missing library control.
-- Generic gaps get a change request through the Brutalist change protocol. Record its ID here.
-- Close an entry only in the change that replaces the fallback with the released component.
-- When the installed package changes, re-review this list and update the commit above. This will be enforced by `npm run design-system:check` (planned).
+- Generic gaps are fixed in `packages/brutalist-design-system` in the pull request that needs them. Record that pull request here.
+- Close an entry only in the change that replaces the fallback with the package component.
+- When the package changes, re-review this list and update the version above. DS2 makes this list checkable by `npm run design-system:check`.
 
 Status values: `open` (no request yet), `requested`, `available` (released, not yet adopted), `closed`.
 
@@ -52,4 +52,4 @@ Status values: `open` (no request yet), `requested`, `available` (released, not 
 
 - Application code imports public components and `brutalist-design-system/styles.css` only. Existing local import paths in `src/components/design-system/` are adapters (see the audit); do not add new skins there.
 - Product brand palettes, artwork fonts, slide layouts and export geometry are application data, not UI tokens.
-- `npm run design-system:check` rejects missing named exports, package or provenance drift, upstream token redefinitions, private component selectors and explicit `className`/`style` on directly imported upstream components. It cannot prove the effect of spread props, re-export chains or ancestor selectors; keep rendered checks for new routes and patterns.
+- `npm run design-system:check` rejects a non-workspace install, package imports of application code or undeclared modules, deep imports, unreviewed product vocabulary, missing named exports, package token redefinitions, private component selectors and explicit `className`/`style` on directly imported upstream components. It cannot prove the effect of spread props, re-export chains or ancestor selectors; keep rendered checks for new routes and patterns.
