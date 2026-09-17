@@ -48,5 +48,4 @@ Use these terms in product documents, specifications and the user interface. The
 | Six campaign modules (Brief, Copy, Visuals, Banners, Review, Distribute) | Four stages (Brief, Copy, Visuals, Assets) | Module IDs in `src/studio/campaign/moduleContracts.js` |
 | Review, designer approval | Escalation (designer) and acceptance (requester) | Campaign statuses `in_review`, `ready`, `approved` in `shared/workflowRules.js` |
 | Product recipes / product logic designer (node editor) | Recipe files | Admin area (`/mvp/admin/recipes`), `asset_workflow*` tables |
-| Project | Asset creation flow (for now) | Admin "Projects" view, `projectType` field |
 | Directions | Visuals | `directions` records and API routes |
