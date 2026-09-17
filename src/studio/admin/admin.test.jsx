@@ -121,7 +121,7 @@ function fixtureApi() {
   }
   return { api, requests }
 }
-const admin = { id: 'admin', role: 'admin' }
+const admin = { id: 'admin', role: 'admin', displayName: 'Admin User', email: 'admin@example.test' }
 const openEditor = (api, props = {}) =>
   render(
     <AdminApp
