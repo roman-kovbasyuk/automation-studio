@@ -8,6 +8,7 @@ import { createWorkspaceService } from '../services/workspaceService.js'
 import { createGenerationService } from '../services/generationService.js'
 import { createMockProvider } from '../providers/mockProvider.js'
 import { createMemoryAssetStore } from '../storage/memoryAssetStore.js'
+import { briefWithBriefing, confirmBriefing } from '../testing/briefingFixtures.js'
 
 test('visual methods preserve copy linkage, append batches and fence duplicate images', async () => {
   const schema = `visuals_test_${randomUUID().replaceAll('-', '')}`
@@ -21,13 +22,14 @@ test('visual methods preserve copy linkage, append batches and fence duplicate i
     const actor = { id: 'visual-marketer', role: 'marketer' }
     await pool.query("INSERT INTO users (id,email,role,display_name) VALUES ($1,'visuals@example.test','marketer','Visual test')", [actor.id])
     await createCampaignRepository(pool).create({ id: 'campaign', title: 'Autumn launch', createdBy: actor.id,
-      brief: { product: 'Headphones', audience: 'Commuters', objective: 'Shop', offer: '', locale: 'en', notes: '' } })
+      brief: briefWithBriefing({ product: 'Headphones', audience: 'Commuters', objective: 'Shop', offer: '', locale: 'en', notes: '' }) })
     const control = createGenerationControlPlane({ pool })
     const service = createGenerationService({ pool, controlPlane: control, assetStore: createMemoryAssetStore(), providers: { mock: createMockProvider() } })
     const read = () => createWorkspaceService({ pool }).getWorkspace({ actor, campaignId: 'campaign' })
     const directions = (input, key) => service.generateDirections({ actor, campaignId: 'campaign', idempotencyKey: key, input })
-    await expect(directions({ mode: 'campaign' }, 'too-early')).rejects.toMatchObject({ code: 'visual_input_required' })
+    await expect(directions({ mode: 'campaign' }, 'unconfirmed')).rejects.toMatchObject({ code: 'brief_confirmation_required' })
     await service.analyseBrief({ actor, campaignId: 'campaign', idempotencyKey: 'analysis', input: {} })
+    await confirmBriefing({ pool, actor, campaignId: 'campaign' })
     await service.generateCopy({ actor, campaignId: 'campaign', idempotencyKey: 'copy', input: {} })
     let workspace = await read()
     const [first, second] = workspace.copies[0].candidates

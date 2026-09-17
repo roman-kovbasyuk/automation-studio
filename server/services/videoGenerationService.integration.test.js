@@ -21,6 +21,7 @@ import { createDeliveryService } from './deliveryService.js'
 import { createTemplateRepository } from '../repositories/templateRepository.js'
 import { pilotTemplateFixture } from '../../shared/fixtures/pilotTemplate.js'
 import { hashCanonical } from '../../shared/canonicalJson.js'
+import { briefWithBriefing, confirmBriefing } from '../testing/briefingFixtures.js'
 
 async function setup() {
   const schema = `video_test_${randomUUID().replaceAll('-', '')}`
@@ -33,10 +34,11 @@ async function setup() {
   const actor = { id: 'video-user', role: 'marketer' }
   await pool.query("INSERT INTO users(id,email,role,display_name) VALUES($1,'video@example.test','marketer','Video')", [actor.id])
   await createCampaignRepository(pool).create({ id: 'video-campaign', title: 'Video fixture', createdBy: actor.id,
-    brief: { product: 'Bottle', audience: 'Hikers', objective: 'Shop', offer: '', locale: 'en', notes: '' } })
+    brief: briefWithBriefing({ product: 'Bottle', audience: 'Hikers', objective: 'Shop', offer: '', locale: 'en', notes: '' }) })
   const assetStore = createMemoryAssetStore()
   const generation = createGenerationService({ pool, assetStore, controlPlane: createGenerationControlPlane({ pool }), providers: { mock: createMockProvider() } })
   await generation.analyseBrief({ actor, campaignId: 'video-campaign', input: {}, idempotencyKey: 'brief' })
+  await confirmBriefing({ pool, actor, campaignId: 'video-campaign' })
   await generation.generateCopy({ actor, campaignId: 'video-campaign', input: {}, idempotencyKey: 'copy' })
   const directions = await generation.generateDirections({ actor, campaignId: 'video-campaign', input: { mode: 'campaign' }, idempotencyKey: 'directions' })
   const directionId = directions.body.job.result.directions[0].id

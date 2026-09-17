@@ -7,6 +7,7 @@ import { createGenerationControlPlane } from './generationJobRepository.js'
 import { createWorkspaceService } from '../services/workspaceService.js'
 import { createGenerationService } from '../services/generationService.js'
 import { createMockProvider } from '../providers/mockProvider.js'
+import { briefWithBriefing, confirmBriefing } from '../testing/briefingFixtures.js'
 
 test('copy batches append, retain independent approvals, and reserve at most 30 visible slots', async () => {
   const schema = `copy_options_test_${randomUUID().replaceAll('-', '')}`
@@ -20,7 +21,7 @@ test('copy batches append, retain independent approvals, and reserve at most 30 
     const actor = { id: 'copy-marketer', role: 'marketer' }
     await pool.query("INSERT INTO users (id,email,role,display_name) VALUES ($1,'copy-options@example.test','marketer','Copy test')", [actor.id])
     await createCampaignRepository(pool).create({ id: 'campaign', title: 'Copy test', createdBy: actor.id,
-      brief: { product: 'Studio', audience: 'Designers', objective: 'Trial', offer: '', locale: 'en', notes: '' } })
+      brief: briefWithBriefing({ product: 'Studio', audience: 'Designers', objective: 'Trial', offer: '', locale: 'en', notes: '' }) })
     const control = createGenerationControlPlane({ pool })
     const service = createGenerationService({ pool, controlPlane: control, providers: { mock: createMockProvider() } })
     const reader = createWorkspaceService({ pool })
@@ -28,6 +29,7 @@ test('copy batches append, retain independent approvals, and reserve at most 30 
     const options = workspace => workspace.copies.flatMap(set => set.candidates)
     const generate = key => service.generateCopy({ actor, campaignId: 'campaign', idempotencyKey: key, input: {} })
     await service.analyseBrief({ actor, campaignId: 'campaign', idempotencyKey: 'analysis', input: {} })
+    await confirmBriefing({ pool, actor, campaignId: 'campaign' })
     await generate('batch-1')
     let workspace = await read()
     const first = options(workspace)

@@ -18,6 +18,7 @@ import { createMemoryAssetStore } from '../storage/memoryAssetStore.js'
 import { createInProcessRenderer, RendererError } from '../rendering/inProcessRenderer.js'
 import { studioTemplates } from '../../shared/studioTemplates.js'
 import { hashCanonical } from '../../shared/canonicalJson.js'
+import { briefWithBriefing, confirmBriefing } from '../testing/briefingFixtures.js'
 
 test('batch resolves multiple approved source pairs, rejects invalid selections, and reviews/delivers every design × size', async () => {
   const schema = `banner_batch_${randomUUID().replaceAll('-', '')}`
@@ -31,7 +32,7 @@ test('batch resolves multiple approved source pairs, rejects invalid selections,
     await pool.query("INSERT INTO users (id,email,role,display_name) VALUES ('marketer','batch@example.test','marketer','Batch'), ('designer','designer@example.test','designer','Designer')")
     const actor = { id: 'marketer', role: 'marketer' }
     const common = { actor, campaignId: 'campaign' }
-    const brief = { product: 'Headphones', audience: 'Commuters', objective: 'Shop', offer: '20% off until Sunday', locale: 'en', notes: '' }
+    const brief = briefWithBriefing({ product: 'Headphones', audience: 'Commuters', objective: 'Shop', offer: '20% off until Sunday', locale: 'en', notes: '' })
     for (const id of ['campaign', 'other']) await createCampaignRepository(pool).create({ id, title: 'Launch', createdBy: actor.id, brief })
     for (const manifest of studioTemplates) await createTemplateRepository(pool).createVersion({ ...manifest, manifest, manifestHash: hashCanonical(manifest), createdBy: actor.id })
     const assetStore = createMemoryAssetStore()
@@ -39,8 +40,10 @@ test('batch resolves multiple approved source pairs, rejects invalid selections,
     const versions = createVersionService({ pool, assetStore })
     const read = () => createWorkspaceService({ pool }).getWorkspace(common)
     await generation.analyseBrief({ ...common, input: {}, idempotencyKey: 'brief' })
+    await confirmBriefing({ pool, ...common })
     await generation.generateCopy({ ...common, input: {}, idempotencyKey: 'copy' })
     await generation.analyseBrief({ ...common, campaignId: 'other', input: {}, idempotencyKey: 'other-brief' })
+    await confirmBriefing({ pool, ...common, campaignId: 'other' })
     const foreignCopy = await generation.generateCopy({ ...common, campaignId: 'other', input: {}, idempotencyKey: 'other-copy' })
     const set = (await read()).copies[0]
     await generation.generateCopy({ ...common, input: {}, idempotencyKey: 'copy-second-set' })

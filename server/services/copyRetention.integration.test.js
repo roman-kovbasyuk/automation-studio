@@ -5,11 +5,12 @@ import { runMigrations } from '../db/migrate.js'
 import { createCampaignRepository } from '../repositories/campaignRepository.js'
 import { createGenerationControlPlane } from '../repositories/generationJobRepository.js'
 import { createGenerationService } from './generationService.js'
-import { createWorkflowService } from './workflowService.js'
 import { createWorkspaceService } from './workspaceService.js'
 import { createMockProvider } from '../providers/mockProvider.js'
 import { createMemoryAssetStore } from '../storage/memoryAssetStore.js'
 import { hashCanonical } from '../../shared/canonicalJson.js'
+import { copyProjection } from '../../shared/briefingDependencies.js'
+import { briefWithBriefing, confirmBriefing } from '../testing/briefingFixtures.js'
 
 test('retains only the previous copy cohort for the current brief, clears approvals, and invalidates on the next edit', async () => {
   const schema = `retain_${randomUUID().replaceAll('-', '')}`
@@ -23,17 +24,15 @@ test('retains only the previous copy cohort for the current brief, clears approv
     const actor = { id: 'retention-editor', role: 'marketer' }
     await pool.query("INSERT INTO users (id,email,role,display_name) VALUES ($1,'retention@example.test','marketer','Retention test')", [actor.id])
     const campaigns = createCampaignRepository(pool)
-    await campaigns.create({ id: 'retention-campaign', title: 'Launch', createdBy: actor.id, brief: { product: 'Headphones', audience: 'Commuters', objective: 'Shop', offer: '', locale: 'en', notes: 'Launch on Instagram.' } })
+    await campaigns.create({ id: 'retention-campaign', title: 'Launch', createdBy: actor.id, brief: briefWithBriefing({ product: 'Headphones', audience: 'Commuters', objective: 'Shop', offer: '', locale: 'en', notes: 'Launch on Instagram.' }) })
     const service = createGenerationService({ pool, controlPlane: createGenerationControlPlane({ pool }), assetStore: createMemoryAssetStore(), providers: { mock: createMockProvider() } })
-    const workflow = createWorkflowService({ pool })
     const request = { actor, campaignId: 'retention-campaign' }
     const read = () => createWorkspaceService({ pool }).getWorkspace(request)
     await service.analyseBrief({ ...request, idempotencyKey: 'analysis', input: {} })
+    await confirmBriefing({ pool, ...request })
     await service.generateCopy({ ...request, idempotencyKey: 'old', input: {} })
-    const change = async summary => {
-      const campaign = await campaigns.findById(request.campaignId)
-      return workflow.patchCampaign({ ...request, expectedRevision: campaign.revision, patch: { brief: { ...campaign.brief, analysis: { ...campaign.brief.analysis, summary } } } })
-    }
+    // Changing a confirmed answer that copy depends on makes existing copy stale.
+    const change = summary => confirmBriefing({ pool, ...request, answers: { summary }, idempotencyKey: `change:${summary.replaceAll(' ', '-')}` })
     await change('Updated campaign summary')
     await service.generateCopy({ ...request, idempotencyKey: 'previous', input: {} })
     const previous = (await read()).copies.filter(set => !set.stale)
@@ -48,7 +47,7 @@ test('retains only the previous copy cohort for the current brief, clears approv
     expect(after.copies.filter(set => !set.stale).every(set => set.approvedCandidateIds.length === 0)).toBe(true)
     expect(after.jobs).toHaveLength(before.jobs.length)
     const retention = await pool.query('SELECT retained_brief_hash FROM copy_sets WHERE stale = false')
-    expect(retention.rows[0].retained_brief_hash).toBe(hashCanonical(after.campaign.brief))
+    expect(retention.rows[0].retained_brief_hash).toBe(hashCanonical(copyProjection(after.campaign.brief)))
     await service.approveCopy({ ...request, expectedRevision: after.campaign.revision, input: { copyId: previous[0].candidates[0].id } })
     expect((await read()).copies.find(set => set.id === previous[0].id).approvedCandidateIds).toContain(previous[0].candidates[0].id)
     await change('Another edit')
