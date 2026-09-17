@@ -31,6 +31,7 @@ function harness(overrides = {}) {
       },
     })),
     markDispatched: vi.fn(async () => true),
+    failBeforeDispatch: vi.fn(async ({ errorCode }) => ({ status: 201, body: { job: { ...job, status: 'failed', errorCode } } })),
     waitForResult: vi.fn(async () => ({ status: 202, body: { job: { ...job, status: 'unknown' } } })),
     completeProviderResult: vi.fn(async () => ({ status: 201, body: { job: succeeded } })),
     completeGeneratedImage: vi.fn(async ({ asset }) => ({
@@ -334,4 +335,69 @@ describe('generation service external-call recovery', () => {
     expect(controlPlane.recoverGeneration).toHaveBeenCalledOnce()
   })
 
+})
+
+describe('generation outcome classification', () => {
+  const failedResult = { status: 201, body: { job: { ...job, status: 'failed' } } }
+  const failWith = error => harness({
+    provider: { generateCopy: vi.fn(async () => { throw error }) },
+    controlPlane: { completeProviderResult: vi.fn(async () => failedResult) },
+  })
+
+  test('fails before dispatch without calling a provider when the job provider is not configured', async () => {
+    const { service, provider, controlPlane } = harness({
+      controlPlane: { prepareGeneration: vi.fn(async () => ({ kind: 'owner', ownerToken: 'owner-1', job: { ...job, provider: 'gemini' }, context: { brief, analysis: { summary: 'A course.', themes: [], warnings: [] } } })) },
+    })
+    const outcome = await service.generateCopy({ actor, campaignId: 'campaign-1', idempotencyKey: 'no-provider', input: {} })
+
+    expect(outcome.body.job).toMatchObject({ status: 'failed', errorCode: 'provider_configuration' })
+    expect(controlPlane.failBeforeDispatch).toHaveBeenCalledWith({ jobId: 'job-1', ownerToken: 'owner-1', errorCode: 'provider_configuration' })
+    expect(controlPlane.markDispatched).not.toHaveBeenCalled()
+    expect(controlPlane.recoverGeneration).not.toHaveBeenCalled()
+    expect(provider.generateCopy).not.toHaveBeenCalled()
+  })
+
+  test.each([
+    ['a provider error raised before sending', Object.assign(new Error('Campaign sources require managed Vertex AI EU.'), { dispatched: false }), 'provider_configuration', 0],
+    ['an invalid provider request', Object.assign(new Error('Invalid input'), { name: 'ZodError', code: 'invalid_request', dispatched: false }), 'invalid_request', 0],
+    ['an invalid provider result', Object.assign(new Error('Invalid result'), { name: 'ZodError', code: 'invalid_output' }), 'invalid_output', 3_000],
+    ['a provider schema error of unknown origin', Object.assign(new Error('Invalid'), { name: 'ZodError' }), 'invalid_output', 3_000],
+    ['a provider HTTP 400 rejection', Object.assign(new Error('Bad request'), { status: 400 }), 'provider_rejected', 0],
+    ['a provider HTTP 403 rejection', Object.assign(new Error('Forbidden'), { status: 403 }), 'provider_rejected', 0],
+    ['a provider HTTP 404 rejection', Object.assign(new Error('Model not found'), { response: { status: 404 } }), 'provider_rejected', 0],
+  ])('records %s as a known failure without an uncertain outcome', async (_label, error, errorCode, actualCostMicrounits) => {
+    const { service, controlPlane } = failWith(error)
+    const outcome = await service.generateCopy({ actor, campaignId: 'campaign-1', idempotencyKey: `known-${errorCode}`, input: {} })
+
+    expect(outcome).toEqual(failedResult)
+    expect(controlPlane.completeProviderResult).toHaveBeenCalledWith(expect.objectContaining({
+      jobId: 'job-1', ownerToken: 'owner-1', status: 'failed', errorCode, actualCostMicrounits, resultMetadata: null,
+    }))
+    expect(controlPlane.recoverGeneration).not.toHaveBeenCalled()
+  })
+
+  test.each([
+    ['a network error after sending', new Error('socket hang up'), 'provider_call_ambiguous'],
+    ['a provider server error', Object.assign(new Error('Internal'), { status: 500 }), 'provider_call_ambiguous'],
+    ['an aborted call', Object.assign(new Error('Aborted'), { name: 'AbortError' }), 'provider_timeout'],
+  ])('keeps %s uncertain', async (_label, error, reason) => {
+    const { service, controlPlane } = failWith(error)
+    await service.generateCopy({ actor, campaignId: 'campaign-1', idempotencyKey: `uncertain-${reason}`, input: {} })
+
+    expect(controlPlane.recoverGeneration).toHaveBeenCalledWith(expect.objectContaining({ jobId: 'job-1', ownerToken: 'owner-1', reason }))
+    expect(controlPlane.completeProviderResult).not.toHaveBeenCalled()
+  })
+
+  test('an invalid request never reaches the provider', async () => {
+    const { service, provider, controlPlane } = harness({
+      controlPlane: {
+        prepareGeneration: vi.fn(async () => ({ kind: 'owner', ownerToken: 'owner-1', job, context: { brief: { product: 42 }, analysis: null } })),
+        completeProviderResult: vi.fn(async () => failedResult),
+      },
+    })
+    await service.generateCopy({ actor, campaignId: 'campaign-1', idempotencyKey: 'bad-input', input: {} })
+
+    expect(provider.generateCopy).not.toHaveBeenCalled()
+    expect(controlPlane.completeProviderResult).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed', errorCode: 'invalid_request', actualCostMicrounits: 0 }))
+  })
 })

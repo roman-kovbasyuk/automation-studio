@@ -2218,6 +2218,25 @@ describe('persisted generation control plane', () => {
     pools.delete(harness.pool)
   })
 
+  test('records a provider rejection as a failed job without cost and does not block the next attempt', async () => {
+    const baseProvider = createMockProvider()
+    const generateCopy = vi.fn(async () => { throw Object.assign(new Error('Request rejected'), { status: 400 }) })
+    const harness = await generationHarness({ provider: { ...baseProvider, generateCopy }, briefing: 'v2' })
+    const common = { actor: harness.actor, campaignId: harness.campaign.id }
+    await harness.service.analyseBrief({ ...common, idempotencyKey: 'analysis', input: {} })
+    await confirmBriefing({ pool: harness.pool, ...common })
+
+    const rejected = await harness.service.generateCopy({ ...common, idempotencyKey: 'rejected-copy', input: {} })
+    expect(rejected.body.job).toMatchObject({ status: 'failed', errorCode: 'provider_rejected', unknownReason: null, actualCostMicrounits: 0 })
+    expect((await harness.pool.query('SELECT dispatch_state FROM generation_jobs WHERE id = $1', [rejected.body.job.id])).rows[0].dispatch_state).toBe('dispatched')
+
+    const retried = await harness.service.generateCopy({ ...common, idempotencyKey: 'retried-copy', input: {} })
+    expect(retried.body.job).toMatchObject({ status: 'failed', errorCode: 'provider_rejected' })
+    expect(generateCopy).toHaveBeenCalledTimes(2)
+    await harness.pool.end()
+    pools.delete(harness.pool)
+  })
+
   test('persists ambiguous calls as unknown, retains their full reservation, and never redispatches the key', async () => {
     const baseProvider = createMockProvider()
     const call = vi.fn(() => new Promise(() => {}))
