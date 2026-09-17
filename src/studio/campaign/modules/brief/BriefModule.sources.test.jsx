@@ -6,7 +6,7 @@ const answers = {
   summary: 'A clear campaign idea.', audience: 'Commuters', copyMode: 'create_new',
   ageGroups: [], gender: 'all', reach: 'national', goal: 'signups', goalCustom: '', visualTags: [],
 }
-const proposal = { foundCopy: [{ id: 'copy-1', fields: { headline: 'Travel lighter.', body: '', offer: '', cta: '' }, sourceRefs: [{ sourceId: 'source-1', label: 'campaign.pdf', blockId: 'page-2', page: 2 }] }] }
+const proposal = { answers: { ...answers, copyMode: null }, suggestedVisualTags: [], foundCopy: [{ id: 'copy-1', fields: { headline: 'Travel lighter.', body: '', offer: '', cta: '' }, verification: 'text_verified', sourceRefs: [{ sourceId: 'source-1', label: 'campaign.pdf', blockId: 'page-2', page: 2 }] }] }
 
 test('opens the same source preview from found copy only after an explicit click', async () => {
   const getSource = vi.fn(async () => ({ source: { id: 'source-1', name: 'campaign.pdf' }, blocks: [{ id: 'page-2', text: 'Travel lighter.', page: 2 }] }))
@@ -18,8 +18,7 @@ test('opens the same source preview from found copy only after an explicit click
   render(<BriefModule port={port} />)
 
   expect(getSource).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByRole('button', { name: 'View found copy' }))
-  fireEvent.click(screen.getByRole('button', { name: 'Open source campaign.pdf · page 2' }))
+  fireEvent.click(screen.getByRole('button', { name: 'From campaign.pdf' }))
   await waitFor(() => expect(getSource).toHaveBeenCalledWith('source-1'))
   expect(screen.getByRole('dialog', { name: 'campaign.pdf' })).toHaveTextContent('Travel lighter.')
 })

@@ -5,7 +5,9 @@ import { InlineText } from '../../../../components/design-system/molecules/Inlin
 import { AsyncStatus } from '../../../../components/design-system/molecules/AsyncStatus.jsx'
 import { PromptInputBlock } from '../../../../components/design-system/organisms/PromptInputBlock.jsx'
 import { briefAnalysisSchema } from '../../../../../shared/briefAnalysis.js'
-import { ReviewedBriefView } from './ReviewedBriefView.jsx'
+import { AnalysisProgress } from './AnalysisProgress.jsx'
+import { BriefReview } from './BriefReview.jsx'
+import { initialDraft } from './briefReviewModel.js'
 import { BriefSourcesView } from './BriefSourcesView.jsx'
 import './brief.css'
 
@@ -18,16 +20,25 @@ export default function BriefModule({ port }) {
   const analysis = port.input.analysis ?? (resultDirty ? latestAnalysis.current : null)
   const [chat, setChat] = useState(''), [error, setError] = useState(''), [submitting, setSubmitting] = useState(false)
   const source = useRef(port.inputKey), busy = useRef(false), dirtyFields = useRef(new Set())
-  const [reviewDraft, setReviewDraft] = useState(() => briefing?.answers ?? null)
-  const [reviewDirty, setReviewDirty] = useState(false), [reviewSaving, setReviewSaving] = useState(false), [reviewError, setReviewError] = useState('')
+  const proposal = port.input.analysis?.briefingProposal
+  const savedDraft = () => briefing?.answers && proposal ? initialDraft(briefing.answers, proposal) : briefing?.answers ?? null
+  const [reviewDraft, setReviewDraft] = useState(savedDraft)
+  const [reviewDirty, setReviewDirty] = useState(false), [reviewSaving, setReviewSaving] = useState(false)
   const reviewInputKey = useRef(port.inputKey)
   const sourceControls = useRef(null)
+  const analysisJob = useRef(briefing?.analysisJobId ?? null)
+  const [reanalysed, setReanalysed] = useState(false)
   useEffect(() => {
     if (!reviewDirty && briefing?.schemaVersion === 2 && reviewInputKey.current !== port.inputKey) {
-      setReviewDraft(briefing.answers)
+      setReviewDraft(savedDraft())
       reviewInputKey.current = port.inputKey
     }
   }, [briefing, port.inputKey, reviewDirty])
+  useEffect(() => {
+    const current = briefing?.analysisJobId ?? null
+    if (current && analysisJob.current && current !== analysisJob.current) setReanalysed(true)
+    if (current) analysisJob.current = current
+  }, [briefing?.analysisJobId])
   function markDirty(field, dirty) {
     dirty ? dirtyFields.current.add(field) : dirtyFields.current.delete(field)
     setResultDirty(dirtyFields.current.size > 0)
@@ -35,8 +46,7 @@ export default function BriefModule({ port }) {
   }
   const running = port.operation.kind === 'running'
   const locked = !port.access.canEdit || !port.input.analysis || submitting || running
-  const proposal = port.input.analysis?.briefingProposal
-  const reviewedDraft = reviewDraft ?? briefing?.answers
+  const reviewedDraft = reviewDraft ?? savedDraft()
   const reviewDisabled = !port.access.canEdit || running || reviewSaving
   const sources = port.input.sources ?? (proposal?.foundCopy ? [...new Map(proposal.foundCopy.flatMap(candidate => candidate.sourceRefs).map(ref => [ref.sourceId, { id: ref.sourceId, name: ref.label, status: 'ready' }])).values()] : [])
   const changeReview = nextDraft => {
@@ -44,19 +54,24 @@ export default function BriefModule({ port }) {
     setReviewDirty(true)
     port.setDirty(true)
   }
-  async function confirmReview(nextDraft = reviewedDraft) {
-    if (reviewDisabled || !nextDraft) return
+  /** Confirms the reviewed draft and returns the result, so the review can place any error. */
+  async function confirmReview(nextDraft) {
+    if (reviewDisabled || !nextDraft) return { ok: false }
     setReviewSaving(true)
-    setReviewError('')
     try {
       const result = await port.actions.confirm({ sourceKey: briefing.sourceKey, analysisJobId: briefing.analysisJobId, answers: nextDraft }, { expectedInputKey: reviewInputKey.current })
-      if (!result?.ok) setReviewError(result?.message ?? 'Unable to confirm the brief.')
-      else {
+      if (result?.ok) {
         setReviewDirty(false)
         port.setDirty(false)
       }
-    } catch (failure) { setReviewError(failure.message) }
+      return result ?? { ok: false }
+    } catch (failure) { return { ok: false, message: failure.message } }
     finally { setReviewSaving(false) }
+  }
+  const discardReview = () => {
+    setReviewDraft(savedDraft())
+    setReviewDirty(false)
+    port.setDirty(false)
   }
   async function refine() {
     if (locked || busy.current || !chat.trim()) return
@@ -76,10 +91,12 @@ export default function BriefModule({ port }) {
       if (!result.success) return { ok: false, message: list ? 'Use up to 20 comma-separated values, at most 100 characters each.' : 'Shorten this value and try again.' }
       return port.actions.save({ brief: { ...brief, analysis: result.data } }, { expectedInputKey })
     }} />
+  if (briefing?.schemaVersion === 2 && proposal && running && port.operation.actionId === 'analyze') return <AnalysisProgress />
   if (briefing?.schemaVersion === 2 && proposal && reviewedDraft) return <>
-    <ReviewedBriefView draft={reviewedDraft} foundCopy={proposal.foundCopy} sources={sources}
-      disabled={reviewDisabled} error={reviewError || port.operation.error?.message || ''} confirmed={Boolean(briefing.confirmation)}
-      onChange={changeReview} onConfirm={confirmReview} onOpenSource={sourceId => sourceControls.current?.openSource(sourceId)} />
+    <BriefReview key={briefing.analysisJobId} brief={brief} proposal={proposal} draft={reviewedDraft} dirty={reviewDirty}
+      readOnly={!port.access.canEdit} busy={running || reviewSaving} error={port.operation.error?.message ?? ''}
+      notice={reanalysed ? 'Your materials changed, so the settings were suggested again.' : ''}
+      onChange={changeReview} onConfirm={confirmReview} onDiscard={discardReview} onOpenSource={sourceId => sourceControls.current?.openSource(sourceId)} />
     <BriefSourcesView ref={sourceControls} sources={sources} disabled={!port.access.canEdit || running || reviewDirty}
       actions={{ getSource: port.actions.getSource, retrySource: port.actions.retrySource, removeSource: port.actions.removeSource }} />
   </>

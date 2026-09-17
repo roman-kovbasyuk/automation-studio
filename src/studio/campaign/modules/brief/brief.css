@@ -4,41 +4,13 @@
 
 .bs-brief-results-summary > .v2-inline-text-value { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; }
 
-/* Keep every Brief fact value on the same leading-2 rhythm. */
-.bs-brief-questions { display: grid; gap: var(--a-space-6); min-width: 0; container-type: inline-size; }
-.bs-brief-questions__campaign { display: grid; gap: var(--a-space-3); }
-.bs-brief-questions__tags { display: flex; flex-wrap: wrap; align-items: center; gap: var(--a-space-3); }
 .bs-found-copy-dialog { display: grid; gap: var(--a-space-4); }
 .bs-found-copy-dialog dl, .bs-found-copy-dialog__sources { display: grid; gap: var(--a-space-3); }
-@container (min-width: 640px) { .bs-brief-questions__campaign { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-.bs-briefing-wizard { display: grid; gap: var(--a-space-7); max-width: 840px; }
-.bs-briefing-wizard__intro { display: grid; gap: var(--a-space-3); max-width: 65ch; }
-.bs-briefing-wizard__intro h2 { margin: 0; font-size: var(--a-type-h1-size); letter-spacing: -.025em; }
-.bs-briefing-wizard__intro p { margin: 0; color: var(--a-color-secondary); line-height: 1.6; }
-.bs-briefing-wizard__stack { display: grid; gap: var(--a-space-4); }
-.bs-briefing-card { display: grid; gap: var(--a-space-5); padding: var(--a-space-6); border: 1px solid var(--a-color-ink); border-radius: var(--a-radius-small); background: var(--a-color-surface); box-shadow: 3px 3px 0 color-mix(in srgb, var(--a-color-ink) 15%, transparent); }
-.bs-briefing-card.is-active { box-shadow: 5px 5px 0 var(--a-color-ink); }
-.bs-briefing-card.is-complete:not(.is-active) { background: color-mix(in srgb, var(--a-color-canvas) 70%, var(--a-color-surface)); }
-.bs-briefing-card__header { display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: var(--a-space-4); }
-.bs-briefing-card__number { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid var(--a-color-ink); border-radius: 50%; font-size: var(--a-type-small-size); font-weight: 600; }
-.bs-briefing-card.is-complete .bs-briefing-card__number { background: var(--a-color-ink); color: var(--a-color-surface); }
-.bs-briefing-card__header h2 { margin: 0 0 4px; font-size: var(--a-type-h3-size); }
-.bs-briefing-card__header p { margin: 0; color: var(--a-color-secondary); font-size: var(--a-type-small-size); }
-.bs-briefing-card__body { display: grid; gap: var(--a-space-5); padding-left: 48px; }
-.bs-briefing-card__choice-row { display: grid; gap: var(--a-space-3); }
-.bs-briefing-card__choice-row p, .bs-briefing-card__body > p { margin: 0; color: var(--a-color-secondary); font-size: var(--a-type-small-size); line-height: 1.55; }
-.bs-briefing-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--a-space-5); }
-.bs-briefing-tags { display: flex; flex-wrap: wrap; align-items: center; gap: var(--a-space-3); }
-.bs-briefing-tags input { min-width: 150px; border: 1px dashed var(--a-color-ink); padding: 9px 10px; background: var(--a-color-surface); }
-.bs-briefing-autoadvance { color: var(--a-color-success) !important; font-weight: 600; }
-.bs-campaign-layout--briefing { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'heading' 'content'; }
-.bs-campaign-layout--briefing > .bs-stage { max-width: 900px; }
-.bs-campaign-layout--briefing .bs-campaign-heading { margin-bottom: 18px; }
-@media (max-width: 640px) {
-  .bs-briefing-card { padding: var(--a-space-5); }
-  .bs-briefing-card__body { padding-left: 0; }
-  .bs-briefing-card__header { grid-template-columns: auto 1fr; }
-  .bs-briefing-card__header > button { grid-column: 2; justify-self: start; }
-  .bs-briefing-grid { grid-template-columns: 1fr; }
-}
+/* Stepwise brief review: layout only; components keep their own appearance. */
+.bs-brief-review { display: grid; gap: var(--a-space-4); min-width: 0; max-width: 840px; }
+.bs-brief-step__actions { display: grid; justify-items: end; gap: var(--a-space-3); text-align: end; }
+.bs-brief-save { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--a-space-3); }
+.bs-brief-settings { display: grid; gap: var(--a-space-6); min-width: 0; }
+.bs-found-copy-list { display: grid; gap: var(--a-space-4); margin: 0; padding: 0; list-style: none; }
+.bs-brief-keywords { display: flex; flex-wrap: wrap; gap: var(--a-space-2); margin: 0; padding: 0; list-style: none; }

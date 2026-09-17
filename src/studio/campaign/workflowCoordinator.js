@@ -110,15 +110,18 @@ export function createWorkflowCoordinator({ runtime, onNavigate = () => {} }) {
         return result
       },
       confirm: async(input,options)=>{
+        const saving=Boolean(runtime.getSnapshot('brief').input.brief?.briefing?.confirmation)
         const result=await brief.confirm(input,options)
         if(!result.ok) return result
         runtime.setDirty('brief',false)
-        if(result.receipt?.initialCopy==='offer_generation') {
+        const writesCopy=result.receipt?.initialCopy==='offer_generation'
+        if(writesCopy) {
           // The Copy operation owns its failure/retry. Confirmation is already
           // durable and must not leave the Brief draft on its old revision.
           await copy.generate({initial:true,confirmationId:result.receipt.confirmationId})
         }
-        onNavigate('copy')
+        // Finalizing opens Copy; saving changes to a confirmed brief stays on Brief unless new copy is being written.
+        if(!saving||writesCopy) onNavigate('copy')
         return {ok:true}
       },
       refine: (instruction, options = {}) => brief.analyze({ ...options, instruction }) }),
