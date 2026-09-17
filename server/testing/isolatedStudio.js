@@ -26,7 +26,7 @@ import { assertIsolatedSchema, isolatedDatabaseUrl } from './postgresIsolation.j
 
 const roles = ['marketer', 'designer', 'admin']
 
-export async function createIsolatedStudio({briefingEnabled=false,sourceExtractor}={}) {
+export async function createIsolatedStudio({briefingEnabled=true,sourceExtractor}={}) {
   const schema = `runtime_flow_${randomUUID().replaceAll('-', '')}`
   if (!/^runtime_flow_[0-9a-f]{32}$/.test(schema)) throw new Error('Unsafe isolated schema name')
   const connectionString = process.env.TEST_DATABASE_URL ?? 'postgresql:///banner_studio_test'

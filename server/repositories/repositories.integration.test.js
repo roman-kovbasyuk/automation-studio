@@ -542,7 +542,7 @@ describe('persistent workflow API checkpoint', () => {
     const firstPool = makePool()
     const actorId = await insertUser(firstPool, { id: 'workflow-admin', role: 'admin' })
     const actor = { id: actorId, role: 'admin', disabled: false }
-    const firstService = createWorkflowService({ pool: firstPool })
+    const firstService = createWorkflowService({ pool: firstPool, briefingEnabled: true })
     const firstApp = buildApp({ resolveActor: async () => actor, workflowService: firstService })
     const response = await firstApp.inject({
       method: 'POST',
