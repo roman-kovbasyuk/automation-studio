@@ -54,16 +54,17 @@ These are expected gaps between the current code and the [target model](../produ
 
 ## Design-system integration
 
-Found on 17 September 2026. The target fixes are specified in [design system integration](../specs/design-system-integration.md) and Brutalist's change protocol v2.
+Found on 17 September 2026. The target fix is specified in [design system integration](../specs/design-system-integration.md): Brutalist moves into this repository as a workspace package (D36), which retires the cross-repository change pipeline.
 
 | Issue | Evidence | When |
 | --- | --- | --- |
-| The change pipeline only runs Codex and assumes Observatory | Brutalist `scripts/changes/agent.mjs` builds `codex exec` arguments | Rollout step 3 |
-| Pipeline installs are rejected by the app | Brutalist `scripts/changes/app-update.mjs` installs `file:<absolute path>`; the app's `scripts/design-system-check.mjs` requires `file:vendor/<artifact>` and provenance | Rollout step 2 |
-| Pipeline releases are not pushed to GitHub | Brutalist worker promotes to local `main` only; the app's updater builds from GitHub `main` | Rollout step 2 |
-| Pipeline prompt and file check allow different paths | Prompt allows fixtures and the usage guide; `allowedPath()` in Brutalist `scripts/changes/worker.mjs` allows only `src/atomic/` | Rollout step 3 |
-| Local UI that published components could replace | Seven items A1–A7 in the [adoption audit](../design-system/adoption-audit.md#adopt-now) | Rollout step 1 |
-| Brutalist has no `CLAUDE.md` | Claude Code does not load Brutalist's `AGENTS.md` automatically | Rollout step 3 |
+| The change pipeline only runs Codex and assumes Observatory | Brutalist `scripts/changes/agent.mjs` builds `codex exec` arguments | Retired by DS0 |
+| Pipeline installs are rejected by the app | Brutalist `scripts/changes/app-update.mjs` installs `file:<absolute path>`; the app's `scripts/design-system-check.mjs` requires `file:vendor/<artifact>` and provenance | Retired by DS0 |
+| Pipeline releases are not pushed to GitHub | Brutalist worker promotes to local `main` only; the app's updater builds from GitHub `main` | Retired by DS0 |
+| Pipeline prompt and file check allow different paths | Prompt allows fixtures and the usage guide; `allowedPath()` in Brutalist `scripts/changes/worker.mjs` allows only `src/atomic/` | Retired by DS0 |
+| Local UI that published components could replace | Seven items A1–A7 in the [adoption audit](../design-system/adoption-audit.md#adopt-now) | DS1 |
+| Brutalist has no `CLAUDE.md` | Claude Code does not load Brutalist's `AGENTS.md` automatically | DS0 adds one to the package |
+| Every gap fix crosses two repositories | A Brutalist commit, a library build, an archive committed to `vendor/` (10 so far) and an app update | DS0 |
 
 ## Documentation
 

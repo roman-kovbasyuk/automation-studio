@@ -242,7 +242,7 @@ Targets are set from the baseline of the first pilot week (D29).
 | M3 Deck recipe | Folkeuniversitetet slide templates with placeholders, outline and fill, PPTX export, PPTX escalation | COPY-4–5, VIS-2, ASSET-2, TPL-4–5, ESC-3 (decks) |
 | M4 Pilot | Real Folkeuniversitetet briefs, live AI, baseline week, measures | Section 9 |
 
-The design-system track (DS1–DS5 in the [roadmap](roadmap.md)) runs alongside M0–M2.
+The design-system track (DS0–DS3 in the [roadmap](roadmap.md)) runs alongside M0–M2.
 
 ## 11. Risks
 
@@ -264,7 +264,7 @@ The design-system track (DS1–DS5 in the [roadmap](roadmap.md)) runs alongside 
 - A Folkeuniversitetet slide template set exists before M3 build (TPL-4).
 - Gemini text, image and review models are available through Vertex AI in the EU.
 - The Figma plugin and handoff services keep working for banner escalations.
-- The Brutalist change requests R1–R3 are released before the M2 interface.
+- The Brutalist gap fixes R1–R3 are made in the workspace package before the M2 interface (D36).
 
 ## 13. Open questions
 

@@ -1,6 +1,6 @@
 # Decision log
 
-**Status:** Current · **Updated:** 16 September 2026
+**Status:** Current · **Updated:** 17 September 2026
 
 Each decision records what was decided, when and what it replaces. A decision is not proof of implementation; check [known issues](../engineering/known-issues.md) and the code for the current state.
 
@@ -21,9 +21,6 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D11 | **`docs/` is the single documentation source.** The team site in `docs-site/` renders it. | 16 Sep 2026 | Separate content in `docs-site/` and `docs/` |
 | D12 | Superseded specifications, plans and reports move to **`docs/archive/`** with an index. They are never an authority. | 16 Sep 2026 | Dated specs and plans kept beside current docs |
 | D13 | **Use Brutalist components first.** Generic needs are added to Brutalist; product-specific compositions stay in the app. See [design system integration](../specs/design-system-integration.md). | 17 Sep 2026 | — |
-| D14 | **Brutalist changes go only through the change protocol.** Additive requests from Automation Studio are pre-approved; breaking changes need the owner's approval. | 17 Sep 2026 | The rule requiring explicit authorization for every external-package change |
-| D15 | **The change protocol is agent-agnostic.** Any agent or person can implement a request; pull mode is the default; Codex, Claude Code and command adapters are optional. | 17 Sep 2026 | Codex-only implementation in the v1 pipeline |
-| D16 | **One install path, owned by the app.** Releases are installed only through the app's updater (vendored artifact plus provenance). Brutalist releases are pushed to GitHub (`main` and a version tag) before any app installs them. | 17 Sep 2026 | Direct installation of local absolute package paths by the v1 pipeline |
 | D17 | **Decks are delivered as editable PPTX only.** No PDF or slide PNG downloads. | 17 Sep 2026 | Provisional P6 (PDF plus PNG per slide) |
 | D18 | **Escalated decks are improved in the PPTX itself.** The designer downloads the generated PPTX, edits it in PowerPoint or Keynote and uploads it back; the requester accepts it. Banners keep the Figma route. | 17 Sep 2026 | Figma round trip for decks |
 | D19 | **Deck image slots use the placeholder defined in the template.** Each slide template declares what its image slots show until an image is inserted (for example a labelled grey box). No image generation or upload for decks in the proof of concept. | 17 Sep 2026 | Provisional P7 (AI-generated artwork or uploads) |
@@ -33,8 +30,6 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D23 | **Users and documentation call the top-level record a Project.** "Asset creation flow" names the four-stage process inside a project. | 17 Sep 2026 | Naming part of D6 ("asset creation flow" as the record name) |
 | D24 | **The design-system gap list is stored as JSON** and rendered into its documentation page. | 17 Sep 2026 | Provisional P1 |
 | D25 | **Brutalist releases use semantic versions:** before 1.0, patch for additive changes and minor for breaking changes. | 17 Sep 2026 | Provisional P2; fixed `0.1.0-atomic.0` |
-| D26 | **The change queue runs on the owner's machine for the pilot; Observatory reporting is optional.** | 17 Sep 2026 | Provisional P3, P4 |
-| D27 | **Pull-mode claims do not expire.** A claimed request stays with its claimant until submitted or released. | 17 Sep 2026 | Provisional P5 (2-hour renewable claims) |
 | D28 | **Roman Kovbasyuk is the pilot designer** and handles escalations. Target turnaround is **one business day** from request to returned asset. | 17 Sep 2026 | Open question (pilot designer and turnaround) |
 | D29 | **Pilot measure targets are set after the first pilot week,** from the baseline measured in that week. | 17 Sep 2026 | Targets set before the pilot starts |
 | D30 | **AI agents do not use the Observatory task tracker** in Automation Studio or Brutalist. The instruction is removed from Brutalist's `AGENTS.md`; the change pipeline may still report to Observatory when configured (D26). | 17 Sep 2026 | Brutalist `AGENTS.md` Task Observatory section |
@@ -43,6 +38,7 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D33 | **Unknown generation outcomes can be marked as failed 40 seconds after the job's timeout,** and the interface always explains why the outcome is uncertain or why the job failed, in plain language. | 17 Sep 2026 | Unknown jobs with no resolution path |
 | D34 | **The `firebase-admin` 14 upgrade is a separate follow-up** with its own authentication tests, not part of M0. | 17 Sep 2026 | — |
 | D35 | **M0 is delivered as one pull request into `v3`;** its plan is reviewed with the documentation pull request. | 17 Sep 2026 | — |
+| D36 | **Brutalist is a standalone product that Automation Studio consumes; during the pilot its source lives in this repository** as the workspace package `packages/brutalist-design-system`, imported with its history. It stays detachable: its own manifest, tests, build and documentation; no imports from application code; the application uses only its public exports; checks enforce all three. Generic gaps are fixed in the package in the same pull request as the feature that needs them. Additive changes need no extra approval; breaking changes need the owner's approval. The standalone repository is frozen until the package is split back out with its history. See [design system integration](../specs/design-system-integration.md). | 17 Sep 2026 | D14, D15, D16, D26, D27 (cross-repository change protocol, change queue and vendored releases) |
 
 ## Provisional decisions
 
@@ -72,6 +68,11 @@ From the register consolidated on 10 September 2026 ([archived](../archive/docs-
 | W03 | Keep React Flow for the real recipe editor. | D4, D8 |
 | W06 | Five campaign steps with mandatory Figma design and approval inside Banners. | D1, D6 |
 | A04 | Mutable recipe drafts and immutable versions stored by the editor. | D8 (file versions pinned by content hash) |
+| D14 | Brutalist changes go only through the change protocol; additive requests from Automation Studio are pre-approved, breaking changes need the owner's approval. | D36 (the approval policy is kept) |
+| D15 | The change protocol is agent-agnostic: pull mode by default, optional Codex, Claude Code and command adapters. | D36 |
+| D16 | One install path owned by the app: vendored release archive plus provenance; releases pushed to GitHub before installation. | D36 |
+| D26 | The change queue runs on the owner's machine for the pilot; Observatory reporting is optional. | D36 |
+| D27 | Pull-mode claims do not expire. | D36 |
 
 ## How to record a decision
 

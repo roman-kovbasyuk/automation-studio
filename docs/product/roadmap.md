@@ -45,11 +45,10 @@ Drafted on 17 September 2026 and updated for decisions D17–D30 the same day:
 
 | Step | Work | Needed before |
 | --- | --- | --- |
+| DS0 | Import Brutalist as the workspace package `packages/brutalist-design-system` with its history; boundary checks and CI; remove vendored archives and the change pipeline; freeze the standalone repository (D36) | First gap fix |
 | DS1 | Adopt available components (audit items A1–A7) | M2 |
-| DS2 | App artifact install mode; pipeline uses it; releases pushed to GitHub | First change request |
-| DS3 | Protocol v2: shared allowed paths, pull mode, adapters, `CLAUDE.md` in Brutalist | First change request |
-| DS4 | Checkable gap list (JSON); breaking-change gate | M2 |
-| DS5 | First requests: routed steps (R1), autosave inline text (R2), controlled dialogs (R3) | M2 interface |
+| DS2 | Checkable gap list (JSON); breaking-change gate | M2 |
+| DS3 | First gap fixes in the package: routed steps (R1), autosave inline text (R2), controlled dialogs (R3) | M2 interface |
 
 **Preparation outside the build:** the pilot designer (D28) creates the Folkeuniversitetet slide template set and uploads the licensed Matter font files before M3.
 

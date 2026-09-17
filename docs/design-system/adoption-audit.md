@@ -89,7 +89,7 @@ Against commit `50c322c`. The refreshed list is in [missing components](missing-
 
 ## Proposed change requests
 
-Ordered by need for the asset creation flow (roadmap M2). All additive.
+Ordered by need for the asset creation flow (roadmap M2). All additive. Since D36 they are made directly in the workspace package after the import (roadmap DS0), not requested from a separate repository.
 
 | ID | Component | Change | Unblocks |
 | --- | --- | --- | --- |
