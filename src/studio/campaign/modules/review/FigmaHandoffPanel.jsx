@@ -34,7 +34,7 @@ export function FigmaHandoffPanel({figma,phase,canSend,pending,send,refresh}){
     </form>}
     {handoff&&<div className="bs-info"><div>
       <strong role="status">{handoff.state==='imported'?'Banners added to Figma, design will review shortly':handoff.state==='importing'?'Adding banners to Figma…':handoff.state==='import_failed'?'The Figma import needs to be resumed.':'Ready to import into Figma'}</strong>
-      {handoff.state!=='imported'&&<p>Open the Figma plugin “Banner Studio Review” in the destination file, connect it to Studio, and import this project.</p>}
+      {handoff.state!=='imported'&&<p>Open the Figma plugin “Automation Studio Review” in the destination file, connect it to Studio, and import this project.</p>}
       {handoff.figmaUrl&&<a href={handoff.figmaUrl} target="_blank" rel="noreferrer">Open Figma</a>}
       {refresh&&<AppButton onClick={refresh} disabled={pending}>Refresh Figma status</AppButton>}
     </div></div>}

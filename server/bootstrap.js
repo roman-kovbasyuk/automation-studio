@@ -61,7 +61,7 @@ async function testPersonalIntegration({ platform, webhookUrl, secret, eventType
     ? eventType.replaceAll('_', ' ')
     : 'test notification'
   const campaignLabel = payload?.campaignId ? ` · campaign ${payload.campaignId}` : ''
-  const message = `Banner Studio: ${eventLabel}${campaignLabel}`
+  const message = `Automation Studio: ${eventLabel}${campaignLabel}`
   const response = await fetch(webhookUrl, {
     method: 'POST',
     headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` },

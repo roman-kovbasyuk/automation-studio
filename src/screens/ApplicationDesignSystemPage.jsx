@@ -21,7 +21,7 @@ export default function ApplicationDesignSystemPage() {
     <main className="application-design-system" id="installed-design-system">
       <Stack gap={8}>
         <header>
-          <AppButton as="a" variant="quiet" href="/">Back to Banner Studio</AppButton>
+          <AppButton as="a" variant="quiet" href="/">Back to Automation Studio</AppButton>
           <h1>Brutalist Design System</h1>
           <p>The app uses the installed external library. Component documentation and development live in its repository.</p>
           <AppButton as="a" href={repository}>Open design-system repository</AppButton>

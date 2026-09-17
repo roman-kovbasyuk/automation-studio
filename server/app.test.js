@@ -3,7 +3,7 @@ import { resolve } from 'node:path'
 import { buildApp } from './app.js'
 import { loadConfig } from './config.js'
 
-describe('Banner Studio API shell', () => {
+describe('Automation Studio API shell', () => {
   test('uses the configured logger when the HTTP app is built', async () => {
     const app = buildApp({ readiness: async () => true, logger: { level: 'warn' } })
 

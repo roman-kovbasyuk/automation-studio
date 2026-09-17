@@ -29,7 +29,7 @@ await writeFile(resolve(out,'ui.html'),html)
 const domains=[...new Set([origin,apiOrigin])]
 const productionDomains=domains.filter(value=>value.startsWith('https://'))
 const developmentDomains=domains.filter(value=>value.startsWith('http://'))
-const manifest={name:'Banner Studio Review',api:'1.0.0',editorType:['figma'],main:'main.js',ui:'ui.html',documentAccess:'dynamic-page',
+const manifest={name:'Automation Studio Review',api:'1.0.0',editorType:['figma'],main:'main.js',ui:'ui.html',documentAccess:'dynamic-page',
   id:pluginId,networkAccess:{allowedDomains:productionDomains.length?productionDomains:['none'],...(developmentDomains.length?{devAllowedDomains:developmentDomains}:{})}}
 await writeFile(resolve(out,'manifest.json'),JSON.stringify(manifest,null,2)+'\n')
 console.log('Figma plugin built in figma-plugin/dist')

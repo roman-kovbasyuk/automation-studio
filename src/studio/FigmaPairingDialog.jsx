@@ -9,7 +9,7 @@ export function FigmaPairingDialog({api,pairingId,onClose}){
     {done?<><p role="status">Plugin connected. Return to Figma to continue.</p><AppButton onClick={onClose}>Done</AppButton></>:<form onSubmit={async event=>{
       event.preventDefault();setPending(true);setError(null)
       try{await api.confirmFigmaPairing(pairingId,code.trim());setDone(true)}catch(caught){setError(caught.message)}finally{setPending(false)}
-    }}><p>Enter the code shown in Banner Studio Review in Figma. This grants that plugin session access for 15 minutes.</p>
+    }}><p>Enter the code shown in Automation Studio Review in Figma. This grants that plugin session access for 15 minutes.</p>
       <TextField label="Plugin pairing code" autoFocus autoComplete="off" maxLength={32} value={code} onChange={event=>setCode(event.target.value)} disabled={pending}/>
       {error&&<p role="alert">{error}</p>}<AppButton type="submit" variant="primary" disabled={!code.trim()||pending} busy={pending}>Connect plugin</AppButton>
     </form>}

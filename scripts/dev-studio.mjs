@@ -61,7 +61,7 @@ async function checkPersonalCredential({ provider, apiKey }) {
 
 async function testPersonalIntegration({ webhookUrl, secret }) {
   try {
-    const response = await fetch(webhookUrl, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` }, body: JSON.stringify({ text: 'Banner Studio test notification' }) })
+    const response = await fetch(webhookUrl, { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${secret}` }, body: JSON.stringify({ text: 'Automation Studio test notification' }) })
     return response.ok ? { ok: true } : { ok: false, code: response.status === 429 ? 'rate_limited' : 'delivery_failed', message: 'The destination rejected the test notification.' }
   } catch { return { ok: false, code: 'provider_unavailable', message: 'The destination could not be reached.' } }
 }

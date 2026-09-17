@@ -22,11 +22,11 @@ export function PrototypeApp() {
       .catch(value => { if (active) setError(value) })
     return () => { active = false; void current?.dispose() }
   }, [])
-  if (error) return <DesignSystemRoot><main aria-labelledby="prototype-title"><p>Banner Studio</p><h1 id="prototype-title">Offline prototype</h1><p role="alert">The local prototype could not start: {error.message}</p><Button type="button" variant="primary" onClick={() => window.location.reload()}>Reload prototype</Button></main></DesignSystemRoot>
+  if (error) return <DesignSystemRoot><main aria-labelledby="prototype-title"><p>Automation Studio</p><h1 id="prototype-title">Offline prototype</h1><p role="alert">The local prototype could not start: {error.message}</p><Button type="button" variant="primary" onClick={() => window.location.reload()}>Reload prototype</Button></main></DesignSystemRoot>
   if (!session) {
     return (
       <main aria-labelledby="prototype-title">
-        <p>Banner Studio</p>
+        <p>Automation Studio</p>
         <h1 id="prototype-title">Offline prototype</h1>
         <p>This local prototype runs with bundled data and does not require authentication or services.</p>
         <p role="status">Loading prototype workspace…</p>

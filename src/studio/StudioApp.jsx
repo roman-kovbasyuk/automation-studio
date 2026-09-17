@@ -71,7 +71,7 @@ export function StudioApp() {
   if (auth.loading)
     return (
       <div className="bs-auth" role="status">
-        <span className="bs-wordmark">Banner Studio</span>
+        <span className="bs-wordmark">Automation Studio</span>
         <p>Opening your workspace…</p>
       </div>
     )
@@ -80,7 +80,7 @@ export function StudioApp() {
       <DesignSystemRoot><div className="bs-auth">
         <span className="bs-wordmark">
           <Shapes size={24} />
-          Banner Studio
+          Automation Studio
         </span>
         <h1>
           Good ideas deserve

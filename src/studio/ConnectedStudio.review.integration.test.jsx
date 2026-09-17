@@ -201,7 +201,7 @@ describe('ConnectedStudio review flow through real HTTP and isolated services', 
     const download = await screen.findByRole('button', { name: 'Download package' })
     await waitFor(() => expect(download).toBeEnabled())
     await user.click(download)
-    await waitFor(() => expect(downloads.clicks).toContainEqual(expect.objectContaining({ filename: 'banner-studio-v2.zip' })))
+    await waitFor(() => expect(downloads.clicks).toContainEqual(expect.objectContaining({ filename: 'automation-studio-v2.zip' })))
 
     persisted = await studio.api('marketer').getWorkspace(campaignId)
     expect(persisted.delivery.versionId).toBe(v2.id)

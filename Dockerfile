@@ -10,8 +10,8 @@ RUN npm run build && npm prune --omit=dev --no-audit --no-fund
 
 FROM node:22.22.0-alpine3.23@sha256:e4bf2a82ad0a4037d28035ae71529873c069b13eb0455466ae0bc13363826e34 AS runtime
 
-LABEL org.opencontainers.image.title="Banner Studio" \
-      org.opencontainers.image.description="Banner Studio API, application, and team documentation"
+LABEL org.opencontainers.image.title="Automation Studio" \
+      org.opencontainers.image.description="Automation Studio API, application, and team documentation"
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \

@@ -32,7 +32,7 @@ describe('Settings screen', () => {
 
     const readiness = screen.getByRole('region', { name: 'AI generation readiness' })
     expect(readiness).toHaveTextContent('AI generation is paused.')
-    expect(readiness).toHaveTextContent('Spending control is managed outside Banner Studio.')
+    expect(readiness).toHaveTextContent('Spending control is managed outside Automation Studio.')
     expect(readiness).not.toHaveTextContent(/remaining|spent|balance|budget/i)
   })
 

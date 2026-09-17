@@ -11,7 +11,7 @@ export function DistributeView({ input = {}, access = {}, operation = {}, action
   const pending = operation.kind === 'running'
   async function download() {
     setDownloading(true); setDownloadError(null)
-    try { saveBlob(await actions.download(), `banner-studio-v${input.version.versionNumber}.zip`) }
+    try { saveBlob(await actions.download(), `automation-studio-v${input.version.versionNumber}.zip`) }
     catch (error) { setDownloadError(error) }
     finally { setDownloading(false) }
   }
