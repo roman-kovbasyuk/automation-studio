@@ -4,7 +4,7 @@ import { resolve } from 'node:path'
 import userEvent from '@testing-library/user-event'
 import { useState } from 'react'
 import { expect, test, vi } from 'vitest'
-import { Button, Panel, TextField, Checkbox, RadioGroup } from './index'
+import { Button, Panel, TextField, Checkbox, RadioGroup, Tag } from './index'
 
 test('button activates from keyboard, defaults to button, and blocks busy actions', async () => {
   const user = userEvent.setup(), action = vi.fn()
@@ -111,6 +111,14 @@ test('RadioGroup tags variant shows the custom answer only while it is selected'
   expect(screen.getByRole('textbox', { name: 'Other answer' })).toHaveValue('Open day visits')
   await user.click(screen.getByRole('radio', { name: 'Square' }))
   expect(screen.queryByRole('textbox', { name: 'Other answer' })).not.toBeInTheDocument()
+})
+
+test('a removable Tag and a tags-variant choice row lift on hover; a plain display Tag does not', () => {
+  render(<><Tag onRemove={() => {}} removeLabel="Remove Draft">Draft</Tag><Tag>Approved</Tag></>)
+  const css = readFileSync(resolve(process.cwd(), 'src/atomic/components/tag.css'), 'utf8')
+  expect(css).toMatch(/\.c-tag-wrap:has\(\.c-tag__remove\):hover \.c-tag[^{]*\{[^}]*transform:\s*translate\(var\(--a-motion-lift\)/)
+  const formsCss = readFileSync(resolve(process.cwd(), 'src/atomic/components/forms.css'), 'utf8')
+  expect(formsCss).toMatch(/\.c-radio-group--tags \.c-choice-row:not\(:has\(:disabled\)\):hover[^{]*\{[^}]*transform:\s*translate\(var\(--a-motion-lift\)/)
 })
 
 test('uncontrolled RadioGroup allows native keyboard selection and group disabling', async () => {
