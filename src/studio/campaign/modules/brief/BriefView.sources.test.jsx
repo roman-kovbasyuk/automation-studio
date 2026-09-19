@@ -62,6 +62,6 @@ test('uses source-collection pending copy without promising first drafts', () =>
   render(<BriefView campaign={{ title: 'Spring campaign', brief: { notes: '' } }} api={{ extractBriefFile: vi.fn() }} pending="analyze"
     collectSources Composer={SourceComposer} />)
 
-  expect(screen.getByText('Analyzing campaign materials…')).toBeVisible()
+  expect(screen.getByRole('region', { name: 'Analyzing your materials' })).toBeVisible()
   expect(screen.queryByText(/preparing the first drafts/i)).not.toBeInTheDocument()
 })

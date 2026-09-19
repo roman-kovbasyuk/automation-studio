@@ -41,3 +41,13 @@
 .c-textarea--embedded { border-color:transparent; padding:var(--a-space-2); background:transparent; }
 .c-textarea--embedded:focus, .c-textarea--embedded:focus-visible { box-shadow:none; outline:none; }
 .c-attachment-area:focus-within { box-shadow:inset 0 0 0 var(--a-border-width) var(--a-color-ink); }
+.c-radio-tags { display: flex; flex-wrap: wrap; gap: var(--a-space-2); }
+.c-radio-group--tags .c-choice-row { transition: transform var(--a-motion-fast) var(--a-motion-out), box-shadow var(--a-motion-fast) var(--a-motion-out); }
+.c-radio-group--tags .c-choice-row:not(:has(:disabled)):hover, .c-radio-group--tags .c-choice-row:has(.c-radio:focus-visible) { transform: translate(var(--a-motion-lift), var(--a-motion-lift)); box-shadow: var(--a-shadow-small); }
+@media (prefers-reduced-motion: reduce) { .c-radio-group--tags .c-choice-row { transition: none; } .c-radio-group--tags .c-choice-row:not(:has(:disabled)):hover, .c-radio-group--tags .c-choice-row:has(.c-radio:focus-visible) { transform: none; } }
+.c-radio-group--tags .c-choice-row { position: relative; padding: var(--a-space-1) var(--a-space-3); border: var(--a-border-width) solid var(--a-color-ink); border-radius: var(--a-radius-pill); background: var(--a-color-surface); font-weight: 600; }
+.c-radio-group--tags .c-radio { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; border-radius: inherit; background: transparent; opacity: 0; }
+.c-radio-group--tags .c-choice-row:has(.c-radio:checked), .c-radio-group--tags .c-choice-row:has(.c-radio:checked):hover { border-color: var(--a-color-accent); background: var(--a-color-accent); }
+.c-radio-group--tags .c-choice-row:has(.c-radio:focus-visible) { outline: var(--a-focus-width) solid var(--a-color-ink); outline-offset: var(--a-focus-offset); }
+.c-radio-group--tags .c-choice-row:has(.c-radio[aria-invalid='true']) { border-color: var(--a-color-danger); }
+@media (forced-colors: active) { .c-radio-group--tags .c-radio { position: static; width: var(--a-size-choice); height: var(--a-size-choice); opacity: 1; } }

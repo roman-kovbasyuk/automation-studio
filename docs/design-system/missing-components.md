@@ -1,6 +1,6 @@
 # Design-system gap list
 
-**Status:** Current · **Reviewed against:** `brutalist-design-system` `0.1.0-atomic.0`, commit `50c322c7fc38b934abb5391587dd509d0de40f62` · **Updated:** 17 September 2026
+**Status:** Current · **Reviewed against:** `brutalist-design-system` `0.1.2`, the workspace package in `packages/brutalist-design-system` · **Updated:** 17 September 2026
 
 Patterns the application needs that the installed Brutalist package does not provide, the fallback used meanwhile, and what would replace it. The process is defined in [design system integration](../specs/design-system-integration.md); the evidence for each entry is in the [adoption audit](adoption-audit.md).
 
@@ -25,7 +25,6 @@ Status values: `open` (no request yet), `requested`, `available` (released, not 
 | G-sidebar-primary-disabled | Disabled primary action for read-only roles | Studio sidebar | Navigation callback blocked; no visual override | `SidebarPanel` `primaryAction.disabled` | R5 | open |
 | G-sidebar-project-metadata | Project type icon and secondary label in the sidebar | Studio sidebar | Title only | `SidebarPanel` project `icon` and secondary label | R5 | open |
 | G-sidebar-shell-border | Sidebar with only a right divider | Studio shell | Public component with all four borders, no override | `SidebarPanel` shell/border variant | R5 | open |
-| G-keyword-input | Free-text tags added with Enter | Brief visual keywords (`BriefQuestionsView.jsx`) | Public `TextField` with Enter handler plus removable `Tag`s | `TagInput` component | R7 | open (low priority) |
 | G-canvas-text | Editing banner text on the artwork | Banner template editor | Public fields beside the artwork | Canvas text editing component | none | open (deferred) |
 | G-icon-bundle-size | Tree-shakeable icons | Whole application bundle | None; large design-system chunk | Per-icon or tree-shakeable icon registry | R8 | open |
 | G-color-picker | Brand palette colour picking | `ColorTokenEditor.jsx` | Native `<input type="color">` | `ColorPicker` (released); read-only state still missing | R6 (read-only) | available → adopt A1 |
@@ -38,6 +37,7 @@ Status values: `open` (no request yet), `requested`, `available` (released, not 
 | G-empty-decision | Empty and decision regions | Public `EmptyState`; decisions compose public `Alert` | 17 Sep 2026 |
 | G-recipe-graph | Recipe graph editor | Not a design-system concern; editor frozen (D4) | 17 Sep 2026 |
 | G-button-link | Button used as navigation | Links use public `TextAction` with `href` | 17 Sep 2026 |
+| G-keyword-input | Free-text tags added with Enter | Public `TagInput` (Brutalist 0.1.2) in the Brief visual keywords (`VisualContextStep.jsx`); request R7 | 17 Sep 2026 |
 
 ## Contract changes to keep in mind
 

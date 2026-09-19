@@ -26,3 +26,11 @@ test('workflow panels use the external Surface while keeping accessible structur
   expect(screen.getByRole('region', { name: 'Brief' })).toHaveClass('a-surface')
   expect(screen.getByRole('region', { name: 'Brief' })).toHaveAttribute('aria-busy', 'true')
 })
+
+test('a bare workflow panel keeps the labelled region and heading without the card treatment', () => {
+  render(<WorkflowModuleFrame id="example" title="Brief" bare><p>Draft</p></WorkflowModuleFrame>)
+  const region = screen.getByRole('region', { name: 'Brief' })
+  expect(region).not.toHaveClass('a-surface')
+  expect(screen.getByRole('heading', { name: 'Brief' })).toBeVisible()
+  expect(screen.getByText('Draft')).toBeVisible()
+})

@@ -8,7 +8,7 @@ How the code uses AI today. The target role of AI is described in the [product c
 
 | Operation | Used for | Model (approved list) | Output |
 | --- | --- | --- | --- |
-| `analyseBrief` | Brief stage | `gemini-3.5-flash` | Title, summary, audience, objective, channels, formats, themes, warnings; with sources, a briefing proposal (found copy, visual keywords) |
+| `analyseBrief` | Brief stage | `gemini-3.5-flash` | Title, summary, audience, objective, channels, formats, themes, warnings; with sources, a briefing proposal: found copy, and the settings the materials state or clearly imply (age range, gender, goal, reach, copy question, visual keywords), never inferred from stereotypes |
 | `generateCopy` | Copy stage | `gemini-3.5-flash` | Exactly 5 variants: headline, body, optional offer, CTA and an image prompt |
 | `generateDirections` | Visuals stage | `gemini-3.5-flash` | Image prompts: 5 campaign-wide, or 1 per selected copy |
 | `generateImage` | Visuals stage | `gemini-3.1-flash-image` | One image with no text or logos, leaving space for layout |

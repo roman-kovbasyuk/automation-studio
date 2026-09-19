@@ -1,4 +1,5 @@
 import { hashCanonical } from '../../shared/canonicalJson.js'
+import { AGE_GROUPS } from '../../shared/briefingContracts.js'
 import { deflateSync } from 'node:zlib'
 import {
   analyseBriefInputSchema,
@@ -81,6 +82,60 @@ function short(value, limit) {
   return value.length <= limit ? value : `${value.slice(0, limit - 1)}…`
 }
 
+const ageBounds = [[18, 24], [25, 34], [35, 44], [45, 54], [55, 64], [65, Infinity]]
+const mockGoals = { awareness: 'awareness', traffic: 'traffic', leads: 'leads', signups: 'signups', 'sign-ups': 'signups', sales: 'sales' }
+
+// A brief with no explicit `Keywords:` line still gets keywords "based on the brief understanding":
+// distinct content words from the narrative first (grounded, like the real model is asked to do),
+// topped up from a fixed pool only when the brief itself does not supply enough, deterministically
+// so the same brief always yields the same suggestion.
+const MIN_VISUAL_TAGS = 5
+const MAX_VISUAL_TAGS_SUGGESTED = 7
+const genericVisualKeywordPool = ['natural light', 'clean composition', 'everyday setting', 'warm tones', 'confident mood', 'soft shadows', 'modern space', 'quiet detail']
+const visualKeywordStopWords = new Set(['this', 'that', 'with', 'from', 'your', 'their', 'have', 'will', 'about', 'into', 'more', 'than', 'they', 'them'])
+const cueLine = /^(?:age|gender|goal|reach|keywords|copy|headline):.*$/gim
+
+function defaultVisualKeywords(text) {
+  const narrative = text.replace(cueLine, ' ')
+  const seen = new Set(), grounded = []
+  for (const match of narrative.toLowerCase().matchAll(/[a-zà-öø-ÿ]{4,}/g)) {
+    if (visualKeywordStopWords.has(match[0]) || seen.has(match[0])) continue
+    seen.add(match[0])
+    grounded.push(match[0])
+    if (grounded.length === MAX_VISUAL_TAGS_SUGGESTED) break
+  }
+  if (grounded.length >= MIN_VISUAL_TAGS) return grounded
+  const start = [...text].reduce((sum, char) => sum + char.charCodeAt(0), 0) % genericVisualKeywordPool.length
+  for (let offset = 0; grounded.length < MIN_VISUAL_TAGS; offset++) {
+    const candidate = genericVisualKeywordPool[(start + offset) % genericVisualKeywordPool.length]
+    if (!grounded.includes(candidate)) grounded.push(candidate)
+  }
+  return grounded
+}
+
+/** Deterministic stand-in for AI inference: explicit `Name: value` lines first, then a few everyday words. */
+function mockBriefSettings(text) {
+  const line = name => new RegExp(`^${name}:[ \\t]*(.+)$`, 'im').exec(text)?.[1].trim().toLowerCase()
+  const words = text.toLowerCase(), settings = {}
+  const age = /^(\d+)\s*(?:[-–]\s*(\d+)|(\+))$/.exec(line('Age') ?? '')
+  if (age) {
+    const low = Number(age[1]), high = age[3] ? Infinity : Number(age[2])
+    settings.ageGroups = AGE_GROUPS.filter((_, index) => ageBounds[index][0] <= high && ageBounds[index][1] >= low)
+  } else if (/\bstudents\b/.test(words)) settings.ageGroups = ['18_24']
+  else if (/\bpensioners\b/.test(words)) settings.ageGroups = ['65_plus']
+  const gender = { women: 'women', men: 'men', both: 'all' }[line('Gender')]
+  if (gender) settings.gender = gender
+  const goal = mockGoals[line('Goal')] ?? (/\bsign up\b/.test(words) ? 'signups' : undefined)
+  if (goal) settings.goal = goal
+  if (['local', 'national', 'global'].includes(line('Reach'))) settings.reach = line('Reach')
+  const explicit = new RegExp('^Keywords:[ \\t]*(.+)$', 'im').exec(text)?.[1].split(',').map(item => item.trim().slice(0, 60)).filter(Boolean) ?? []
+  const keywordsSeen = new Set(), uniqueExplicit = explicit.filter(item => !keywordsSeen.has(item.toLowerCase()) && keywordsSeen.add(item.toLowerCase())).slice(0, 7)
+  settings.visualTags = uniqueExplicit.length ? uniqueExplicit : defaultVisualKeywords(text)
+  const copyMode = { keep: 'keep_original', 'keep and write': 'keep_and_create' }[line('Copy')]
+  if (copyMode) settings.copyMode = copyMode
+  return settings
+}
+
 export function createMockProvider({ model = 'mock-v1', region = 'europe-west6' } = {}) {
   const options = { model, region }
   return Object.freeze({
@@ -104,14 +159,15 @@ export function createMockProvider({ model = 'mock-v1', region = 'europe-west6' 
       }
       if(command.sources) {
         const foundCopy=[]
-        for(const source of command.sources) for(const block of source.blocks) {
-          const match=/Headline: (.+)/.exec(block.text)
-          if(match) { const start=match.index+'Headline: '.length
-            foundCopy.push({id:`found-${foundCopy.length+1}`,fields:{headline:match[1],body:'',offer:'',cta:''},verification:'text_verified',
-              sourceRefs:[{sourceId:source.id,label:source.name,blockId:block.id,start,end:start+match[1].length,...(block.page?{page:block.page}:{})}]}) }
+        for(const source of command.sources) for(const block of source.blocks) for(const match of block.text.matchAll(/Headline: (.+)/g)) {
+          const start=match.index+'Headline: '.length
+          foundCopy.push({id:`found-${foundCopy.length+1}`,fields:{headline:match[1],body:'',offer:'',cta:''},verification:'text_verified',
+            sourceRefs:[{sourceId:source.id,label:source.name,blockId:block.id,start,end:start+match[1].length,...(block.page?{page:block.page}:{})}]})
         }
+        const settings=mockBriefSettings(command.sources.flatMap(source=>source.blocks.map(block=>block.text)).join('\n'))
         analysis.briefingProposal={sourceKey:command.brief.briefing.sourceKey,foundCopy,answers:{summary:analysis.summary,audience:audience,
-          copyMode:foundCopy.length?null:'create_new',ageGroups:[],gender:'all',reach:null,goal:null,goalCustom:'',visualTags:[]},suggestedVisualTags:[]}
+          copyMode:foundCopy.length?settings.copyMode??null:'create_new',ageGroups:settings.ageGroups??[],gender:settings.gender??'all',
+          reach:settings.reach??null,goal:settings.goal??null,goalCustom:'',visualTags:settings.visualTags??[]},suggestedVisualTags:settings.visualTags??[]}
       }
       return analyseBriefResultSchema.parse({ ...metadata({ ...options, input: command, outputUnits: 36, actualCostMicrounits: 80 }), analysis })
     },

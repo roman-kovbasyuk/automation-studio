@@ -126,7 +126,7 @@ stages:
         kind: action
         capability: writeCopy
         label: Write five copy options
-        skipWhen: { input: keepSuppliedCopy, equals: true }
+        skipWhen: { answer: copyMode, equals: keep_original }
         settings: { variants: 5 }
         guidance: guidance/write-copy.md
         next: C2

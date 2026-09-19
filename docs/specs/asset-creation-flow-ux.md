@@ -59,8 +59,8 @@ If creation fails, the form keeps its content and shows the error inline. An unc
 
 | Situation | Status line | Primary action |
 | --- | --- | --- |
-| Analysing materials | Analysing your materials… | — |
-| Brief ready for review | Review the brief and confirm | Confirm and write copy / Confirm and outline deck |
+| Analysing materials | Analyzing your materials… | — |
+| Brief ready for review | Review the brief and proceed to copy | Proceed to copy / Confirm and outline deck |
 | Writing copy | Writing 5 copy options… | — |
 | Copy ready (banners) | Select at least one option | Continue to visuals |
 | Outline ready (deck) | Review the outline: 7 slides | Write slide text |
@@ -82,15 +82,12 @@ If creation fails, the form keeps its content and shows the error inline. An unc
 | Region | Content | Components |
 | --- | --- | --- |
 | Materials | Files with status (processing, ready, failed with reason); add or remove | `FileList`, `FileDropzone` |
-| Analysis | Progress while running; result when ready | `Spinner`, `Text` |
-| Understanding | Summary and audience, editable with autosave | `InlineText` (autosave, gap R2) |
-| Campaign | Goal, reach, age groups, gender | `Select`, `RadioGroup`, `Checkbox` |
-| Visual keywords (banners) | Suggested keywords as removable tags; add with Enter | `TextField` + `Tag` (gap R7) |
-| Copy found | *We found wording in your materials* with a preview; keep verbatim or create new | `RadioGroup`, `Dialog` |
+| Analysis | One progress panel while running | `Panel`, `Spinner` |
+| Review (banners) | Summary and audience edited in place, then up to three sections shown together, specified in [Brief review](brief-review.md): Copy found, Settings, Visual context | `InlineText`, `Panel`, `RadioGroup` (tags), `RangeSlider`, `TagInput`, `Badge`, `Icon`, `Button` |
 | Recipe inputs | Only missing inputs, for example sizes, slide count or wording fidelity | `MultiSelect`, `NumberStepper`, `Select` |
-| Action | **Confirm and write copy**, **Confirm and import copy** or **Confirm and outline deck** | `Button` primary |
+| Action | **Proceed to copy →** (banners) or **Confirm and outline deck** | `Button` primary |
 
-Confirming validates required answers inline before anything starts.
+Proceeding checks required answers inline and focuses the first problem before anything starts. A confirmed brief saves later changes automatically, except a change that would write new copy.
 
 ### Copy — banner set
 
@@ -189,7 +186,8 @@ Never show internal status names (for example *Generation unknown*).
 | Stage navigation with links | `WorkflowSteps` | R1 (`href` per step) |
 | Autosaving summary | `InlineText` | R2 (autosave) |
 | Details drawer and controlled dialogs | `Drawer`, `Dialog` | R3 (optional trigger) |
-| Keyword tags | `TextField` + `Tag` | R7 (`TagInput`) |
+| Keyword tags | `TagInput` | none (added in Brutalist 0.1.2) |
+| Settings choices | `RadioGroup` tags variant, `RangeSlider` | none (added in Brutalist 0.1.1) |
 | Everything else in this page | Public components listed above | none |
 
 See the [gap list](../design-system/missing-components.md).

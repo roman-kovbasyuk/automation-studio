@@ -446,7 +446,7 @@ State changes belong to the application. Components expose controls and callback
 
 **In context:** A format choice shows Square, Portrait, and Landscape together, allowing quick comparison without opening a menu.
 
-**Choose and compose:** Use Select when the list would occupy too much space, and SegmentedControl for a small immediate mode change such as Grid/List. Use customOption only when a genuine “Other” answer is meaningful and can be handled by the product.
+**Choose and compose:** Use Select when the list would occupy too much space, and SegmentedControl for a small immediate mode change such as Grid/List. Use customOption only when a genuine “Other” answer is meaningful and can be handled by the product. Use `variant="tags"` for a short set of choices that reads better as wrapping tags, such as a goal; it keeps radio behaviour, and its custom answer field appears only while that option is selected.
 
 **Behavior and content:** Give the set a question or descriptive label and keep option wording parallel. Explain why a necessary option is unavailable. Choose a default only when it is safe and helpful; do not disguise a required conscious choice with an arbitrary preselection.
 

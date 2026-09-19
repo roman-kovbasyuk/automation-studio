@@ -132,10 +132,10 @@ Priority: **M** must for the proof of concept, **S** should, **C** could. Each r
 | ID | Requirement | Pri | Spec |
 | --- | --- | --- | --- |
 | BRIEF-1 | Accept text and files (text, PDF, DOCX, PNG, JPEG, WebP) up to 25 MB in total; unreadable files are reported and removable. | M | [Recipes](../specs/recipes.md) |
-| BRIEF-2 | Analysis extracts summary, audience, goal, reach, visual keywords (at most 7 suggested) and copy found in the materials with source references. | M | [Recipes](../specs/recipes.md) |
-| BRIEF-3 | Only questions whose answers are missing are asked; supplied answers are preserved. | M | [Recipes](../specs/recipes.md) |
+| BRIEF-2 | Analysis extracts summary, audience, goal, reach, visual keywords (five to seven suggested, fewer only when the materials genuinely support fewer) and copy found in the materials with source references. | M | [Brief review](../specs/brief-review.md) |
+| BRIEF-3 | The analysis prefills the settings it has a basis for and marks them as suggested; the requester reviews every setting and answers those left empty. | M | [Brief review](../specs/brief-review.md) |
 | BRIEF-4 | The requester confirms the brief; confirmation is the explicit action that starts the recipe's next generation step. | M | [UX](../specs/asset-creation-flow-ux.md) |
-| BRIEF-5 | The requester chooses to keep found copy verbatim or create new copy. | M | [Recipes](../specs/recipes.md) |
+| BRIEF-5 | Found copy is always kept; the requester chooses whether to also write new copy options. | M | [Brief review](../specs/brief-review.md) |
 
 ### 7.3 Copy
 

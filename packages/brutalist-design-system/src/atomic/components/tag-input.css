@@ -1,0 +1,7 @@
+.c-tag-input__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--a-space-2); min-height: var(--a-size-compact); }
+.c-tag-input__control { flex: 1 1 12rem; min-width: 12rem; max-width: 100%; text-overflow: ellipsis; padding: var(--a-space-1) var(--a-space-3); border: var(--a-border-width) dashed var(--a-color-ink); border-radius: var(--a-radius-pill); background: var(--a-color-surface); color: var(--a-color-ink); font: inherit; font-weight: 600; transition: transform var(--a-motion-fast) var(--a-motion-out), box-shadow var(--a-motion-fast) var(--a-motion-out); }
+.c-tag-input__control::placeholder { color: var(--a-color-secondary); font-weight: 400; }
+.c-tag-input__control:hover { transform: translate(var(--a-motion-lift), var(--a-motion-lift)); box-shadow: var(--a-shadow-small); }
+.c-tag-input__control:focus { outline: none; border-style: solid; box-shadow: inset 0 0 0 var(--a-border-width) currentColor; transform: none; }
+.c-tag-input__control[aria-invalid='true'] { border-color: var(--a-color-danger); }
+@media (prefers-reduced-motion: reduce) { .c-tag-input__control { transition: none; } .c-tag-input__control:hover { transform: none; } }

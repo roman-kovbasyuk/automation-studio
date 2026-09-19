@@ -83,14 +83,18 @@ test('Slider uses the wider 16rem control width', () => {
   expect(css).toContain('.c-slider { width: min(100%, 16rem); }')
 })
 
-test('RangeSlider composes labelled non-crossing native sliders', () => {
+test('RangeSlider composes labelled native sliders on one scale that never cross', () => {
   function Example() { const [value, setValue] = useState<[number, number]>([25, 55]); return <C.RangeSlider label="Age range" value={value} onChange={setValue} min={18} max={80} /> }
   render(<Example />)
   const lower = screen.getByRole('slider', { name: 'Minimum' }), upper = screen.getByRole('slider', { name: 'Maximum' })
   expect(screen.getByRole('group', { name: 'Age range' })).toBeInTheDocument()
-  expect(lower).toHaveAttribute('max', '55'); expect(upper).toHaveAttribute('min', '25')
+  for (const slider of [lower, upper]) { expect(slider).toHaveAttribute('min', '18'); expect(slider).toHaveAttribute('max', '80') }
+  fireEvent.change(lower, { target: { value: '70' } })
+  expect(lower).toHaveAttribute('aria-valuetext', '55'); expect(upper).toHaveAttribute('aria-valuetext', '55')
+  fireEvent.change(upper, { target: { value: '20' } })
+  expect(upper).toHaveAttribute('aria-valuetext', '55')
   fireEvent.change(lower, { target: { value: '40' } })
-  expect(upper).toHaveAttribute('min', '40')
+  expect(lower).toHaveAttribute('aria-valuetext', '40')
 })
 
 test('Rating supports native keyboard selection and disabled submission semantics', async () => {

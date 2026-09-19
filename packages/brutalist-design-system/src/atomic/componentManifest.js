@@ -12,6 +12,7 @@ export const componentManifest = [
   { name: 'TextArea', id: 'component-textarea', title: 'Text area' },
   { name: 'Select', id: 'component-dropdowns', title: 'Dropdowns' },
   { name: 'Tag', id: 'component-tag', title: 'Tag' },
+  { name: 'TagInput', id: 'component-tag-input', title: 'Tag input' },
   { name: 'SegmentedControl', id: 'component-tabs', title: 'Tabs', aliasOf: 'Tabs' },
   { name: 'Breadcrumbs', id: 'component-breadcrumbs', title: 'Breadcrumbs' },
   { name: 'Pagination', id: 'component-pagination', title: 'Pagination' },

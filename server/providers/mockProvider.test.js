@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
 import { inflateSync } from 'node:zlib'
 import { createMockProvider } from './mockProvider.js'
+import { emptyBriefAnswers } from '../../shared/briefingContracts.js'
+import { verifyBriefingProposal } from '../briefSources/analysisEvidence.js'
 
 const briefA = {
   product: 'Nordic language course', audience: 'Busy adults', objective: 'Trial signups',
@@ -107,5 +109,52 @@ describe('deterministic mock generation provider contract', () => {
     const controller = new AbortController()
     controller.abort()
     await expect(provider.analyseBrief({ brief: briefA }, controller.signal)).rejects.toMatchObject({ name: 'AbortError' })
+  })
+})
+
+describe('mock briefing proposals', () => {
+  const sourceKey = 'a'.repeat(64)
+  const sourcesFor = text => [{ id: 'campaign-input', name: 'Campaign input', contentHash: 'b'.repeat(64), blocks: [{ id: 'text-1', text }], attachmentRefs: [] }]
+  const analyse = async text => (await createMockProvider().analyseBrief({
+    brief: { notes: text, briefing: { schemaVersion: 2, sourceIds: [], sourceKey, analysisJobId: null, answers: emptyBriefAnswers(), confirmation: null } },
+    sources: sourcesFor(text),
+  }, new AbortController().signal)).analysis.briefingProposal
+
+  test('fills settings from explicit lines, as a stand-in for AI inference', async () => {
+    const text = 'Headline: Learn together.\nAge: 25-44\nGender: women\nGoal: signups\nReach: local\nKeywords: winter light, tram stop, Winter light\nCopy: keep and write'
+    const proposal = await analyse(text)
+    expect(proposal.answers).toMatchObject({ ageGroups: ['25_34', '35_44'], gender: 'women', goal: 'signups', reach: 'local', copyMode: 'keep_and_create', visualTags: ['winter light', 'tram stop'] })
+    expect(proposal.suggestedVisualTags).toEqual(['winter light', 'tram stop'])
+    expect(verifyBriefingProposal(proposal, { sourceKey, sources: sourcesFor(text) }).answers).toEqual(proposal.answers)
+    expect((await analyse('Headline: Learn together.\nCopy: keep\nAge: 65+')).answers).toMatchObject({ copyMode: 'keep_original', ageGroups: ['65_plus'] })
+  })
+
+  test('recognises a few everyday words', async () => {
+    expect((await analyse('Evening courses for students. Sign up today.')).answers).toMatchObject({ ageGroups: ['18_24'], goal: 'signups' })
+    expect((await analyse('Day trips for pensioners.')).answers.ageGroups).toEqual(['65_plus'])
+  })
+
+  test('leaves settings empty without cues, and never keeps copy that was not found', async () => {
+    const proposal = await analyse('Norwegian courses in the city.\nCopy: keep')
+    expect(proposal.answers).toMatchObject({ ageGroups: [], gender: 'all', goal: null, reach: null, copyMode: 'create_new' })
+  })
+
+  test('suggests five to seven keywords grounded in the brief even without an explicit Keywords line', async () => {
+    const proposal = await analyse('Evening Norwegian courses for pensioners at our Oslo campus.')
+    expect(proposal.answers.visualTags.length).toBeGreaterThanOrEqual(5)
+    expect(proposal.answers.visualTags.length).toBeLessThanOrEqual(7)
+    expect(proposal.suggestedVisualTags).toEqual(proposal.answers.visualTags)
+    expect(proposal.answers.visualTags).toEqual(expect.arrayContaining(['evening', 'norwegian', 'courses', 'pensioners', 'campus']))
+    // Cue lines (Age:, Copy: …) are metadata, not narrative content, so they must not leak in as keywords.
+    expect(proposal.answers.visualTags).not.toContain('keep')
+    expect(new Set(proposal.answers.visualTags).size).toBe(proposal.answers.visualTags.length)
+    expect((await analyse('Evening Norwegian courses for pensioners at our Oslo campus.')).answers.visualTags).toEqual(proposal.answers.visualTags)
+  })
+
+  test('tops up with generic keywords, deterministically, when the brief itself is too thin', async () => {
+    const first = await analyse('Sale.')
+    expect(first.answers.visualTags).toHaveLength(5)
+    expect((await analyse('Sale.')).answers.visualTags).toEqual(first.answers.visualTags)
+    expect((await analyse('Offer.')).answers.visualTags).not.toEqual(first.answers.visualTags)
   })
 })

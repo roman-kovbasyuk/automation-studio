@@ -7,6 +7,8 @@ import {hashCanonical} from '../../shared/canonicalJson.js'
 import {applyArtifactEdit} from '../../shared/workflowRules.js'
 import {briefSourceError} from '../briefSources/sourceExtractor.js'
 import {verifyBriefingProposal} from '../briefSources/analysisEvidence.js'
+// Copy writing after a confirmation adds five options.
+const INITIAL_COPY_OPTIONS=5
 
 function authorize(actor) {
   if(!actor?.id || actor.disabled || actor.disabledAt || !['marketer','admin'].includes(actor.role)) throw briefSourceError('forbidden','You cannot edit this brief.',403)
@@ -82,25 +84,30 @@ export function createBriefingService({pool,idGenerator=randomUUID,clock=()=>new
         const job=(await client.query("SELECT * FROM generation_jobs WHERE id=$1 AND campaign_id=$2 AND step='brief_analysis' AND status='succeeded'",[input.analysisJobId,campaignId])).rows[0]
         if(!job || job.safety?.verdict!=='safe' || job.input_snapshot.brief.briefing?.sourceKey!==state.sourceKey) throw briefSourceError('brief_analysis_required','A current successful analysis is required.',409)
         const proposal=verifyBriefingProposal(job.result_metadata.analysis.briefingProposal,{sourceKey:state.sourceKey,sources:job.input_snapshot.sources})
-        if(input.answers.copyMode==='keep_original'&&!proposal.foundCopy.length) throw briefSourceError('no_supplied_copy','No banner wording was found to keep.',422)
+        const keepsCopy=input.answers.copyMode!=='create_new'
+        if(keepsCopy&&!proposal.foundCopy.length) throw briefSourceError('no_supplied_copy','No banner wording was found to keep.',422)
+        if(!keepsCopy&&proposal.foundCopy.length) throw briefSourceError('found_copy_not_kept','Found copy is always kept. Choose whether to also write new copy.',422)
         const brief={...campaign.brief,briefing:{...state,answers:input.answers}}
         const copyKey=hashCanonical(copyProjection(brief)),visualKey=hashCanonical(visualProjection(brief)),answersKey=hashCanonical(input.answers)
         if(state.confirmation?.answersKey===answersKey) return {confirmationId:state.confirmation.id,campaignRevision:campaign.revision,initialCopy:'skip',importedCopySetId:state.confirmation.importedCopySetId}
-        const previous=(await client.query('SELECT id FROM brief_confirmations WHERE campaign_id=$1 AND copy_key=$2 LIMIT 1',[campaignId,copyKey])).rows.length>0
+        const previouslyWritten=(await client.query("SELECT id FROM brief_confirmations WHERE campaign_id=$1 AND copy_key=$2 AND response->>'initialCopy'='offer_generation' LIMIT 1",[campaignId,copyKey])).rows.length>0
         const importKey=hashCanonical({sourceKey:state.sourceKey,copies:proposal.foundCopy})
         const imported=(await client.query('SELECT id FROM copy_sets WHERE campaign_id=$1 AND import_key=$2',[campaignId,importKey])).rows[0]
-        const shouldImport=input.answers.copyMode==='keep_original'&&!imported
+        const shouldImport=keepsCopy&&!imported
+        // Copy writing starts only for copy settings that never wrote copy; keeping copy verbatim doesn't count.
+        const writesCopy=input.answers.copyMode!=='keep_original'&&!previouslyWritten
         if(shouldImport) {
           const capacity=(await client.query(`SELECT COALESCE(sum(jsonb_array_length(candidates)-jsonb_array_length(deleted_candidate_ids)),0)::int AS n FROM copy_sets WHERE campaign_id=$1 AND stale=false`,[campaignId])).rows[0].n
           const reserved=(await client.query("SELECT COALESCE(sum(COALESCE((input_snapshot->>'copySlots')::int,5)),0)::int AS n FROM generation_jobs WHERE campaign_id=$1 AND step='copy' AND status IN ('pending','unknown')",[campaignId])).rows[0].n
-          if(capacity+reserved+proposal.foundCopy.length>30) throw briefSourceError('copy_capacity_exceeded','Delete copy options to make room for all supplied wording.',409)
+          if(capacity+reserved+proposal.foundCopy.length+(writesCopy?INITIAL_COPY_OPTIONS:0)>30) throw briefSourceError('copy_capacity_exceeded',writesCopy
+            ?'Delete copy options to make room for the found copy and five new options.':'Delete copy options to make room for all supplied wording.',409)
         }
         const id=idGenerator(),importedCopySetId=shouldImport?idGenerator():imported?.id??null
         const suppliedCopy=shouldImport?{id:importedCopySetId,candidates:proposal.foundCopy.map(copy=>({id:`${importedCopySetId}:${copy.id}`,...copy.fields,visualPrompt:''})),sourceRefs:proposal.foundCopy.map(copy=>copy.sourceRefs)}:null
         const confirmation={id,analysisJobId:input.analysisJobId,sourceKey:state.sourceKey,copyKey,visualKey,answersKey,
           confirmedAt:clock().toISOString(),confirmedBy:actor.id,importedCopySetId}
         const updated=await save(client,campaign,input.answers,confirmation)
-        const response={confirmationId:id,campaignRevision:updated.revision,initialCopy:input.answers.copyMode==='create_new'&&!previous?'offer_generation':'skip',importedCopySetId}
+        const response={confirmationId:id,campaignRevision:updated.revision,initialCopy:writesCopy?'offer_generation':'skip',importedCopySetId}
         await client.query(`INSERT INTO brief_confirmations(id,campaign_id,actor_id,idempotency_key,request_hash,source_key,copy_key,answers_key,snapshot,response)
           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,[id,campaignId,actor.id,idempotencyKey,requestHash,state.sourceKey,copyKey,answersKey,JSON.stringify({answers:input.answers,confirmation,suppliedCopy}),JSON.stringify(response)])
         if(shouldImport) {

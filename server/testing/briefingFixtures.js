@@ -18,6 +18,8 @@ export async function confirmBriefing({ pool, actor, campaignId, answers = {}, i
   const state = campaign?.brief.briefing
   if (!state?.analysisJobId) throw new Error('Analyze the fixture brief before confirming it')
   const proposed = state.answers
+  // Found copy is always kept; only briefs without it confirm new copy alone.
+  const foundCopy = campaign.brief.analysis?.briefingProposal?.foundCopy ?? []
   return createBriefingService({ pool }).confirm({
     actor, campaignId, expectedRevision: campaign.revision, idempotencyKey,
     input: {
@@ -25,7 +27,7 @@ export async function confirmBriefing({ pool, actor, campaignId, answers = {}, i
       sourceKey: state.sourceKey,
       answers: {
         ...proposed,
-        copyMode: proposed.copyMode ?? 'create_new',
+        copyMode: proposed.copyMode ?? (foundCopy.length ? 'keep_original' : 'create_new'),
         reach: proposed.reach ?? 'local',
         goal: proposed.goal ?? 'signups',
         ...answers,
