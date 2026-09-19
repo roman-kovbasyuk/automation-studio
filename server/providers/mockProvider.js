@@ -85,6 +85,34 @@ function short(value, limit) {
 const ageBounds = [[18, 24], [25, 34], [35, 44], [45, 54], [55, 64], [65, Infinity]]
 const mockGoals = { awareness: 'awareness', traffic: 'traffic', leads: 'leads', signups: 'signups', 'sign-ups': 'signups', sales: 'sales' }
 
+// A brief with no explicit `Keywords:` line still gets keywords "based on the brief understanding":
+// distinct content words from the narrative first (grounded, like the real model is asked to do),
+// topped up from a fixed pool only when the brief itself does not supply enough, deterministically
+// so the same brief always yields the same suggestion.
+const MIN_VISUAL_TAGS = 5
+const MAX_VISUAL_TAGS_SUGGESTED = 7
+const genericVisualKeywordPool = ['natural light', 'clean composition', 'everyday setting', 'warm tones', 'confident mood', 'soft shadows', 'modern space', 'quiet detail']
+const visualKeywordStopWords = new Set(['this', 'that', 'with', 'from', 'your', 'their', 'have', 'will', 'about', 'into', 'more', 'than', 'they', 'them'])
+const cueLine = /^(?:age|gender|goal|reach|keywords|copy|headline):.*$/gim
+
+function defaultVisualKeywords(text) {
+  const narrative = text.replace(cueLine, ' ')
+  const seen = new Set(), grounded = []
+  for (const match of narrative.toLowerCase().matchAll(/[a-zà-öø-ÿ]{4,}/g)) {
+    if (visualKeywordStopWords.has(match[0]) || seen.has(match[0])) continue
+    seen.add(match[0])
+    grounded.push(match[0])
+    if (grounded.length === MAX_VISUAL_TAGS_SUGGESTED) break
+  }
+  if (grounded.length >= MIN_VISUAL_TAGS) return grounded
+  const start = [...text].reduce((sum, char) => sum + char.charCodeAt(0), 0) % genericVisualKeywordPool.length
+  for (let offset = 0; grounded.length < MIN_VISUAL_TAGS; offset++) {
+    const candidate = genericVisualKeywordPool[(start + offset) % genericVisualKeywordPool.length]
+    if (!grounded.includes(candidate)) grounded.push(candidate)
+  }
+  return grounded
+}
+
 /** Deterministic stand-in for AI inference: explicit `Name: value` lines first, then a few everyday words. */
 function mockBriefSettings(text) {
   const line = name => new RegExp(`^${name}:[ \\t]*(.+)$`, 'im').exec(text)?.[1].trim().toLowerCase()
@@ -100,9 +128,9 @@ function mockBriefSettings(text) {
   const goal = mockGoals[line('Goal')] ?? (/\bsign up\b/.test(words) ? 'signups' : undefined)
   if (goal) settings.goal = goal
   if (['local', 'national', 'global'].includes(line('Reach'))) settings.reach = line('Reach')
-  const keywords = new RegExp('^Keywords:[ \\t]*(.+)$', 'im').exec(text)?.[1].split(',').map(item => item.trim().slice(0, 60)).filter(Boolean) ?? []
-  const seen = new Set(), unique = keywords.filter(item => !seen.has(item.toLowerCase()) && seen.add(item.toLowerCase())).slice(0, 7)
-  if (unique.length) settings.visualTags = unique
+  const explicit = new RegExp('^Keywords:[ \\t]*(.+)$', 'im').exec(text)?.[1].split(',').map(item => item.trim().slice(0, 60)).filter(Boolean) ?? []
+  const keywordsSeen = new Set(), uniqueExplicit = explicit.filter(item => !keywordsSeen.has(item.toLowerCase()) && keywordsSeen.add(item.toLowerCase())).slice(0, 7)
+  settings.visualTags = uniqueExplicit.length ? uniqueExplicit : defaultVisualKeywords(text)
   const copyMode = { keep: 'keep_original', 'keep and write': 'keep_and_create' }[line('Copy')]
   if (copyMode) settings.copyMode = copyMode
   return settings

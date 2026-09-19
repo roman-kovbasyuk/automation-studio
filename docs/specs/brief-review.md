@@ -172,7 +172,7 @@ Still one call (`analyseBrief` with sources). New and changed instructions:
 6. **Goal:** one of the fixed goals; *Other* with a short description only when a stated goal fits none of them.
 7. **Reach:** Local when the materials target a city or region, National for one country, Global for several countries.
 8. **Copy question:** with found copy, *use this copy only* when the materials say to use the wording as it is, *also write new* when they ask for alternatives, otherwise empty. Without found copy, new copy is written and there is no question.
-9. **Keywords:** up to seven short phrases describing what the images should show: subject, place, people, mood and light, style. Grounded in the materials and consistent with the suggested audience; in the language of the request; no text, logos, brand names or names of people. Local scenery only when the materials support it (existing rule).
+9. **Keywords:** five to seven short phrases describing what the images should show: subject, place, people, mood and light, style. Grounded in the materials and consistent with the suggested audience; fewer only when the materials genuinely support fewer than five distinct ideas, never invented beyond what is given; in the language of the request; no text, logos, brand names or names of people. Local scenery only when the materials support it (existing rule).
 10. Summary, audience description and found copy extraction are unchanged.
 
 **Normalisation.** When the analysis result is accepted, before it is stored, the server corrects what the model can get wrong without failing the analysis:
@@ -194,7 +194,7 @@ Because the request data does not change, stored copy and visuals do not go out 
 
 ### Mock provider
 
-The mock provider fills settings from explicit lines (`Age: 25-44`, `Gender: women`, `Goal: signups`, `Reach: local`, `Keywords: winter light, tram stop`, `Copy: keep` or `Copy: keep and write`) and from a short word list (for example *students*, *pensioners*, *sign up*). Briefs without them leave settings empty, so tests and the isolated launcher cover both suggested and empty settings.
+The mock provider fills settings from explicit lines (`Age: 25-44`, `Gender: women`, `Goal: signups`, `Reach: local`, `Keywords: winter light, tram stop`, `Copy: keep` or `Copy: keep and write`) and from a short word list (for example *students*, *pensioners*, *sign up*). Briefs without them leave those settings empty, so tests and the isolated launcher cover both suggested and empty settings. Keywords are the exception: without an explicit `Keywords:` line the mock still fills five to seven, drawn from the brief's own words first and topped up deterministically from a fixed list only when the brief is too thin — so trying the flow without hand-authored cues still shows keywords filled in.
 
 ## Data and server
 

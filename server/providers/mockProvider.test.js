@@ -135,8 +135,26 @@ describe('mock briefing proposals', () => {
   })
 
   test('leaves settings empty without cues, and never keeps copy that was not found', async () => {
-    expect((await analyse('Norwegian courses in the city.\nCopy: keep')).answers).toMatchObject({
-      ageGroups: [], gender: 'all', goal: null, reach: null, copyMode: 'create_new', visualTags: [],
-    })
+    const proposal = await analyse('Norwegian courses in the city.\nCopy: keep')
+    expect(proposal.answers).toMatchObject({ ageGroups: [], gender: 'all', goal: null, reach: null, copyMode: 'create_new' })
+  })
+
+  test('suggests five to seven keywords grounded in the brief even without an explicit Keywords line', async () => {
+    const proposal = await analyse('Evening Norwegian courses for pensioners at our Oslo campus.')
+    expect(proposal.answers.visualTags.length).toBeGreaterThanOrEqual(5)
+    expect(proposal.answers.visualTags.length).toBeLessThanOrEqual(7)
+    expect(proposal.suggestedVisualTags).toEqual(proposal.answers.visualTags)
+    expect(proposal.answers.visualTags).toEqual(expect.arrayContaining(['evening', 'norwegian', 'courses', 'pensioners', 'campus']))
+    // Cue lines (Age:, Copy: …) are metadata, not narrative content, so they must not leak in as keywords.
+    expect(proposal.answers.visualTags).not.toContain('keep')
+    expect(new Set(proposal.answers.visualTags).size).toBe(proposal.answers.visualTags.length)
+    expect((await analyse('Evening Norwegian courses for pensioners at our Oslo campus.')).answers.visualTags).toEqual(proposal.answers.visualTags)
+  })
+
+  test('tops up with generic keywords, deterministically, when the brief itself is too thin', async () => {
+    const first = await analyse('Sale.')
+    expect(first.answers.visualTags).toHaveLength(5)
+    expect((await analyse('Sale.')).answers.visualTags).toEqual(first.answers.visualTags)
+    expect((await analyse('Offer.')).answers.visualTags).not.toEqual(first.answers.visualTags)
   })
 })

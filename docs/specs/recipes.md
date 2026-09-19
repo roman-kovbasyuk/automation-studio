@@ -176,7 +176,7 @@ Version 1 capabilities for the proof of concept. "Today" names the existing impl
 | Capability | Kind | Asset types | Settings | Produces | Today |
 | --- | --- | --- | --- | --- | --- |
 | `collectMaterials` | touchpoint | all | `maxBytes` (≤ 25 MB) | brief sources | Home composer, `briefSourceService` |
-| `analyseMaterials` | action | all | `suggestVisualKeywords` (0–7) | analysis, found copy, draft answers | `analyseBrief` with sources (`generationService`) |
+| `analyseMaterials` | action | all | `suggestVisualKeywords` (5–7) | analysis, found copy, draft answers | `analyseBrief` with sources (`generationService`) |
 | `confirmBrief` | touchpoint | all | `questions` (answer fields and recipe inputs to ask) | confirmation | `briefingService` confirmation; when copy was found, `copyMode` records whether to also write new copy (`keep_original` or `keep_and_create`), otherwise it is `create_new` |
 | `importSuppliedCopy` | action | banners | — | copy items (supplied) | confirmation when copy was found (`keep_original` or `keep_and_create`) |
 | `writeCopy` | action | banners | `variants` (1–5) | copy items (generated) | `generateCopy` |

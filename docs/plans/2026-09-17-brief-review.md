@@ -177,6 +177,18 @@ Pure functions used by the interface:
 
 **Verify:** the full T11 checks and a browser check at desktop width and 320 px.
 
+### T13 — Five to seven keywords, always (19 September 2026)
+
+**Files:** `geminiProvider.js`, `mockProvider.js` and their tests; `brief-review.md`, `prd.md`, `recipes.md`.
+
+Analysis suggested up to seven keywords, but could suggest none. The owner asked that campaign creation fill five to seven, based on what the AI understood from the brief.
+
+- The analysis instruction now asks for five to seven, grounded in the materials; fewer only when the materials genuinely support fewer than five distinct ideas, and never invented beyond what is given.
+- The mock provider filled keywords only from an explicit `Keywords:` line, otherwise leaving them empty. It now falls back to words drawn from the brief's own narrative (cue lines such as `Age:` excluded), topped up deterministically from a fixed list when the brief is too thin, so a brief with no hand-authored cues still shows keywords filled in.
+- The schema still allows up to seven with no enforced minimum: a hard floor there would reject a genuinely thin real brief outright (`invalid_copy_evidence`, failing the whole analysis) for what is a quality target, not a safety rule, and would have required padding dozens of unrelated test fixtures that use short example tag lists. The floor is carried by the prompt and the mock, not by validation.
+
+**Verify:** `npx vitest run server/providers`; docs updated.
+
 ## Results
 
 | Task | Result (17 September 2026) |
@@ -192,6 +204,7 @@ Pure functions used by the interface:
 | T9 | `BriefReview` with 7 tests; `BriefModule` wiring; the coordinator's navigation rule with a test; the single review form, its questions view and stale wizard styles removed. The browser check found two defects, both fixed: Brutalist's `RangeSlider` drew its handles on different scales and locked the upper handle at the maximum (fixed in the package, recorded in 0.1.1), and a spacing step Brutalist does not define collapsed the found copy step |
 | T10 | D39; PRD BRIEF-3 and BRIEF-5; UX spec Brief region, status line and Brutalist mapping; recipe spec and product recipe example; roadmap; AI generation page; design status |
 | T12 | The one-page review, automatic saving, age from 18, icons, `TagInput` and hover elevation; the Brief stage lost its outer card; D39, the design page, the UX spec, the gap list (R7 closed) and the roadmap updated. Using it in the browser found defects that are now fixed and tested: Edit showed before confirmation; sections stayed open after confirming because the stage stays mounted; validation focus landed on a fieldset; switching the copy question to *Yes, also write new options* saved silently and wrote no copy, both in the browser rule and on the server, which counted a kept-copy confirmation as copy already written; an automatic save hid the controls and could drop a change made during it; a failed automatic save retried every second; `div`s sat inside headings and choice labels; the keyword placeholder was cut off |
+| T13 | Analysis instruction targets five to seven grounded keywords; the mock provider derives them from the brief's narrative when there is no explicit `Keywords:` line, topped up deterministically from a fixed list for a thin brief; PRD BRIEF-2, the design page and the recipe capability table updated |
 
 ## Final verification
 

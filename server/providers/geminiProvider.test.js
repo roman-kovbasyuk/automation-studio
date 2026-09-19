@@ -659,6 +659,8 @@ test('briefing analysis prefills only grounded settings and suggests keywords fo
   expect(instruction).toMatch(/one continuous range/i)
   expect(instruction).toMatch(/keep_original.*keep_and_create.*otherwise leave copyMode null.*create_new/i)
   expect(instruction).toMatch(/subject, place, people, mood and light, and style/i)
+  expect(instruction).toMatch(/five to seven/i)
+  expect(instruction).not.toMatch(/at most seven/i)
   expect(instruction).not.toMatch(/unless explicitly given/i)
 })
 
