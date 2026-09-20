@@ -1,10 +1,10 @@
-import {briefingProposalSchema,normalizeAgeGroups} from '../../shared/briefingContracts.js'
+import {briefingStoredProposalSchema,normalizeAgeGroups} from '../../shared/briefingContracts.js'
 import {briefSourceError} from './sourceExtractor.js'
 
 /** Validate provider claims against the immutable input snapshot, not its labels. */
 export function verifyBriefingProposal(value,{sourceKey,sources}) {
   const invalid=()=>briefSourceError('invalid_copy_evidence','The analysis contains invalid source evidence.')
-  const parsed=briefingProposalSchema.safeParse(value)
+  const parsed=briefingStoredProposalSchema.safeParse(value)
   if (!parsed.success || parsed.data.sourceKey!==sourceKey) throw invalid()
   const proposal=parsed.data
   if (new Set(proposal.foundCopy.map(copy=>copy.id)).size!==proposal.foundCopy.length) throw invalid()
@@ -28,11 +28,12 @@ export function verifyBriefingProposal(value,{sourceKey,sources}) {
     if (!hasUnverifiedAttachment && Object.values(copy.fields).some(text=>text && !snippets.some(snippet=>snippet.includes(text)))) throw invalid()
     return {...copy,sourceRefs,verification:hasUnverifiedAttachment?'needs_review':'text_verified'}
   })
-  return briefingProposalSchema.parse(normalizeBriefingProposal(proposal))
+  return briefingStoredProposalSchema.parse(normalizeBriefingProposal(proposal))
 }
 
 /** Corrects answers the model can get wrong without failing the analysis: found copy is always kept, and ages form one range. */
 export function normalizeBriefingProposal(proposal) {
   const copyMode=!proposal.foundCopy.length?'create_new':proposal.answers.copyMode==='create_new'?null:proposal.answers.copyMode
-  return {...proposal,answers:{...proposal.answers,copyMode,ageGroups:normalizeAgeGroups(proposal.answers.ageGroups)}}
+  return {...proposal,answers:{...proposal.answers,copyMode,
+    ageGroups:proposal.answers.ageGroups.includes('under_18')?proposal.answers.ageGroups:normalizeAgeGroups(proposal.answers.ageGroups)}}
 }

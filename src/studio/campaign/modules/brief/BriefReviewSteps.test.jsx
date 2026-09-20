@@ -67,6 +67,15 @@ test('settings change the age range, gender, goal and reach, and compose an icon
   expect(onChange).toHaveBeenLastCalledWith({ goalCustom: 'Open day visits' }, 'goal')
 })
 
+test('settings expose a historical under-18 selection and replace it only after an adult range choice', () => {
+  const onChange = vi.fn()
+  render(<SettingsStep draft={{ ...draft, ageGroups: ['under_18'] }} errors={{}} suggested={new Set()} onChange={onChange} />)
+  expect(screen.getByText(/Under 18 \(previous selection\).*Choose an age range from 18/)).toBeVisible()
+  expect(onChange).not.toHaveBeenCalled()
+  fireEvent.change(screen.getByRole('slider', { name: 'From' }), { target: { value: '1' } })
+  expect(onChange).toHaveBeenCalledWith({ ageGroups: ['25_34', '35_44', '45_54', '55_64', '65_plus'] }, 'ageGroups')
+})
+
 test('visual context wires keywords, the moved-in hint as placeholder, the limit and the suggested mark to TagInput', () => {
   const onChange = vi.fn()
   const { rerender } = render(<VisualContextStep draft={{ ...draft, visualTags: ['winter light'] }} suggested={new Set(['visualTags'])} onChange={onChange} />)

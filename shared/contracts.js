@@ -3,7 +3,7 @@ import { videoAssetSchema, reviewVideoSchema } from './videoContracts.js'
 import { z } from 'zod'
 import { hashCanonical } from './canonicalJson.js'
 import { templateManifestSchema } from './templateManifest.js'
-import { briefAnalysisSchema } from './briefAnalysis.js'
+import { briefAnalysisSchema, briefAnalysisStoredSchema } from './briefAnalysis.js'
 import { briefingStateSchema, briefingCreateSchema, analysisSourceSchema, authoredCopyVariantSchema } from './briefingContracts.js'
 import { MAX_BRIEF_UPLOAD_BASE64 } from './briefUploadLimits.js'
 export { briefAnalysisSchema } from './briefAnalysis.js'
@@ -50,9 +50,10 @@ const briefFields = {
   notes: z.string().trim().max(20_000).default(''),
   analysis: briefAnalysisSchema.nullable().optional(),
 }
+const briefStoredFields = { ...briefFields, analysis: briefAnalysisStoredSchema.nullable().optional() }
 const hasBriefInput = brief => brief.briefing?.schemaVersion === 2 || brief.notes.length > 0
   || (brief.product.length > 0 && brief.audience.length > 0 && brief.objective.length > 0)
-export const briefSchema = z.strictObject({...briefFields, briefing:briefingStateSchema.optional()}).refine(
+export const briefSchema = z.strictObject({...briefStoredFields, briefing:briefingStateSchema.optional()}).refine(
   hasBriefInput,
   { message: 'Provide campaign notes or the product, audience, and objective fields.' },
 )
@@ -765,7 +766,7 @@ const durableImageResultMetadataSchema = z.strictObject({
 })
 
 export const generationResultMetadataSchema = z.union([
-  z.strictObject({ analysis: briefAnalysisSchema }),
+  z.strictObject({ analysis: briefAnalysisStoredSchema }),
   z.strictObject({ copySetId: nonEmptyString, copies: z.array(copyVariantSchema) }),
   z.strictObject({ directions: z.array(generatedVisualDirectionSchema) }),
   legacyImageResultMetadataSchema,

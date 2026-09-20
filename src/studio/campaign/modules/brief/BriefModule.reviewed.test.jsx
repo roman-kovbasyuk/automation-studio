@@ -55,6 +55,53 @@ test('reviews the analysed brief with every step open at once, keeps an edit acr
   await waitFor(() => expect(port.setDirty).toHaveBeenLastCalledWith(false))
 })
 
+test.each([['Summary', 'summary'], ['Audience', 'audience']])('keeps an unfinished %s edit and its original input key across a remote refresh', async (label, field) => {
+  const port = reviewedPort()
+  const { rerender } = render(<BriefModule port={port} />)
+  fireEvent.click(screen.getByRole('button', { name: `Edit ${label}` }))
+  const textbox = screen.getByRole('textbox', { name: label })
+  fireEvent.change(textbox, { target: { value: 'My unfinished draft.' } })
+  await waitFor(() => expect(port.setDirty).toHaveBeenLastCalledWith(true))
+
+  port.inputKey = 'remote-new-revision'
+  port.input = { ...port.input, brief: { ...port.input.brief, briefing: { ...port.input.brief.briefing,
+    answers: { ...answers, [field]: 'Another editor changed this.' } } } }
+  rerender(<BriefModule port={{ ...port }} />)
+  expect(textbox).toHaveValue('My unfinished draft.')
+  expect(port.setDirty).toHaveBeenLastCalledWith(true)
+
+  fireEvent.keyDown(textbox, { key: 'Enter' })
+  await screen.findByRole('button', { name: `Edit ${label}` })
+  await finalize()
+  await waitFor(() => expect(port.actions.confirm).toHaveBeenCalledWith(
+    expect.objectContaining({ answers: { ...answers, [field]: 'My unfinished draft.', copyMode: 'keep_original' } }),
+    { expectedInputKey: 'source-before-edit' },
+  ))
+})
+
+test('cancel after a refresh adopts the latest answers and key before a new inline edit', async () => {
+  const port = reviewedPort()
+  const { rerender } = render(<BriefModule port={port} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Summary' }))
+  const first = screen.getByRole('textbox', { name: 'Summary' })
+  fireEvent.change(first, { target: { value: 'Cancelled draft.' } })
+  port.inputKey = 'remote-new-revision'
+  port.input = { ...port.input, brief: { ...port.input.brief, briefing: { ...port.input.brief.briefing,
+    answers: { ...answers, audience: 'Remote audience' } } } }
+  rerender(<BriefModule port={{ ...port }} />)
+  fireEvent.keyDown(first, { key: 'Escape' })
+  expect(await screen.findByRole('button', { name: 'Edit Audience' })).toHaveTextContent('Remote audience')
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Summary' }))
+  const second = screen.getByRole('textbox', { name: 'Summary' })
+  fireEvent.change(second, { target: { value: 'Fresh edit.' } })
+  fireEvent.keyDown(second, { key: 'Enter' })
+  await screen.findByRole('button', { name: 'Edit Summary' })
+  await finalize()
+  await waitFor(() => expect(port.actions.confirm).toHaveBeenCalledWith(expect.objectContaining({
+    answers: { ...answers, summary: 'Fresh edit.', audience: 'Remote audience', copyMode: 'keep_original' },
+  }), { expectedInputKey: 'remote-new-revision' }))
+})
+
 test('keeps the review dirty and shows the parent error when confirmation fails', async () => {
   const port = reviewedPort({ actions: { confirm: vi.fn(async () => ({ ok: false, message: 'The source changed.' })) } })
   render(<BriefModule port={port} />)
@@ -119,4 +166,36 @@ test('an edit made while an autosave is in flight is kept and saved next, agains
   await act(() => vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS))
   expect(port.actions.confirm).toHaveBeenCalledTimes(2)
   expect(port.actions.confirm).toHaveBeenLastCalledWith(expect.objectContaining({ answers: { ...confirmed, gender: 'women' } }), { expectedInputKey: 'after-own-save' })
+})
+
+test('an unfinished inline edit stays dirty while another review save finishes and uses that save’s input key', async () => {
+  let finishSave
+  const confirmed = { ...answers, copyMode: 'keep_original' }
+  const confirm = vi.fn().mockImplementationOnce(() => new Promise(resolve => { finishSave = resolve })).mockResolvedValue({ ok: true })
+  const port = reviewedPort({ actions: { confirm } })
+  port.input = { ...port.input, brief: { ...port.input.brief, briefing: { ...port.input.brief.briefing, answers: confirmed, confirmation: { id: 'confirmation-1' } } } }
+  const { rerender } = render(<BriefModule port={port} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Edit settings' }))
+  vi.useFakeTimers()
+  fireEvent.click(screen.getByRole('radio', { name: 'Men' }))
+  await act(() => vi.advanceTimersByTimeAsync(AUTOSAVE_DELAY_MS))
+  expect(confirm).toHaveBeenCalledTimes(1)
+  fireEvent.click(screen.getByRole('button', { name: 'Edit Summary' }))
+  const field = screen.getByRole('textbox', { name: 'Summary' })
+  fireEvent.change(field, { target: { value: 'My next summary.' } })
+  expect(port.setDirty).toHaveBeenLastCalledWith(true)
+  await act(async () => { finishSave({ ok: true }) })
+  expect(port.setDirty).toHaveBeenLastCalledWith(true)
+  port.inputKey = 'after-own-save'
+  port.input = { ...port.input, brief: { ...port.input.brief, briefing: { ...port.input.brief.briefing,
+    answers: { ...confirmed, gender: 'men' }, confirmation: { id: 'confirmation-2' } } } }
+  rerender(<BriefModule port={{ ...port }} />)
+  expect(field).toHaveValue('My next summary.')
+  vi.useRealTimers()
+  fireEvent.keyDown(field, { key: 'Enter' })
+  expect(await screen.findByRole('button', { name: 'Edit Summary' })).toHaveTextContent('My next summary.')
+  expect(port.setDirty).toHaveBeenLastCalledWith(true)
+  await waitFor(() => expect(confirm).toHaveBeenCalledTimes(2), { timeout: 2000 })
+  expect(confirm).toHaveBeenLastCalledWith(expect.objectContaining({ answers: { ...confirmed, gender: 'men', summary: 'My next summary.' } }),
+    { expectedInputKey: 'after-own-save' })
 })

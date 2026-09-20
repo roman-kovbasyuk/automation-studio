@@ -66,6 +66,20 @@ test('an empty summary shows its own error text and takes focus', async () => {
   expect(screen.getByText('Enter a summary.')).toBeVisible()
 })
 
+test('legacy under-18 answers stay visible and cannot be reconfirmed until an adult range is chosen', async () => {
+  const onConfirm = vi.fn(async () => ({ ok: true }))
+  const historical = { ...answers, copyMode: 'create_new', ageGroups: ['under_18'] }
+  const proposal = proposalFor(historical, [])
+  render(<Review proposal={proposal} brief={briefFor(historical)} onConfirm={onConfirm} />)
+  expect(screen.getByText(/Under 18 \(previous selection\).*Choose an age range from 18/)).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: 'Proceed to copy →' }))
+  expect(onConfirm).not.toHaveBeenCalled()
+  expect(screen.getByText('Choose an age range starting at 18.')).toBeVisible()
+  fireEvent.change(screen.getByRole('slider', { name: 'From' }), { target: { value: '1' } })
+  fireEvent.click(screen.getByRole('button', { name: 'Proceed to copy →' }))
+  await waitFor(() => expect(onConfirm).toHaveBeenCalledWith({ ...historical, ageGroups: ['25_34', '35_44', '45_54', '55_64', '65_plus'] }))
+})
+
 test('suggested marks show for analysis-filled values and clear once the user changes them', async () => {
   const user = userEvent.setup()
   const proposal = proposalFor({ copyMode: 'create_new' }, [])

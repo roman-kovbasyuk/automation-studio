@@ -29,6 +29,13 @@ describe('brief review model', () => {
     expect(initialDraft({ ...complete, copyMode: null }, { ...withCopy, foundCopy: [] }).copyMode).toBe('create_new')
   })
 
+  test('keeps a historical under-18 audience visible until the requester chooses an adult range', () => {
+    const historical = { ...complete, ageGroups: ['under_18'] }
+    expect(initialDraft(historical, proposalWithCopy()).ageGroups).toEqual(['under_18'])
+    expect(ageLabel(historical.ageGroups)).toBe('Under 18 (previous selection)')
+    expect(briefIssues(historical).ageGroups).toBe('Choose an age range starting at 18.')
+  })
+
   test('checks only the fields a step owns, in plain language', () => {
     const draft = { ...complete, summary: ' ', copyMode: null, goal: 'other', goalCustom: '', reach: null, ageGroups: ['18_24', '45_54'] }
     expect(stepIssues('understanding', draft)).toEqual({ summary: 'Enter a summary.' })

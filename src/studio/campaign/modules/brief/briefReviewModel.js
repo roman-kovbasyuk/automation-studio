@@ -35,7 +35,7 @@ export function visibleSteps(proposal) {
 /** Found copy is always kept, so a proposal with it never starts by dropping it; ages form one range. */
 export function initialDraft(answers, proposal) {
   const copyMode = !proposal?.foundCopy?.length ? 'create_new' : answers.copyMode === 'create_new' ? null : answers.copyMode
-  return { ...answers, copyMode, ageGroups: normalizeAgeGroups(answers.ageGroups) }
+  return { ...answers, copyMode, ageGroups: answers.ageGroups.includes('under_18') ? answers.ageGroups : normalizeAgeGroups(answers.ageGroups) }
 }
 
 /** Every problem that blocks confirmation, as field → plain-language message. */
@@ -45,7 +45,8 @@ export function briefIssues(draft) {
   const issues = {}
   for (const issue of result.error.issues) {
     const field = issue.path[0]
-    issues[field] ??= issue.code === 'custom' && requiredMessages[field] ? requiredMessages[field] : issue.message
+    issues[field] ??= issue.code === 'custom' && requiredMessages[field] && !(field === 'ageGroups' && draft.ageGroups.includes('under_18'))
+      ? requiredMessages[field] : issue.message
   }
   return issues
 }
@@ -55,6 +56,7 @@ export function stepIssues(step, draft) {
 }
 
 export function ageLabel(groups) {
+  if (groups.includes('under_18')) return 'Under 18 (previous selection)'
   const [low, high] = ageRangeFromGroups(groups)
   if (low === 0 && high === ageBounds.length - 1) return 'All ages'
   if (high === ageBounds.length - 1) return `${ageBounds[low][0]}+`

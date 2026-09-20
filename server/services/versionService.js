@@ -2,12 +2,11 @@ import { reviewVideoSchema } from '../../shared/videoContracts.js'
 import { decodeGeneratedVideo } from '../media/videoDecoder.js'
 import { createHash, randomUUID } from 'node:crypto'
 import { z } from 'zod'
-import { rawBrief } from '../../shared/briefAnalysis.js'
+import { briefAnalysisStoredSchema, rawBrief } from '../../shared/briefAnalysis.js'
 import {authoredCopyVariantSchema} from '../../shared/briefingContracts.js'
 import {copyProjection,visualProjection,reviewedAnalysis} from '../../shared/briefingDependencies.js'
 import {
   analyseBriefInputSchema,
-  briefAnalysisSchema,
   campaignRecordSchema,
   campaignVersionRecordSchema,
   campaignVersionSnapshotSchema,
@@ -164,7 +163,7 @@ export function verifyCopyLineage(copy, campaignBrief, analysis) {
   // Capacity is persisted control-plane metadata, not part of the provider prompt.
   const copyInput = generateCopyInputSchema.extend({ copySlots: z.number().int().min(1).max(5).optional() }).safeParse(copy?.generationInput)
   const analysisInput = analyseBriefInputSchema.extend({ title: z.string().optional() }).safeParse(analysis?.generationInput)
-  const analysisResult = briefAnalysisSchema.safeParse(analysis?.generationResult?.analysis)
+  const analysisResult = briefAnalysisStoredSchema.safeParse(analysis?.generationResult?.analysis)
   if (!copy?.selectedCopy || copy.stale || copy.generationStep !== 'copy' || !isSafeGeneration(copy)
     || !copyInput.success
     || (!retained && hashCanonical(copyProjection(copyInput.data.brief)) !== hashCanonical(copyProjection(campaignBrief)))
@@ -404,7 +403,7 @@ function immutableBriefAnalysis(analysis) {
   return {
     id: analysis.id,
     input: analyseBriefInputSchema.extend({ title: z.string().optional() }).parse(analysis.generationInput),
-    result: { analysis: briefAnalysisSchema.parse(analysis.generationResult.analysis) },
+    result: { analysis: briefAnalysisStoredSchema.parse(analysis.generationResult.analysis) },
   }
 }
 

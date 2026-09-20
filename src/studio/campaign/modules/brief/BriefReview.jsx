@@ -14,7 +14,7 @@ const addTo = value => current => new Set(current).add(value)
 export const AUTOSAVE_DELAY_MS = 900
 
 /** Brief review (docs/specs/brief-review.md): all open until confirmed; then collapsed, autosaving unless a change would write copy. */
-export function BriefReview({ brief, proposal, draft, dirty, readOnly, busy, saving = false, error, notice, onChange, onConfirm, onDiscard, onOpenSource, sourcesSlot }) {
+export function BriefReview({ brief, proposal, draft, dirty, inputKey, readOnly, busy, saving = false, error, notice, onChange, onEditDirty, onConfirm, onDiscard, onOpenSource, sourcesSlot }) {
   const confirmed = Boolean(brief.briefing.confirmation)
   const steps = visibleSteps(proposal)
   const [openSteps, setOpenSteps] = useState(() => new Set(confirmed ? [] : steps))
@@ -61,10 +61,10 @@ export function BriefReview({ brief, proposal, draft, dirty, readOnly, busy, sav
     return () => clearTimeout(timer)
   }, [confirmed, dirty, busy, saving, pendingCopyWrite, draft, failedAutosave])
 
-  const update = (patch, block) => {
+  const update = (patch, block, sourceKey) => {
     setChanged(addTo(block))
     setSubmitError('')
-    onChange({ ...draft, ...patch })
+    onChange({ ...draft, ...patch }, sourceKey)
   }
   const toggle = step => setOpenSteps(current => {
     const next = new Set(current)
@@ -104,11 +104,11 @@ export function BriefReview({ brief, proposal, draft, dirty, readOnly, busy, sav
   return <div className="bs-brief-review" ref={root}>
     {notice && <Alert title={notice} tone="info" announce />}
     <div id={stepElement('understanding')} tabIndex={-1} className="bs-brief-understanding">
-      <InlineText label="Summary" variant="leadMedium" value={draft.summary} maxLength={1000} required readOnly={readOnly || busy}
-        onSave={value => { update({ summary: value }, 'summary'); return { ok: true } }} />
+      <InlineText label="Summary" variant="leadMedium" value={draft.summary} sourceKey={inputKey} maxLength={1000} required readOnly={readOnly || busy}
+        onDirty={dirty => onEditDirty?.('summary', dirty)} onSave={(value, sourceKey) => { update({ summary: value }, 'summary', sourceKey); return { ok: true } }} />
       {fieldError('summary')}
-      <InlineText label="Audience" variant="h5" value={draft.audience} maxLength={500} required readOnly={readOnly || busy}
-        onSave={value => { update({ audience: value }, 'audience'); return { ok: true } }} />
+      <InlineText label="Audience" variant="h5" value={draft.audience} sourceKey={inputKey} maxLength={500} required readOnly={readOnly || busy}
+        onDirty={dirty => onEditDirty?.('audience', dirty)} onSave={(value, sourceKey) => { update({ audience: value }, 'audience', sourceKey); return { ok: true } }} />
       {fieldError('audience')}
     </div>
     {sourcesSlot}

@@ -31,8 +31,7 @@ test('confirmed supplied copy reaches visual generation and an immutable banner 
     expect((await read()).copies).toHaveLength(1)
     const beforeGoal=await read(),goalState=beforeGoal.campaign.brief.briefing
     await createBriefingService({pool:studio.pool}).confirm({...common,expectedRevision:beforeGoal.campaign.revision,idempotencyKey:'new-goal',input:{sourceKey:goalState.sourceKey,analysisJobId:goalState.analysisJobId,answers:{...goalState.answers,goal:'traffic'}}})
-    expect((await read()).copies[0].stale).toBe(true)
-    await generation.retainCopy({...common,expectedRevision:(await read()).campaign.revision})
+    expect((await read()).copies[0].stale).toBe(false)
     await generation.approveCopy({...common,expectedRevision:(await read()).campaign.revision,input:{copyId:copy.id}})
     expect((await read()).copies[0].stale).toBe(false)
     const retained=await read(),retainedState=retained.campaign.brief.briefing

@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { briefingProposalSchema } from './briefingContracts.js'
+import { briefingProposalSchema, briefingStoredProposalSchema } from './briefingContracts.js'
 
 // Optional facts keep historical analyses readable. New providers request every
 // fact and return empty strings/lists for information the brief does not supply.
@@ -14,6 +14,7 @@ export const briefAnalysisSchema = z.strictObject({
   formats: z.array(z.string().trim().min(1).max(100)).max(20).optional(),
   briefingProposal: briefingProposalSchema.optional(),
 })
+export const briefAnalysisStoredSchema = briefAnalysisSchema.safeExtend({ briefingProposal: briefingStoredProposalSchema.optional() })
 
 /** Provider snapshots are immutable; editor-authored analysis is an override. */
 export function rawBrief(brief) {

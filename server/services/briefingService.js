@@ -15,7 +15,10 @@ function authorize(actor) {
 }
 function parse(schema,value) {
   const result=schema.safeParse(value)
-  if(!result.success) throw briefSourceError('invalid_brief_answers','Review the summary, audience, copy choice, reach and campaign goal.',422)
+  if(!result.success) {
+    const ageIssue=result.error.issues.find(issue=>issue.code==='custom'&&issue.path.includes('ageGroups'))
+    throw briefSourceError('invalid_brief_answers',ageIssue?.message??'Review the summary, audience, copy choice, reach and campaign goal.',422)
+  }
   return result.data
 }
 function editable(campaign,revision) {
@@ -92,14 +95,24 @@ export function createBriefingService({pool,idGenerator=randomUUID,clock=()=>new
         if(state.confirmation?.answersKey===answersKey) return {confirmationId:state.confirmation.id,campaignRevision:campaign.revision,initialCopy:'skip',importedCopySetId:state.confirmation.importedCopySetId}
         const previouslyWritten=(await client.query("SELECT id FROM brief_confirmations WHERE campaign_id=$1 AND copy_key=$2 AND response->>'initialCopy'='offer_generation' LIMIT 1",[campaignId,copyKey])).rows.length>0
         const importKey=hashCanonical({sourceKey:state.sourceKey,copies:proposal.foundCopy})
-        const imported=(await client.query('SELECT id FROM copy_sets WHERE campaign_id=$1 AND import_key=$2',[campaignId,importKey])).rows[0]
+        const imported=(await client.query(`SELECT cs.*,bc.snapshot AS authored_snapshot FROM copy_sets cs
+          LEFT JOIN brief_confirmations bc ON bc.id=cs.source_confirmation_id AND bc.campaign_id=cs.campaign_id
+          WHERE cs.campaign_id=$1 AND cs.import_key=$2`,[campaignId,importKey])).rows[0]
         const shouldImport=keepsCopy&&!imported
+        if(keepsCopy&&imported&&(imported.origin!=='supplied' || imported.authored_snapshot?.confirmation?.id!==imported.source_confirmation_id
+          || imported.authored_snapshot?.confirmation?.importedCopySetId!==imported.id
+          || imported.authored_snapshot?.confirmation?.copyKey!==imported.copy_source_key
+          || imported.authored_snapshot?.suppliedCopy?.id!==imported.id
+          || !Array.isArray(imported.original_candidates) || !Array.isArray(imported.authored_snapshot?.suppliedCopy?.candidates)
+          || hashCanonical(imported.original_candidates)!==hashCanonical(imported.authored_snapshot.suppliedCopy.candidates)))
+          throw briefSourceError('copy_unavailable','The supplied copy history is unavailable. Review the source material before confirming.',409)
         // Copy writing starts only for copy settings that never wrote copy; keeping copy verbatim doesn't count.
         const writesCopy=input.answers.copyMode!=='keep_original'&&!previouslyWritten
-        if(shouldImport) {
+        if(shouldImport || (keepsCopy&&imported?.stale)) {
           const capacity=(await client.query(`SELECT COALESCE(sum(jsonb_array_length(candidates)-jsonb_array_length(deleted_candidate_ids)),0)::int AS n FROM copy_sets WHERE campaign_id=$1 AND stale=false`,[campaignId])).rows[0].n
           const reserved=(await client.query("SELECT COALESCE(sum(COALESCE((input_snapshot->>'copySlots')::int,5)),0)::int AS n FROM generation_jobs WHERE campaign_id=$1 AND step='copy' AND status IN ('pending','unknown')",[campaignId])).rows[0].n
-          if(capacity+reserved+proposal.foundCopy.length+(writesCopy?INITIAL_COPY_OPTIONS:0)>30) throw briefSourceError('copy_capacity_exceeded',writesCopy
+          const suppliedSlots=shouldImport?proposal.foundCopy.length:imported.candidates.length-imported.deleted_candidate_ids.length
+          if(capacity+reserved+suppliedSlots+(writesCopy?INITIAL_COPY_OPTIONS:0)>30) throw briefSourceError('copy_capacity_exceeded',writesCopy
             ?'Delete copy options to make room for the found copy and five new options.':'Delete copy options to make room for all supplied wording.',409)
         }
         const id=idGenerator(),importedCopySetId=shouldImport?idGenerator():imported?.id??null
@@ -107,6 +120,10 @@ export function createBriefingService({pool,idGenerator=randomUUID,clock=()=>new
         const confirmation={id,analysisJobId:input.analysisJobId,sourceKey:state.sourceKey,copyKey,visualKey,answersKey,
           confirmedAt:clock().toISOString(),confirmedBy:actor.id,importedCopySetId}
         const updated=await save(client,campaign,input.answers,confirmation)
+        if(keepsCopy&&imported&&(imported.stale || copyKey!==hashCanonical(copyProjection(campaign.brief))))
+          await client.query(`UPDATE copy_sets SET stale=false,retained_brief_hash=$2,
+            selected_candidate_id=NULL,approved_candidate_ids='[]'::jsonb
+            WHERE id=$1 AND campaign_id=$3 AND origin='supplied' AND import_key=$4`,[imported.id,copyKey,campaignId,importKey])
         const response={confirmationId:id,campaignRevision:updated.revision,initialCopy:writesCopy?'offer_generation':'skip',importedCopySetId}
         await client.query(`INSERT INTO brief_confirmations(id,campaign_id,actor_id,idempotency_key,request_hash,source_key,copy_key,answers_key,snapshot,response)
           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,[id,campaignId,actor.id,idempotencyKey,requestHash,state.sourceKey,copyKey,answersKey,JSON.stringify({answers:input.answers,confirmation,suppliedCopy}),JSON.stringify(response)])

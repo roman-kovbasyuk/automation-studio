@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest'
 import { AGE_GROUPS, ageGroupsFromRange, ageRangeFromGroups, briefAnswersDraftSchema, briefAnswersConfirmedSchema,
   authoredCopyFieldsSchema, authoredCopyVariantSchema, briefingStateSchema, normalizeAgeGroups } from './briefingContracts.js'
 import { briefSchema, campaignPatchRequestSchema, createCampaignRequestSchema, generatedBannerCopySchema } from './contracts.js'
+import { briefAnalysisSchema } from './briefAnalysis.js'
 
 const answers = { summary: 'Norwegian courses', audience: 'Adult learners', copyMode: 'keep_original',
   ageGroups: [], gender: 'all', reach: 'local', goal: 'signups', goalCustom: '', visualTags: ['Oslo streets'] }
@@ -39,6 +40,21 @@ describe('briefing command boundaries', () => {
     expect(createCampaignRequestSchema.safeParse({ title:'Campaign', brief: { briefing } }).success).toBe(false)
     expect(createCampaignRequestSchema.safeParse({ title:'Campaign', brief: { briefing:{schemaVersion:2} } }).success).toBe(true)
     expect(briefSchema.safeParse({ notes:'Legacy campaign' }).success).toBe(true)
+  })
+  test('reads the historical under-18 selection unchanged but rejects it in a new confirmation', () => {
+    const historical = { ...briefing, answers: { ...answers, ageGroups: ['under_18'] } }
+    expect(briefingStateSchema.parse(historical).answers.ageGroups).toEqual(['under_18'])
+    const confirmation = briefAnswersConfirmedSchema.safeParse(historical.answers)
+    expect(confirmation.success).toBe(false)
+    expect(confirmation.error.issues).toEqual([expect.objectContaining({ path: ['ageGroups'] })])
+  })
+  test('reads a historical analysis suggestion without accepting it as a new provider result', () => {
+    const proposal = { sourceKey: briefing.sourceKey, foundCopy: [], answers: { ...answers, ageGroups: ['under_18'] }, suggestedVisualTags: [] }
+    const analysis = { summary: 'Historical analysis', themes: [], warnings: [], briefingProposal: proposal }
+    expect(briefSchema.parse({ briefing, analysis }).analysis.briefingProposal.answers.ageGroups).toEqual(['under_18'])
+    expect(briefAnalysisSchema.safeParse(analysis).success).toBe(false)
+    expect(createCampaignRequestSchema.safeParse({ title: 'New', brief: { notes: 'New', analysis } }).success).toBe(false)
+    expect(campaignPatchRequestSchema.safeParse({ brief: { analysis } }).success).toBe(false)
   })
   test('noncreative metadata cannot make an empty authored card valid', () => {
     expect(authoredCopyVariantSchema.safeParse({id:'candidate',headline:'',body:'',offer:'',cta:'',visualPrompt:'A city'}).success).toBe(false)

@@ -46,3 +46,21 @@ test('combined source analysis produces a reviewable proposal and stops before c
     expect((await studio.pool.query("SELECT step FROM generation_jobs")).rows).toEqual([{step:'brief_analysis'}])
   } finally {await assetStore.close();await studio.close()}
 },30000)
+
+test('a new provider suggestion targeting under-18 users is rejected before it becomes a stored analysis',async()=>{
+  const studio=await createIsolatedStudio()
+  try {
+    const actor=studio.actor('marketer'),workflow=createWorkflowService({pool:studio.pool})
+    const campaign=await workflow.createCampaign({actor,input:{title:'Adult age boundary',brief:{notes:'Headline: Learn together.',briefing:{schemaVersion:2}}}})
+    const mock=createMockProvider()
+    const provider={...mock,analyseBrief:async(...args)=>{
+      const result=await mock.analyseBrief(...args)
+      return {...result,analysis:{...result.analysis,briefingProposal:{...result.analysis.briefingProposal,
+        answers:{...result.analysis.briefingProposal.answers,ageGroups:['under_18']}}}}
+    }}
+    const service=createGenerationService({pool:studio.pool,controlPlane:createGenerationControlPlane({pool:studio.pool}),providers:{mock:provider}})
+    const result=await service.analyseBrief({actor,campaignId:campaign.id,idempotencyKey:'unsafe-age',input:{expectedRevision:campaign.revision}})
+    expect(result.body.job).toMatchObject({status:'failed',errorCode:'invalid_output'})
+    expect((await workflow.getCampaign({actor,campaignId:campaign.id})).brief.analysis).toBeUndefined()
+  } finally {await studio.close()}
+},30000)

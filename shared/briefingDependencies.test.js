@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest'
-import { copyProjection, visualProjection, sourceProjection, classifyBriefChange } from './briefingDependencies.js'
+import { copyProjection, visualProjection, sourceProjection, classifyBriefChange, reviewedAnalysis } from './briefingDependencies.js'
 const makeBrief = (answers = {}) => ({ product:'Course', audience:'Learners', objective:'Signups', offer:'', locale:'no', notes:'Oslo',
   briefing:{ schemaVersion:2, sourceIds:['s1'], sourceKey:'a'.repeat(64), analysisJobId:'job1', confirmation:null,
     answers:{summary:'Norwegian courses',audience:'Adult learners',copyMode:'keep_original',ageGroups:[],gender:'all',reach:'local',goal:'signups',goalCustom:'',visualTags:['Oslo'],...answers} } })
@@ -22,4 +22,11 @@ test('source display names do not affect identity but changed bytes do', () => {
   const before=sourceProjection(makeBrief(),[{id:'s1',contentHash:'a',parserVersion:'v1',name:'Old'}])
   expect(sourceProjection(makeBrief(),[{id:'s1',contentHash:'a',parserVersion:'v1',name:'New'}])).toEqual(before)
   expect(sourceProjection(makeBrief(),[{id:'s1',contentHash:'b',parserVersion:'v1'}])).not.toEqual(before)
+})
+test('provider context uses corrected answers without carrying a historical age suggestion into generation', () => {
+  const brief=makeBrief({ageGroups:['25_34','35_44'],goal:'sales'})
+  const oldAnalysis={summary:'Old summary',audience:'Old audience',objective:'Old goal',themes:[],warnings:[],
+    briefingProposal:{sourceKey:brief.briefing.sourceKey,foundCopy:[],answers:{...brief.briefing.answers,ageGroups:['under_18']},suggestedVisualTags:[]}}
+  expect(reviewedAnalysis(brief,oldAnalysis)).toEqual({summary:'Norwegian courses',audience:'Adult learners',objective:'Sales',themes:[],warnings:[]})
+  expect(oldAnalysis.briefingProposal.answers.ageGroups).toEqual(['under_18'])
 })

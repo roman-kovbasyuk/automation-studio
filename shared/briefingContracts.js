@@ -52,12 +52,18 @@ export const briefAnswersDraftSchema = z.strictObject({
   goal: z.enum(['awareness', 'traffic', 'leads', 'signups', 'sales', 'other']).nullable(),
   goalCustom: z.string().trim().max(500), visualTags: visualTagsSchema,
 })
-export const briefAnswersConfirmedSchema = briefAnswersDraftSchema.superRefine((answers, ctx) => {
+// Existing records may contain the former youngest band. Read it verbatim so
+// historical audience and confirmation hashes remain intact; commands use the adult-only schema above.
+export const briefAnswersStoredSchema = briefAnswersDraftSchema.safeExtend({
+  ageGroups: z.array(z.enum(['under_18', ...AGE_GROUPS])).max(AGE_GROUPS.length + 1).refine(distinct, 'Choose each age group once.'),
+})
+export const briefAnswersConfirmedSchema = briefAnswersStoredSchema.superRefine((answers, ctx) => {
   for (const field of ['summary', 'audience', 'copyMode', 'reach', 'goal']) {
     if (!answers[field]) ctx.addIssue({ code:'custom', path:[field], message:'Review this field before confirming.' })
   }
   if (answers.goal === 'other' && !answers.goalCustom) ctx.addIssue({code:'custom',path:['goalCustom'],message:'Describe the campaign goal.'})
-  if (!continuousAgeRange(answers.ageGroups)) ctx.addIssue({code:'custom',path:['ageGroups'],message:'Choose one continuous age range.'})
+  if (answers.ageGroups.includes('under_18')) ctx.addIssue({code:'custom',path:['ageGroups'],message:'Choose an age range starting at 18.'})
+  else if (!continuousAgeRange(answers.ageGroups)) ctx.addIssue({code:'custom',path:['ageGroups'],message:'Choose one continuous age range.'})
 })
 export function emptyBriefAnswers() {
   return { summary:'', audience:'', copyMode:null, ageGroups:[], gender:'all', reach:null, goal:null, goalCustom:'', visualTags:[] }
@@ -76,6 +82,7 @@ export const foundCopySchema = z.strictObject({id,fields:authoredCopyFieldsSchem
   verification:z.enum(['text_verified','needs_review'])})
 export const briefingProposalSchema = z.strictObject({sourceKey:hash,foundCopy:z.array(foundCopySchema).max(30),
   answers:briefAnswersDraftSchema,suggestedVisualTags:visualTagsSchema.refine(tags=>tags.length<=7,'Suggest at most seven visual keywords.')})
+export const briefingStoredProposalSchema = briefingProposalSchema.safeExtend({ answers: briefAnswersStoredSchema })
 export const briefSourceSummarySchema = z.strictObject({id,name:z.string().min(1).max(255),kind:z.enum(['text','file']),
   mimeType:z.string().min(1).max(200),byteSize:z.number().int().nonnegative().max(MAX_SOURCE_BYTES),
   status:z.enum(['processing','ready','failed']),errorCode:z.string().max(100).nullable(),
@@ -83,7 +90,7 @@ export const briefSourceSummarySchema = z.strictObject({id,name:z.string().min(1
 export const briefConfirmationSchema = z.strictObject({id,analysisJobId:id,sourceKey:hash,copyKey:hash,visualKey:hash,answersKey:hash,
   confirmedAt:z.string().datetime({offset:true}),confirmedBy:id,importedCopySetId:id.nullable()})
 export const briefingStateSchema = z.strictObject({schemaVersion:z.literal(2),sourceIds:z.array(id).max(MAX_BRIEF_SOURCES).refine(distinct),
-  sourceKey:hash,analysisJobId:id.nullable(),answers:briefAnswersDraftSchema,confirmation:briefConfirmationSchema.nullable()})
+  sourceKey:hash,analysisJobId:id.nullable(),answers:briefAnswersStoredSchema,confirmation:briefConfirmationSchema.nullable()})
 // This marker is the only v2 field accepted during campaign creation.
 export const briefingCreateSchema = z.strictObject({schemaVersion:z.literal(2)})
 export const briefConfirmationRequestSchema = z.strictObject({analysisJobId:id,sourceKey:hash,answers:briefAnswersConfirmedSchema})

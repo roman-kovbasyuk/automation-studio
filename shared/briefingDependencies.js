@@ -5,7 +5,10 @@ export function reviewedAnalysis(brief,analysis) {
   if(!isBriefingV2(brief)) return brief.analysis??analysis
   const answers=brief.briefing.answers
   const goals={awareness:'Brand awareness',traffic:'Website traffic',leads:'Generate leads',signups:'Sign-ups',sales:'Sales'}
-  return {...analysis,summary:answers.summary,audience:answers.audience,objective:answers.goal==='other'?answers.goalCustom:goals[answers.goal]??''}
+  // Historical suggestions are immutable evidence, not generation input after an adult-range correction.
+  const {briefingProposal:oldProposal,...content}=analysis
+  const current=oldProposal?.answers?.ageGroups.includes('under_18')?content:analysis
+  return {...current,summary:answers.summary,audience:answers.audience,objective:answers.goal==='other'?answers.goalCustom:goals[answers.goal]??''}
 }
 export function sourceProjection(brief, sources = []) {
   const raw = Object.fromEntries(rawFields.map(key => [key, brief[key] ?? (key==='locale'?'auto':'')]))

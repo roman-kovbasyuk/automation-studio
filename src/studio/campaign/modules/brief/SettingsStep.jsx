@@ -1,4 +1,4 @@
-import { Icon, RadioGroup, RangeSlider } from 'brutalist-design-system'
+import { Icon, RadioGroup, RangeSlider, Text } from 'brutalist-design-system'
 import { ageGroupsFromRange, ageRangeFromGroups } from '../../../../../shared/briefingContracts.js'
 import { AGE_LABELS, GENDER_ICONS, GENDER_OPTIONS, GOAL_ICONS, GOAL_OPTIONS, REACH_ICONS, REACH_OPTIONS, ageLabel } from './briefReviewModel.js'
 import { SuggestedBadge } from './SuggestedBadge.jsx'
@@ -10,11 +10,13 @@ const withIcons = (options, icons) => options.map(option => ({ ...option,
 
 /** Who the banners are for and what they should achieve. */
 export function SettingsStep({ draft, errors, suggested, disabled, onChange }) {
+  const legacyAge = draft.ageGroups.includes('under_18')
   return <div className="bs-brief-settings">
-    <RangeSlider label="Age range" lowerLabel="From" upperLabel="To" min={0} max={AGE_LABELS.length - 1} value={ageRangeFromGroups(draft.ageGroups)}
+    <RangeSlider label="Age range" lowerLabel="From" upperLabel="To" min={0} max={AGE_LABELS.length - 1} value={legacyAge ? [0, AGE_LABELS.length - 1] : ageRangeFromGroups(draft.ageGroups)}
       formatValue={index => AGE_LABELS[index]} disabled={disabled}
-      instructions={<span className="bs-inline-icon-label">{ageLabel(draft.ageGroups)}{suggestion(suggested, 'ageGroups')}</span>}
+      instructions={<span className="bs-inline-icon-label">{ageLabel(draft.ageGroups)}{legacyAge && ' — Choose an age range from 18 to replace this selection.'}{suggestion(suggested, 'ageGroups')}</span>}
       onChange={range => onChange({ ageGroups: ageGroupsFromRange(range) }, 'ageGroups')} />
+    {errors.ageGroups && <Text variant="small" role="alert">{errors.ageGroups}</Text>}
     <RadioGroup variant="tags" name="gender" label="Gender" options={withIcons(GENDER_OPTIONS, GENDER_ICONS)} value={draft.gender} disabled={disabled}
       instructions={suggestion(suggested, 'gender')} onChange={gender => onChange({ gender }, 'gender')} />
     <RadioGroup variant="tags" name="goal" label="Goal" options={withIcons(GOAL_OPTIONS.filter(option => option.value !== 'other'), GOAL_ICONS)} value={draft.goal ?? undefined} disabled={disabled}
