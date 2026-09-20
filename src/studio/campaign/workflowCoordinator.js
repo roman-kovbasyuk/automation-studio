@@ -1,4 +1,3 @@
-import { createCampaignRuntime } from './campaignRuntime.js'
 import { createBriefCommands } from './modules/brief/briefCommands.js'
 import { createCopyCommands } from './modules/copy/copyCommands.js'
 import { createVisualsCommands } from './modules/visuals/visualsCommands.js'
@@ -83,16 +82,6 @@ export function createWorkflowCoordinator({ runtime, onNavigate = () => {} }) {
   }
   const review = createReviewCommands(runtime)
   const banners = createBannersCommands(runtime)
-  async function resumeInitialDrafts() {
-    if (!runtime.getSnapshot('brief').input.brief.briefing) return { ok: false, code: 'canonical_migration_required', message: 'This campaign needs the canonical briefing migration before it can continue.' }
-    return { ok: true }
-  }
-  function observeInitialDrafts() {
-    const resume = () => { void resumeInitialDrafts().catch(() => {}) }
-    const stops = ['brief', 'copy', 'visuals'].map(id => runtime.subscribe(id, resume))
-    resume()
-    return () => stops.forEach(stop => stop())
-  }
   return Object.freeze({ actions: Object.freeze({
     brief: Object.freeze({ ...brief, submit: analyzeAndGenerate,
       retrySource: async id=>{
@@ -138,23 +127,5 @@ export function createWorkflowCoordinator({ runtime, onNavigate = () => {} }) {
     } }),
     review,
     distribute: createDistributeCommands(runtime),
-  }), analyzeAndGenerate, regenerateCopy, resumeInitialDrafts, observeInitialDrafts })
-}
-
-/** Never retry non-idempotent campaign creation automatically. */
-export async function startCampaign({ api, actor, templates, input, onCreated = () => {}, onNavigate, onCampaignChange }) {
-  let campaign, runtime = null
-  try {
-    campaign = await api.createCampaign(input)
-    onCreated(campaign)
-    const workspace = await api.getWorkspace(campaign.id)
-    runtime = createCampaignRuntime({ api, actor, templates, workspace, onCampaignChange })
-    const result = await createWorkflowCoordinator({ runtime, onNavigate }).analyzeAndGenerate()
-    return { campaignId: campaign.id, runtime, result }
-  } catch (error) {
-    const uncertain = !campaign && (error.status === undefined || error.status === 0 || error.status >= 500)
-    return { campaignId: campaign?.id ?? null, runtime, result: { ok: false,
-      code: uncertain ? 'creation_uncertain' : error.code ?? 'request_failed',
-      message: uncertain ? 'Creation may have completed. Check the campaign list before creating another campaign.' : error.message } }
-  }
+  }), analyzeAndGenerate, regenerateCopy })
 }

@@ -223,7 +223,6 @@ export const personalAiDefaultsRequestSchema = z.strictObject({
   imageSecondary: z.strictObject({ provider: z.enum(['google', 'openai']), model: nonEmptyString.max(200) }).nullable().optional(),
 }).refine(value => Object.keys(value).length > 0, 'At least one default is required')
 
-export const personalIntegrationPlatformSchema = z.enum(['slack', 'discord'])
 export const personalIntegrationRequestSchema = z.strictObject({
   destination: nonEmptyString.max(200),
   webhookUrl: z.string().trim().url().max(2_000),

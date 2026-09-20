@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight } from 'lucide-react'
 import { AppButton, Alert } from "../components/design-system/compatibility.jsx"
 import { safeErrorMessage } from './safeErrorMessage.js'
 
@@ -15,7 +14,6 @@ export function ErrorNotice({error, onRetry}) {
 export function SectionHeading({ title, children, action, as: Heading = 'h2' }) {
   return <header className="bs-section-heading"><div><Heading>{title}</Heading>{children && <p>{children}</p>}</div>{action}</header>
 }
-export function NextButton({children='Continue', ...props}) { return <Button primary {...props}>{children}<ArrowRight size={17} aria-hidden="true"/></Button> }
 export function useAssetUrl(reader, assetId) {
   const [state,setState]=useState({url:null,error:null})
   useEffect(()=>{

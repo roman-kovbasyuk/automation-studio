@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [v3]
+    branches: [main]
 
 permissions:
   contents: read
@@ -22,3 +22,33 @@ jobs:
       - run: npm run test:design-system
       - run: npm run design-system:check
       - run: npm run build
+
+  test:
+    name: Application and integration tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: banner_studio_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d banner_studio_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/banner_studio_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm ci
+      - run: npm run test:run -- --maxWorkers=4
+      - run: npm run test:workflow

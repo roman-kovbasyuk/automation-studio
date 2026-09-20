@@ -1,6 +1,6 @@
 # Architecture
 
-**Status:** Current · **Source reviewed:** 16 September 2026 (branch `v3`, commit `26c2598`)
+**Status:** Current · **Updated:** 20 September 2026; see [verification scope](phase-preparation-review.md)
 
 This page describes the code as it is. The target product model is in the [product concept](../product/concept.md). The code still uses older names ("campaign", "Banner Studio"); see the [glossary](../product/glossary.md#old-names-and-where-they-still-appear).
 
@@ -44,7 +44,7 @@ flowchart TB
 | `/` | Home: brief composer and recent projects |
 | `/mvp/new` | Choose what to create (only banners is available) |
 | `/mvp/campaign/:id?module=:module` | Campaign flow |
-| `/mvp/templates` | Template catalog, banner template editor, MSD slide templates |
+| `/mvp/templates` | Template catalog and MSD slide template reference; in-app editor removed (D38) |
 | `/mvp/system`, `/mvp/system/:id` | Brand library and brand details |
 | `/mvp/settings` | Personal settings and AI connections |
 | `/mvp/admin/...` | Admin area (admins only) |

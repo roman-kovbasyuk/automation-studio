@@ -3,7 +3,6 @@ import { hashCanonical } from '../../shared/canonicalJson.js'
 import { withTransaction } from '../db/pool.js'
 import { createIdempotencyRepository } from '../repositories/idempotencyRepository.js'
 
-export const externalOperationRecoveryBoundary = 'Paid-provider calls require the persisted generation-job recovery protocol from Task 9.'
 
 export class IdempotencyServiceError extends Error {
   constructor(statusCode, code, message) {

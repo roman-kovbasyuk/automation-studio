@@ -2,9 +2,9 @@ import { SearchField } from 'brutalist-design-system'
 import { useEffect, useMemo, useState } from 'react'
 import { AppButton, SelectField } from '../components/design-system/compatibility.jsx'
 import { SectionHeading } from './primitives.jsx'
-import { GenericTemplateArt, DESIGN_SYSTEMS } from './NovartisTemplateGallery.jsx'
+import { GenericTemplateArt } from './TemplatePreview.jsx'
 import { TemplateGroup } from './TemplateGroup.jsx'
-import { TEMPLATE_GROUPS, normalizeCatalog, readCatalogSelection, selectCatalog } from './templateCatalog.js'
+import { DESIGN_SYSTEMS, TEMPLATE_GROUPS, normalizeCatalog, readCatalogSelection, selectCatalog } from './templateCatalog.js'
 import './template-library.css'
 
 const designSystemOptions = DESIGN_SYSTEMS.map(system => ({

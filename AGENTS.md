@@ -28,7 +28,7 @@ When sources disagree, use this order:
 3. Current product and specification pages in `docs/product/` and `docs/specs/` for what to build.
 4. Code, schemas and fresh test results for what exists today, described in `docs/engineering/`.
 
-Never treat `docs/archive/` as an authority. Never infer intended product behaviour from old names in the code ("campaign", "Banner Studio", six modules, review statuses). Record unresolved conflicts and ask; do not resolve them by picking the newest file.
+Superseded documents are retained in Git history, not as working-tree instructions (D40). Never infer intended product behaviour from old names in the code ("campaign", "Banner Studio", six modules, review statuses). Record unresolved conflicts and ask; do not resolve them by picking the newest file.
 
 ## Working rules
 
@@ -63,7 +63,7 @@ The existing banner flow lives in `src/studio/campaign/`. Until it is migrated t
 - Each module owns its functionality, local state and explicit input/output contract. The page owns layout and navigation; `workflowCoordinator.js` connects module outputs. Contract changes must be checked against dependent modules and chain tests.
 - Never key a module by campaign revision or replace the module tree during a mutation refresh. Preserve local drafts and send their captured input key through named commands. Keep backend authorization and artifact integrity authoritative.
 - Do not change review permissions, approval requirements or delivery behaviour without an accepted specification. Decision D1 (designer review as escalation) requires its own specification before implementation.
-- The live campaign page is `src/studio/campaign/CampaignPage.jsx`. Legacy Stage exports are compatibility adapters, not the live workflow controller. Unused prototype code in `src/mvp/`, `src/domain/`, `src/data/` and parts of `src/screens/` is scheduled for removal; do not build on it.
+- The live campaign page is `src/studio/campaign/CampaignPage.jsx`. Legacy Stage exports are compatibility adapters, not the live workflow controller. Unreachable pre-campaign screens were removed in M0; do not recreate them. The offline prototype in `src/prototype/` and module playground remain supported.
 
 See [campaign modules](docs/engineering/campaign-modules.md) for the module boundary, playground and verification commands.
 

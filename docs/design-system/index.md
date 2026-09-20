@@ -31,4 +31,4 @@ Start with the root contracts:
 | [Templates catalog](pages/templates.md) | Accepted |
 | [Offline prototype creation flow](pages/prototype-creation.md) | Accepted |
 
-Earlier audits of the in-house component library are in the [archive](../archive/README.md).
+Earlier audits are available in Git history; the [consumer boundary](migration.md) describes the current package.

@@ -10,4 +10,4 @@ Brand systems are separate from the application UI design system. `shared/resolv
 
 The target model changes this: templates reference brand roles and each asset creation flow pins its brand ([D2](../../product/decisions.md)). See [known issues](../known-issues.md#product-model-gaps).
 
-The in-app banner template editor was removed in M0 ([D38](../../product/decisions.md)); its description is [archived](../../archive/records/banner-template-editor.md).
+The in-app banner template editor was removed in M0 ([D38](../../product/decisions.md)); its earlier implementation is available in Git history.

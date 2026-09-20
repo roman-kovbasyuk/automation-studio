@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest'
-import { createWorkflowCoordinator, startCampaign } from './workflowCoordinator.js'
+import { createWorkflowCoordinator } from './workflowCoordinator.js'
 import { createCampaignRuntime } from './campaignRuntime.js'
 import { makeScenario } from './testing/workspaceFixtures.js'
 import { emptyBriefAnswers } from '../../../shared/briefingContracts.js'
@@ -178,40 +178,18 @@ describe('explicit Brief → Copy coordination', () => {
     expect(api.generate.mock.calls.map(call => call[1])).toEqual(['brief'])
     runtime.dispose()
   })
-  test('remount resumes only unattempted initial text outputs, never analysis or images', async () => {
+  test('connecting a coordinator and refreshing never dispatches generation', async () => {
     const { runtime, api, workspace } = setup()
     workspace.jobs = structuredClone(makeScenario('copy-ready').workspace.jobs)
     workspace.campaign.brief.analysis = workspace.jobs[0].result.analysis
     await runtime.refresh()
-    const coordinator = createWorkflowCoordinator({ runtime })
-    await coordinator.resumeInitialDrafts()
-    await coordinator.resumeInitialDrafts()
+    createWorkflowCoordinator({ runtime })
+    await runtime.refresh()
+    await runtime.refresh()
     expect(api.generate.mock.calls.map(call => call[1])).toEqual([])
     runtime.dispose()
   })
-  test('a failed create never starts generation or automatically repeats POST', async () => {
-    const { api, runtime, actor, templates } = setup()
-    api.createCampaign.mockRejectedValueOnce(Object.assign(new Error('Connection lost'), { status: 0 }))
-    const onCreated = vi.fn()
-    const result = await startCampaign({ api, actor, templates, input: { title: 'Launch', brief: { notes: 'Launch' } }, onCreated })
-    expect(result).toMatchObject({ runtime: null, result: { ok: false, code: 'creation_uncertain' } })
-    expect(api.createCampaign).toHaveBeenCalledTimes(1)
-    expect(onCreated).not.toHaveBeenCalled()
-    expect(api.generate).not.toHaveBeenCalled()
-    runtime.dispose()
-  })
-  test('retains the created campaign and its runtime if analysis fails', async () => {
-    const { api, runtime, actor, templates } = setup()
-    api.generate.mockRejectedValueOnce(Object.assign(new Error('Invalid brief'), { status: 422, code: 'brief_invalid' }))
-    const onCreated = vi.fn()
-    const created = await startCampaign({ api, actor, templates, input: { title: 'Launch', brief: { notes: 'Launch' } }, onCreated })
-    expect(created.campaignId).toBe('campaign-1')
-    expect(created.runtime).not.toBeNull()
-    expect(created.result).toMatchObject({ ok: false, code: 'brief_invalid' })
-    expect(onCreated).toHaveBeenCalledOnce()
-    expect(api.createCampaign).toHaveBeenCalledOnce()
-    created.runtime.dispose(); runtime.dispose()
-  })
+
 })
 
 test('Banners hands completed footage to Review for explicit selection before freezing', async () => {

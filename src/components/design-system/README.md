@@ -12,11 +12,11 @@ import { PromptComposer } from './organisms/PromptComposer.jsx'
 import { WorkflowModuleFrame } from './organisms/WorkflowModuleFrame.jsx'
 ```
 
-Paths above are relative to this directory. The flat compatibility exports and unused components were removed in M0; import from the `atoms/`, `molecules/` and `organisms/` paths. Domain-aware components stay in `src/studio`.
+Paths above are relative to this directory. Import supported adapters from the `atoms/`, `molecules/` and `organisms/` paths. The remaining `compatibility.jsx` exports serve live consumers; unused wrappers were removed in the preparation cleanup. Domain-aware components stay in `src/studio`.
 
 - [Consumer boundary and migration](../../../docs/design-system/migration.md)
 - [Missing components and native fallbacks](../../../docs/design-system/missing-components.md)
-- Earlier component contracts, audit, roadmap and validation: [archive](../../../docs/archive/README.md)
+- Current consumer contract: [workspace integration](../../../docs/specs/design-system-integration.md); earlier contracts remain in Git history
 
 The only supported application theme is light.
 
@@ -36,7 +36,7 @@ Consumer: `src/studio/campaign/modules/copy/CopyView.jsx`. Copy content, approva
 - `molecules/InlineText.jsx`: text-first editing with `label`, `value`, `sourceKey`, `onSave(value, capturedSourceKey)`, `onDirty`, `readOnly`, `maxLength` (500 by default), `required`, and `multiline`. Saves trim the value; failed saves retain the draft. Enter saves, Shift+Enter inserts a line, and Escape cancels when idle. A changed source key produces a retained-draft notice; the caller owns conflict resolution and validation beyond required text. Editable display targets are at least 44px high; read-only values render as text.
 - `molecules/AsyncStatus.jsx`: caller-supplied `children` in a status region with a decorative loading icon. It describes indeterminate work; requests, timing, failure recovery, and progress wording belong to the caller.
 
-Consumers: `src/studio/campaign/modules/brief/BriefModule.jsx` uses InlineText and AsyncStatus; `AutoSaveSummary.jsx` uses InlineText; `BriefView.jsx` and `ModuleHost.jsx` use AsyncStatus. Schema validation, permissions, source keys, and campaign mutation behavior remain in Studio. The [Brief surface record](../../../.impeccable/surfaces/src-studio-campaign-modules-brief-briefmodule-jsx.md) describes composition and review evidence.
+Consumers: `src/studio/campaign/modules/brief/BriefModule.jsx` uses InlineText and AsyncStatus; `AutoSaveSummary.jsx` uses InlineText; `BriefView.jsx` and `ModuleHost.jsx` use AsyncStatus. Schema validation, permissions, source keys, and campaign mutation behavior remain in Studio. The [Brief review specification](../../../docs/specs/brief-review.md) describes the current composition; the [preparation review](../../../docs/engineering/phase-preparation-review.md) records verification evidence.
 
 ## Form patterns
 

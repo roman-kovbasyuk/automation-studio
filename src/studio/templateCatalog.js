@@ -119,3 +119,9 @@ export function readCatalogSelection(search = '') {
   const groupId = params.get('type') ?? legacy[params.get('category')] ?? 'all'
   return { groupId, systemId: params.get('system') ?? 'folkeuniversitetet', query: params.get('q') ?? '', sort: params.get('sort') ?? 'last-used' }
 }
+
+export const DESIGN_SYSTEMS = Object.freeze([
+  { id: 'novartis', label: 'Novartis', eyebrow: 'NOVARTIS · V1 KIT', description: 'Progress in every heartbeat, carried through the supplied cardiovascular campaign board.' },
+  { id: 'folkeuniversitetet', label: 'FOK University', matchNames: ['folkeuniversitetet', 'fok university'], eyebrow: 'FOK UNIVERSITY', description: 'Folkeuniversitetet foundations and approved template assignments.' },
+  { id: 'msd', label: 'MSD', eyebrow: 'MSD · CORE DIRECTION', description: 'MSD template layouts assigned to the published brand system.' },
+])

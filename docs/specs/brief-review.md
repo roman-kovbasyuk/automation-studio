@@ -1,6 +1,6 @@
 # Brief review
 
-**Status:** Implemented, awaiting review · **Updated:** 17 September 2026 · **Requirements:** BRIEF-2–5, COPY-1, VIS-1, VIS-5, NFR-2, NFR-5, NFR-6 · **Decisions:** D36, D37, D39 · **Depends on:** M0, DS0 · **Plan:** [implementation plan](../plans/2026-09-17-brief-review.md)
+**Status:** Implemented; regression hardening in preparation review · **Updated:** 20 September 2026 · **Requirements:** BRIEF-2–5, COPY-1, VIS-1, VIS-5, NFR-2, NFR-5, NFR-6 · **Decisions:** D36, D37, D39 · **Depends on:** M0, DS0 · **Evidence:** [preparation review](../engineering/phase-preparation-review.md)
 
 How the Brief stage of a banner set turns one AI analysis into a confirmed brief: the AI prefills what it can, and the requester reviews it on one page.
 
@@ -304,8 +304,12 @@ Made in the implementation pull request:
 - **[Recipes](recipes.md):** the `copyMode` values; `importSuppliedCopy` runs when `{ analysis: foundCopy, exists: true }`; the `confirmBrief` questions.
 - **Roadmap:** a row for this work after DS0.
 
-## Delivery
+## Preparation hardening (20 September 2026)
 
-1. M0 ([pull request #2](https://github.com/roman-kovbasyuk/automation-studio/pull/2)) merges.
-2. DS0 imports Brutalist as a workspace package ([design system integration](design-system-integration.md#import-from-the-standalone-repository)).
-3. One pull request into `v3` with everything on this page. The AI and copy choice work can start before DS0 merges; the interface builds on DS0.
+Summary and Audience drafts capture the input identity at edit start and mark the module dirty before blur. A remote refresh must not authorize an older draft against newer input; failed saves and navigation guards preserve the draft.
+
+Reconfirmation reuses the supplied-copy set identified by its import key, preserving edits, deleted candidates and immutable authorship. Reactivation requires valid original confirmation history and records the current retained brief hash; selection and approval are cleared when the copy becomes current under a different brief.
+
+Historical stored answers and proposals may contain `under_18` and remain readable without changing their hashes or audience. The review displays the legacy choice explicitly. A new confirmation requires a range beginning at 18; new analysis providers retain adult-only validation.
+
+Implementation and exact verification evidence are tracked in the [preparation review](../engineering/phase-preparation-review.md). Changes target `main`; the original M0/DS0/brief delivery sequence is complete.

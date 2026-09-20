@@ -35,6 +35,8 @@ All documentation lives in [`docs/`](docs/index.md) and is served as a site at `
 | [Decision log](docs/product/decisions.md) | What has been decided |
 | [Roadmap](docs/product/roadmap.md) | What happens next |
 | [Architecture](docs/engineering/architecture.md) | How the code is organised today |
+| [Preparation review](docs/engineering/phase-preparation-review.md) | Cleanup findings and verification evidence |
+| [M1 implementation plan](docs/plans/2026-09-20-m1-brand-input.md) | Ordered tasks for brands as project input |
 | [FRONTEND.md](FRONTEND.md) | Rules for application UI work |
 
 ## Repository layout

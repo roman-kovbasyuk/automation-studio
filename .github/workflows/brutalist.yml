@@ -6,7 +6,7 @@ on:
       - packages/brutalist-design-system/**
       - package-lock.json
   push:
-    branches: [v3]
+    branches: [main]
     paths:
       - packages/brutalist-design-system/**
       - package-lock.json

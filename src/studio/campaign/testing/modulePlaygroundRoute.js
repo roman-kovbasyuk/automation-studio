@@ -12,7 +12,3 @@ export function parseModulePlaygroundRoute(url) {
   const requestedScenario = url.searchParams.get('scenario')
   return { moduleId, scenario: PLAYGROUND_SCENARIOS.includes(requestedScenario) ? requestedScenario : 'draft' }
 }
-
-export function isModulePlaygroundRoute(url, enabled) {
-  return Boolean(enabled && parseModulePlaygroundRoute(url))
-}

@@ -1,5 +1,5 @@
 import { Children, cloneElement, isValidElement, useEffect, useId, useRef, useState } from 'react'
-import { AtomsRoot, Alert as PublicAlert, Button, Checkbox, Grid, Heading, Inline, Menu as PublicMenu, Panel, Select, SidebarPanel as PublicSidebarPanel, Spinner, Stack, StatusBadge as PublicStatusBadge, Surface, Tag, Text, TextAction, Toggle, FileDropzone as PublicFileDropzone, icons } from 'brutalist-design-system'
+import { AtomsRoot, Alert as PublicAlert, Button, Checkbox, Grid, Heading, Inline, Menu as PublicMenu, Select, SidebarPanel as PublicSidebarPanel, Spinner, Stack, StatusBadge as PublicStatusBadge, Surface, Text, TextAction, Toggle, FileDropzone as PublicFileDropzone, icons } from 'brutalist-design-system'
 
 // Temporary consumer API translations. No CSS or visual overrides belong here.
 export { AtomsRoot as DesignSystemRoot, Checkbox as CheckboxField }
@@ -40,13 +40,6 @@ export function ActionCard({ label, children, actions, persistentAction, status,
 }
 export function FactGrid({ label = 'Details', items }) {
   return <Grid role="group" aria-label={label} minItemWidth="12rem">{items.map(item => <Stack gap={1} key={item.id ?? item.label}><Text variant="small" tone="secondary">{item.label}</Text><Text as="div" variant={item.emphasis ? 'h4' : 'body'}>{item.value ?? item.content}</Text></Stack>)}</Grid>
-}
-export function FormSection({ title, description, children }) { return <Panel role="group" title={title} description={description}>{children}</Panel> }
-export function TagButton({ children, dismissible, disabled, onClick }) {
-  return dismissible ? <Tag onRemove={disabled ? undefined : onClick} removeLabel={disabled ? undefined : 'Remove ' + children}>{children}</Tag> : <Button disabled={disabled} onClick={onClick}>{children}</Button>
-}
-export function SelectionTile({ label, selected, disabled, onChange, caption, children }) {
-  return <Surface padding={4} radius="small"><Stack gap={3}>{children}{caption}<Button aria-label={(selected ? 'Deselect ' : 'Select ') + label} aria-pressed={selected} variant={selected ? 'primary' : 'secondary'} icon={selected ? 'check' : 'plus'} disabled={disabled} onClick={() => onChange(!selected)}>{label}</Button></Stack></Surface>
 }
 export function StatusBadge({ tone, status, children, showIcon }) {
   const value = status ?? (tone === 'info' || tone === 'warning' ? 'pending' : tone) ?? 'neutral'

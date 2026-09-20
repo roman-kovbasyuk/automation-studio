@@ -1,6 +1,6 @@
 # Design system integration
 
-**Status:** DS0 implemented, awaiting review; DS1–DS3 not started · **Accepted:** 17 September 2026 ([D13, D24, D25, D30, D36](../product/decisions.md)) · **Plan:** [DS0](../plans/2026-09-17-ds0-brutalist-workspace.md)
+**Status:** DS0 implemented; DS1–DS3 remain incremental work · **Updated:** 20 September 2026 · **Accepted:** [D13, D24, D25, D30, D36](../product/decisions.md) · **Evidence:** [preparation review](../engineering/phase-preparation-review.md)
 
 How Automation Studio uses, extends and updates the Brutalist design system.
 

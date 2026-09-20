@@ -17,3 +17,5 @@ Use the guides below for repository, package, and integration details.
 - [Verification](verification.md)
 - [Migration from the legacy catalog](migration.md)
 - [Known limitations](known-limitations.md)
+
+Completed implementation plans and session reviews are retained in Git history. The guides above describe the supported package.

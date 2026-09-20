@@ -38,7 +38,7 @@ Use these terms in product documents, specifications and the user interface. The
 | **Current** | Describes what the code does today. |
 | **Target** | Agreed direction that is not yet built. |
 | **Proposal** | A recommendation that has not been accepted. |
-| **Historical** | Kept for context only. Lives in [the archive](../archive/README.md). Never an authority. |
+| **Historical** | Available in Git history for context only. Never an authority (D40). |
 
 ## Old names and where they still appear
 

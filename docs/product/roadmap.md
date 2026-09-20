@@ -1,6 +1,6 @@
 # Roadmap
 
-**Status:** Target · **Updated:** 17 September 2026
+**Status:** Target · **Updated:** 20 September 2026
 
 The next goal is a **proof of concept**: banner sets and decks produced automatically from brand, templates and recipes for the pilot brand Folkeuniversitetet, with escalation to designers when needed.
 
@@ -35,8 +35,8 @@ Drafted on 17 September 2026 and updated for decisions D17–D30 the same day:
 
 | Milestone | Work | Exit check |
 | --- | --- | --- |
-| **M0 Stabilise** | [Plan](../plans/2026-09-17-m0-stabilise.md), implemented and in review. Fix the issues in [known issues](../engineering/known-issues.md) marked *before build*: generation jobs that lock a project, project creation errors, dead code, the committed dev script tag, product naming in code. | No job can leave a project unusable. |
-| **M1 Brand as input** | Brand guidance fields; licensed brand fonts in the renderer (Matter); projects pin a brand version; templates reference brand roles; brand context in AI prompts. Folkeuniversitetet made automation-ready. | One template renders two brands correctly; Matter renders in banners; prompts include brand context. |
+| **M0 Stabilise** | Implemented; [current baseline review](../engineering/phase-preparation-review.md). Fix the issues in [known issues](../engineering/known-issues.md) marked *before build*: generation jobs that lock a project, project creation errors, dead code, the committed dev script tag, product naming in code. | No job can leave a project unusable. |
+| **M1 Brand as input** | [Implementation plan](../plans/2026-09-20-m1-brand-input.md). Brand guidance fields; licensed brand fonts in the renderer (Matter); projects pin a brand version; templates reference brand roles; brand context in AI prompts. Folkeuniversitetet made automation-ready. | One template renders two brands correctly; Matter renders in banners; prompts include brand context. |
 | **M2 Banner recipe and Assets stage** | Recipe loader and schema check; `banner-set` recipe drives the stages; checks, repair, accept, download, request design help; Figma escalation replaces mandatory review. | A banner brief reaches downloaded files with no designer; a Figma escalation round trip works. |
 | **M3 Deck recipe** | Folkeuniversitetet slide template set with placeholders; outline and slide-fill capabilities; server-side text fit; PPTX export; PPTX escalation (download, edit, upload). | A deck brief reaches a downloaded PPTX with no designer; a PPTX escalation round trip works. |
 | **M4 Pilot** | Real Folkeuniversitetet briefs for both asset types with live AI; baseline week; targets set (D29). | Measures recorded; go/no-go decision written. |
@@ -45,18 +45,18 @@ Drafted on 17 September 2026 and updated for decisions D17–D30 the same day:
 
 | Step | Work | Needed before |
 | --- | --- | --- |
-| DS0 | [Plan](../plans/2026-09-17-ds0-brutalist-workspace.md), implemented and awaiting review. Import Brutalist as the workspace package `packages/brutalist-design-system` with its history; boundary checks and CI; remove vendored archives and the change pipeline; freeze the standalone repository (D36) | First gap fix |
+| DS0 | Implemented; [current baseline review](../engineering/phase-preparation-review.md). Import Brutalist as the workspace package `packages/brutalist-design-system` with its history; boundary checks and CI; remove vendored archives and the change pipeline; freeze the standalone repository (D36) | First gap fix |
 | DS1 | Adopt available components (audit items A1–A7) | M2 |
 | DS2 | Checkable gap list (JSON); breaking-change gate | M2 |
 | DS3 | First gap fixes in the package: routed steps (R1), autosave inline text (R2), controlled dialogs (R3) | M2 interface |
 
-**Brief review (after DS0).** [Design](../specs/brief-review.md) and [plan](../plans/2026-09-17-brief-review.md), implemented and awaiting review: AI-prefilled settings reviewed on one page and saved automatically once confirmed, found copy always kept with optional new copy, keywords and audience settings in image prompts (D39).
+**Brief review (after DS0).** [Specification](../specs/brief-review.md), implemented with regression hardening in the [preparation review](../engineering/phase-preparation-review.md): AI-prefilled settings reviewed on one page and saved automatically once confirmed, found copy always kept with optional new copy, keywords and audience settings in image prompts (D39).
 
 **Preparation outside the build:** the pilot designer (D28) creates the Folkeuniversitetet slide template set and uploads the licensed Matter font files before M3.
 
 ### Later
 
-Carried forward from the [delivery stages proposal](../archive/docs-site-2026-09/decisions/delivery.md); to be re-planned after the pilot.
+Deferred until after the pilot; the earlier delivery proposal is available in Git history.
 
 - Grouping several projects, and reusing a brief across projects.
 - Durable recipe execution with a worker, saved questions and recovery.

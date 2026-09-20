@@ -25,7 +25,7 @@ Status values: `open` (no request yet), `requested`, `available` (released, not 
 | G-sidebar-primary-disabled | Disabled primary action for read-only roles | Studio sidebar | Navigation callback blocked; no visual override | `SidebarPanel` `primaryAction.disabled` | R5 | open |
 | G-sidebar-project-metadata | Project type icon and secondary label in the sidebar | Studio sidebar | Title only | `SidebarPanel` project `icon` and secondary label | R5 | open |
 | G-sidebar-shell-border | Sidebar with only a right divider | Studio shell | Public component with all four borders, no override | `SidebarPanel` shell/border variant | R5 | open |
-| G-canvas-text | Editing banner text on the artwork | Banner template editor | Public fields beside the artwork | Canvas text editing component | none | open (deferred) |
+| G-canvas-text | Editing banner text on the artwork | Future template authoring; in-app editor removed (D38) | None required by current flow | Define with future authoring scope | none | open (deferred) |
 | G-icon-bundle-size | Tree-shakeable icons | Whole application bundle | None; large design-system chunk | Per-icon or tree-shakeable icon registry | R8 | open |
 | G-color-picker | Brand palette colour picking | `ColorTokenEditor.jsx` | Native `<input type="color">` | `ColorPicker` (released); read-only state still missing | R6 (read-only) | available → adopt A1 |
 | G-attachment-selection | File attachment in composers and Visuals | `PromptComposer.jsx`, `VisualsView.jsx` | Hidden native file inputs behind public buttons | `PromptInput`, `FileDropzone`, `AttachmentArea` (released) | none | available → adopt A6, A7 |

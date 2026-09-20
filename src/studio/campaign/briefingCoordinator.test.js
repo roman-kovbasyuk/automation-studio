@@ -15,8 +15,8 @@ test('reviewed briefing stops after analysis and observation never creates paid 
   const runtime=createCampaignRuntime({...scenario,api}),coordinator=createWorkflowCoordinator({runtime})
   try {
     expect(await coordinator.actions.brief.submit()).toEqual({ok:true})
-    const stop=coordinator.observeInitialDrafts()
-    await coordinator.resumeInitialDrafts();stop()
+    const stop=runtime.subscribe('brief',()=>{})
+    await runtime.refresh();stop()
     expect(api.generate.mock.calls.map(call=>call[1])).toEqual(['brief'])
     expect(runtime.getSnapshot('copy').access.canEdit).toBe(false)
   } finally {runtime.dispose()}

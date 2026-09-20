@@ -36,12 +36,6 @@ export async function confirmBriefing({ pool, actor, campaignId, answers = {}, i
   })
 }
 
-export async function analyseAndConfirmBriefing({ pool, generation, actor, campaignId, answers, idempotencyKey = 'fixture-briefing-analysis' }) {
-  const analysis = await generation.analyseBrief({ actor, campaignId, idempotencyKey, input: {} })
-  const confirmation = await confirmBriefing({ pool, actor, campaignId, answers, idempotencyKey: `${idempotencyKey}-confirmation` })
-  return { analysis, confirmation }
-}
-
 // For control-plane tests that prepare image or direction jobs without running
 // analysis: writes the confirmed state the confirmation gate checks, without a
 // revision change, provider call or generation job.

@@ -1,6 +1,6 @@
 # Local development
 
-**Status:** Current · **Updated:** 16 September 2026
+**Status:** Current · **Updated:** 20 September 2026
 
 ## Requirements
 
@@ -64,7 +64,7 @@ Development PostgreSQL can be started with `docker compose up` after setting `PO
 | Build application and docs | `npm run build` |
 | Verify build and container | `npm run verify:production` |
 
-The full suite is not green; see [known issues](known-issues.md).
+See the [preparation review](phase-preparation-review.md) for the latest test and build evidence, including environment limitations.
 
 ## Demo data scripts
 

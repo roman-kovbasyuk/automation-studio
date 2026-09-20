@@ -1,6 +1,6 @@
 # Decision log
 
-**Status:** Current · **Updated:** 17 September 2026
+**Status:** Current · **Updated:** 20 September 2026
 
 Each decision records what was decided, when and what it replaces. A decision is not proof of implementation; check [known issues](../engineering/known-issues.md) and the code for the current state.
 
@@ -19,7 +19,6 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D9 | The product is named **Automation Studio**. | 16 Sep 2026 | Banner Studio, Lingu Studio, Lingu Agents |
 | D10 | The **legacy marketing-agent pipeline is removed** from the repository: Claude agents, HyperFrames/video skills, their docs and `projects/`. Git history keeps them. | 16 Sep 2026 | The Claude Code pipeline described in the old README and CLAUDE.md |
 | D11 | **`docs/` is the single documentation source.** The team site in `docs-site/` renders it. | 16 Sep 2026 | Separate content in `docs-site/` and `docs/` |
-| D12 | Superseded specifications, plans and reports move to **`docs/archive/`** with an index. They are never an authority. | 16 Sep 2026 | Dated specs and plans kept beside current docs |
 | D13 | **Use Brutalist components first.** Generic needs are added to Brutalist; product-specific compositions stay in the app. See [design system integration](../specs/design-system-integration.md). | 17 Sep 2026 | — |
 | D17 | **Decks are delivered as editable PPTX only.** No PDF or slide PNG downloads. | 17 Sep 2026 | Provisional P6 (PDF plus PNG per slide) |
 | D18 | **Escalated decks are improved in the PPTX itself.** The designer downloads the generated PPTX, edits it in PowerPoint or Keynote and uploads it back; the requester accepts it. Banners keep the Figma route. | 17 Sep 2026 | Figma round trip for decks |
@@ -42,6 +41,7 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D37 | **AI is at the centre of every creation flow.** Without AI the application has no purpose, so there is no non-AI mode: the source briefing flag is removed and the confirmed AI briefing is the only way to create a project. Production requires the managed AI connection (Vertex AI EU); development and tests use explicit mock providers. The interface checks AI readiness before work starts and explains when it is unavailable. | 17 Sep 2026 | `BRIEFING_ENABLED` switch and its 503 *briefing unavailable* path |
 | D38 | **Remove the in-app banner template editor.** It can no longer be opened from the application; template authoring returns with the template model. | 17 Sep 2026 | Draft-only banner template editor on the Templates page |
 | D39 | **Brief review is AI-prefilled and reviewed on one page.** One analysis fills the settings it has a basis for (age range from 18 to 65+, gender, goal, reach, the copy question and visual keywords) and marks them as suggested, never inferring age or gender from stereotypes. The requester reviews them in up to three sections shown together (Copy found, Settings and Visual context) and confirms once with **Proceed to copy**. A confirmed brief saves changes automatically, except a change that would write new copy, which needs that explicit action. Found copy is always kept, with optional new copy. Image prompts must use the keywords and audience settings. See [Brief review](../specs/brief-review.md). | 17 Sep 2026 | The single review form; choosing between keeping found copy and creating new copy |
+| D40 | **Prepare a clean development baseline:** fix review regressions, remove proven dead code/modules and superseded Markdown from the working tree, and write the next implementation plan. Current contracts and provenance remain; Git history preserves removed documents. | 20 Sep 2026 | D12 (archive-only retention) |
 
 ## Provisional decisions
 
@@ -49,7 +49,7 @@ None open. Provisional decisions P1–P9, taken on 17 September 2026 while the o
 
 ## Earlier decisions still in force
 
-From the register consolidated on 10 September 2026 ([archived](../archive/docs-site-2026-09/decisions/index.md)).
+From the register consolidated on 10 September 2026 (available in Git history).
 
 | ID | Decision | Status now |
 | --- | --- | --- |
@@ -71,6 +71,7 @@ From the register consolidated on 10 September 2026 ([archived](../archive/docs-
 | W03 | Keep React Flow for the real recipe editor. | D4, D8 |
 | W06 | Five campaign steps with mandatory Figma design and approval inside Banners. | D1, D6 |
 | A04 | Mutable recipe drafts and immutable versions stored by the editor. | D8 (file versions pinned by content hash) |
+| D12 | Superseded documents were retained under `docs/archive/`. | D40 (Git-history retention with current replacements) |
 | D14 | Brutalist changes go only through the change protocol; additive requests from Automation Studio are pre-approved, breaking changes need the owner's approval. | D36 (the approval policy is kept) |
 | D15 | The change protocol is agent-agnostic: pull mode by default, optional Codex, Claude Code and command adapters. | D36 |
 | D16 | One install path owned by the app: vendored release archive plus provenance; releases pushed to GitHub before installation. | D36 |

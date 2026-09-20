@@ -6,19 +6,15 @@ import taskLists from 'markdown-it-task-lists'
 export default withMermaid({
   base: '/docs/',
   srcDir: '../docs',
-  // The archive is browsed in the repository, not published on the site.
-  srcExclude: ['archive/**'],
   outDir: fileURLToPath(new URL('../../dist/docs/', import.meta.url)),
   title: 'Automation Studio Docs',
   description: 'Product concept, decisions, recipes and engineering reference for Automation Studio',
   cleanUrls: true,
   appearance: false,
   // Links to repository files outside docs/ (root contracts, vendor notes, source READMEs)
-  // and to the unpublished archive resolve in the repository but not on the site.
+  // resolve in the repository but not on the site.
   ignoreDeadLinks: [
     /(^|\/)(FRONTEND|DESIGN|PRODUCT|AGENTS|CLAUDE|README)(\.md)?$/,
-    /(^|\/)vendor\//,
-    /(^|\/)archive\//,
     /^https?:\/\/(localhost|127\.0\.0\.1)/,
   ],
   markdown: {
@@ -61,6 +57,8 @@ export default withMermaid({
         { text: 'Local development', link: '/engineering/local-development' },
         { text: 'AI generation', link: '/engineering/ai-generation' },
         { text: 'Known issues', link: '/engineering/known-issues' },
+        { text: 'Preparation review', link: '/engineering/phase-preparation-review' },
+        { text: 'M1 implementation plan', link: '/plans/2026-09-20-m1-brand-input' },
         { text: 'Campaign modules (current)', link: '/engineering/campaign-modules' },
         { text: 'Briefing (current)', link: '/engineering/briefing' },
         { text: 'Banner templates and brands', link: '/engineering/templates/banner-templates-and-brands' },

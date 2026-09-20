@@ -63,4 +63,4 @@ Start with the [product concept](product/concept.md).
 ## About these docs
 
 - [How documentation is maintained](documentation.md)
-- [Archive](archive/README.md) of superseded documents, never an authority
+- [Preparation review](engineering/phase-preparation-review.md) and [next implementation plan](plans/2026-09-20-m1-brand-input.md); superseded documents are available in Git history

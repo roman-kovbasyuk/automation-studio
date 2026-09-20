@@ -92,4 +92,4 @@ V1 uses the existing enabled-admin authorization guard for internal operations a
 
 The implemented asset view unions campaign files, stored brand sources and brand assets with namespaced IDs. Integrating a future document model into that view remains a later change.
 
-Read the [detailed backend proposal](../../archive/superpowers/specs/2026-09-08-admin-backend-foundation-design.md) for invariants and the [delivery stages](../../archive/docs-site-2026-09/decisions/delivery.md) for ordering.
+Use the [domain specification](../../specs/domain-model.md) for accepted invariants and the [roadmap](../../product/roadmap.md) for ordering. The earlier backend proposal remains available in Git history.

@@ -9,7 +9,7 @@
 - Existing entry: `src/studio/TemplateLibrary.jsx` inside `src/studio/StudioApp.jsx`.
 - Governing rules: [FRONTEND.md](../../../FRONTEND.md), [DESIGN.md](../../../DESIGN.md), installed Brutalist public APIs.
 - Visual reference: the latest user mockup below. This supersedes the two earlier images. Gray thumbnails, repeated names and sample dates are placeholders.
-- Implementation plan: [Templates redesign](../../archive/superpowers/plans/2026-09-15-templates-redesign.md).
+- Current boundary: [Templates and brands](../../engineering/templates/banner-templates-and-brands.md).
 
 ![Latest user mockup of the templates catalog](../references/templates-catalog-layout.png)
 

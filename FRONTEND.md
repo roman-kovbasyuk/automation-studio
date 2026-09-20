@@ -374,7 +374,7 @@ A skill may help apply the process, but must link to this file rather than dupli
 
 ### Decision and exception record
 
-Record an exception in the affected design brief or feature spec with: rule, concrete user need, evidence, chosen alternative, approving decision where required, affected routes, verification and removal/review condition. Routine use of an existing pattern is not an exception. External-package changes go through the change protocol: additive requests from this application are pre-approved, breaking changes require the owner's approval (decision D14). Do not weaken this contract silently to make a local patch pass.
+Record an exception in the affected design brief or feature spec with: rule, concrete user need, evidence, chosen alternative, approving decision where required, affected routes, verification and removal/review condition. Routine use of an existing pattern is not an exception. Workspace-package changes follow [design system integration](docs/specs/design-system-integration.md): additive changes are pre-approved, breaking changes require the owner's approval (D36). Do not weaken this contract silently to make a local patch pass.
 
 Change global principles only when a recorded product decision or repeated evidence justifies it. Update the contract and affected briefs together; identify which earlier rule is superseded. Review reusable patterns for demonstrated need, usability, consistency and applicability across real uses, following the reasoning behind [GOV.UK’s contribution criteria](https://design-system.service.gov.uk/community/contribution-criteria/), while retaining Brutalist as the visual authority.
 

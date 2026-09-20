@@ -1,6 +1,6 @@
 # How documentation is maintained
 
-**Status:** Current · **Updated:** 16 September 2026
+**Status:** Current · **Updated:** 20 September 2026
 
 ## One source
 
@@ -30,7 +30,7 @@
 | Engineering proposals not yet accepted | `docs/engineering/proposals/` |
 | Application design-system rules and design briefs | `FRONTEND.md`, `DESIGN.md`, `docs/design-system/` |
 | Hosting and infrastructure | `docs/operations/` |
-| Superseded documents | `docs/archive/`, listed in its README |
+| Superseded documents | Git history; current pages link to the replacement, not to archived implementation instructions |
 
 ## Status labels
 
@@ -41,7 +41,7 @@ Every page starts with a status line: `**Status:** <label> · **Updated:** <date
 | **Current** | Describes what the code does today |
 | **Target** | Agreed direction, not yet built |
 | **Proposal** | Recommendation not yet accepted |
-| **Historical** | Archived only |
+| **Historical** | Superseded context retained in Git history |
 
 ## Rules
 
@@ -51,7 +51,7 @@ Every page starts with a status line: `**Status:** <label> · **Updated:** <date
 4. **Never cite the archive as an authority.** Replace an archived document with a current page instead of editing it.
 5. **Separate evidence types.** Tests passing, browser checks, live provider checks and deployments are different claims; state which one was done.
 6. **No secrets, personal machine paths or temporary URLs** in documents.
-7. **Archive, don't delete, superseded specifications.** Move the file to `docs/archive/`, add it to the archive index and link its replacement.
+7. **Remove superseded specifications and completed task reports once their current replacement is documented (D40).** Keep the decision log and current contracts. Git history is the recovery source; do not delete active plans, asset provenance or database migration history.
 
 ## Diagrams
 

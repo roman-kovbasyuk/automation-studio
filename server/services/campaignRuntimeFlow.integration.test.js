@@ -133,7 +133,7 @@ describe('campaign runtime through real HTTP and PostgreSQL', () => {
 
     session.runtime.dispose()
     session = await connect(studio, templates, campaign.id)
-    await session.coordinator.resumeInitialDrafts()
+    await session.runtime.refresh()
     state = await workspace(session.runtime)
     expect(state.jobs.map(item => item.id)).toEqual(initialJobIds)
     const copies = state.copies[0].candidates.slice(0, 2)
