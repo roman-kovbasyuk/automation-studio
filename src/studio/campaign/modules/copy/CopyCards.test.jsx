@@ -60,10 +60,12 @@ describe('Copy cards', () => {
     await waitFor(() => expect(generate).toHaveBeenCalledOnce())
   })
   test('cards invoke independent selection and delete actions without view tabs', async () => {
-    const select = vi.fn(), remove = vi.fn()
-    render(<ModuleHarness moduleId="copy" scenario={makeScenario('copy-ready')} actions={{ select, remove }} />)
+    const approve = vi.fn(), select = vi.fn(), remove = vi.fn()
+    render(<ModuleHarness moduleId="copy" scenario={makeScenario('copy-ready')} actions={{ approve, select, remove }} />)
     fireEvent.click(await screen.findByRole('button', { name: 'Select option 1' }))
-    await waitFor(() => expect(select).toHaveBeenCalledWith('copy-1'))
+    // Selection is multi-select: it approves the card rather than replacing the single selection.
+    await waitFor(() => expect(approve).toHaveBeenCalledWith('copy-1'))
+    expect(select).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'Delete option 2' }))
     await waitFor(() => expect(remove).toHaveBeenCalledWith('copy-2'))
     expect(screen.queryByRole('tab')).not.toBeInTheDocument()
@@ -76,7 +78,7 @@ describe('Copy cards', () => {
     scenario.workspace.campaign.selectedCopyId = scenario.workspace.copies[0].id
     const generate = vi.fn(), regenerate = vi.fn()
     const view = render(<ModuleHarness moduleId="copy" scenario={scenario} actions={{ generate, regenerate }} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate More Options' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate more options' }))
     await waitFor(() => expect(generate).toHaveBeenCalledTimes(1))
     expect(regenerate).not.toHaveBeenCalled()
     scenario.workspace.copies = [...scenario.workspace.copies, { id: 'set-2', candidates: [{ ...scenario.workspace.copies[0].candidates[0], id: 'copy-3', headline: 'New angle' }], approvedCandidateIds: [], stale: false }]
@@ -105,10 +107,10 @@ describe('Copy cards', () => {
     const scenario = makeScenario('copy-ready')
     scenario.workspace.copies[0].candidates = Array.from({ length: 30 }, (_, i) => ({ ...scenario.workspace.copies[0].candidates[0], id: `copy-${i}`, headline: `Headline ${i}` }))
     const view = render(<ModuleHarness moduleId="copy" scenario={scenario} />)
-    expect(await screen.findByRole('button', { name: 'Generate More Options' })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: 'Generate more options' })).toBeDisabled()
     scenario.workspace.copies = [{ ...scenario.workspace.copies[0], candidates: scenario.workspace.copies[0].candidates.slice(0, 29) }]
     view.rerender(<ModuleHarness moduleId="copy" scenario={scenario} />)
-    expect(screen.getByRole('button', { name: 'Generate More Options' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Generate more options' })).toBeEnabled()
     await waitFor(() => expect(screen.getAllByRole('article', { hidden: true })).toHaveLength(29))
   })
   test('stale cards are hidden and locked campaigns cannot be edited', async () => {

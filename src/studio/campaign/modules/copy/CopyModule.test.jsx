@@ -47,7 +47,7 @@ describe('Copy module boundaries', () => {
   test('keeps append generation available after visuals have been created', async () => {
     render(<ModuleHarness moduleId="copy" scenario={makeScenario('composed')} />)
     await screen.findByRole('button', { name: 'Preview option 1' })
-    expect(screen.getByRole('button', { name: 'Generate More Options' })).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Generate more options' })).toBeVisible()
   })
 
   test('mount and refresh never generate or read images', async () => {
@@ -67,7 +67,7 @@ describe('Copy module boundaries', () => {
     scenario.workspace.campaign.selectedCopyId = scenario.workspace.copies[0].id
     const generate = vi.fn().mockRejectedValue(new Error('Copy provider unavailable'))
     render(<ModuleHarness moduleId="copy" scenario={scenario} actions={{ generate }} />)
-    fireEvent.click(await screen.findByRole('button', { name: 'Generate More Options' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate more options' }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Copy provider unavailable'))
     expect(screen.getAllByRole('article')).toHaveLength(2)
     expect(screen.getByRole('button', { name: 'Deselect option 1' })).toHaveAttribute('aria-pressed', 'true')
@@ -76,7 +76,7 @@ describe('Copy module boundaries', () => {
     const generate = vi.fn(), reconcile = vi.fn()
     render(<ModuleHarness moduleId="copy" scenario={makeScenario('copy-ready')} reconcile={reconcile}
       actions={{ generate }} operation={{ kind: 'uncertain', actionId: 'generate', error: new Error('Check generation status') }} />)
-    expect(await screen.findByRole('button', { name: 'Generate More Options' })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: 'Generate more options' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: 'Check latest state' }))
     await waitFor(() => expect(reconcile).toHaveBeenCalledOnce())
     expect(generate).not.toHaveBeenCalled()
@@ -88,9 +88,13 @@ describe('Copy module boundaries', () => {
     const api = {
       generate: vi.fn(),
       getWorkspace: vi.fn(async () => structuredClone(scenario.workspace)),
-      selectCopy: vi.fn(async (_campaignId, { copyId }) => {
-        scenario.workspace.copies[0].selectedCandidateId = copyId
-        scenario.workspace.campaign.selectedCopyId = scenario.workspace.copies[0].id
+      approveCopy: vi.fn(async (_campaignId, copyId) => {
+        const set = scenario.workspace.copies[0]
+        set.approvedCandidateIds = [...(set.approvedCandidateIds ?? []), copyId]
+        if (!scenario.workspace.campaign.selectedCopyId) {
+          set.selectedCandidateId = copyId
+          scenario.workspace.campaign.selectedCopyId = set.id
+        }
         scenario.workspace.campaign.revision += 1
       }),
     }
@@ -108,7 +112,7 @@ describe('Copy module boundaries', () => {
     expect(screen.queryByRole('region', { name: 'Checking the result' })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Select option 1' }))
     await waitFor(() => expect(screen.getByRole('button', { name: 'Deselect option 1' })).toHaveAttribute('aria-pressed', 'true'))
-    expect(api.selectCopy).toHaveBeenCalledOnce()
+    expect(api.approveCopy).toHaveBeenCalledOnce()
     expect(api.generate).not.toHaveBeenCalled()
     view.unmount(); runtime.dispose()
   })
@@ -130,9 +134,13 @@ describe('Copy module boundaries', () => {
     scenario.workspace.copies[0].approvedCandidateIds = []
     const api = {
       getWorkspace: vi.fn(async () => structuredClone(scenario.workspace)),
-      selectCopy: vi.fn(async (_campaignId, { copyId }) => {
-        scenario.workspace.copies[0].selectedCandidateId = copyId
-        scenario.workspace.campaign.selectedCopyId = scenario.workspace.copies[0].id
+      approveCopy: vi.fn(async (_campaignId, copyId) => {
+        const set = scenario.workspace.copies[0]
+        set.approvedCandidateIds = [...(set.approvedCandidateIds ?? []), copyId]
+        if (!scenario.workspace.campaign.selectedCopyId) {
+          set.selectedCandidateId = copyId
+          scenario.workspace.campaign.selectedCopyId = set.id
+        }
         scenario.workspace.campaign.revision += 1
       }),
       deleteCopy: vi.fn(), generate: vi.fn(), uploadVisual: vi.fn(), selectDirection: vi.fn(),
@@ -147,8 +155,8 @@ describe('Copy module boundaries', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Deselect option 1' })).toHaveAttribute('aria-pressed', 'true'))
 
     expect(initialReads).toBe(1)
-    expect(api.selectCopy).toHaveBeenCalledOnce()
-    expect(api.selectCopy).toHaveBeenCalledWith('campaign-1', { copyId: 'copy-1' }, initialWorkspace.campaign.revision)
+    expect(api.approveCopy).toHaveBeenCalledOnce()
+    expect(api.approveCopy).toHaveBeenCalledWith('campaign-1', 'copy-1', initialWorkspace.campaign.revision)
     expect(api.getWorkspace).toHaveBeenCalledTimes(initialReads + 1)
     expect(api.deleteCopy).not.toHaveBeenCalled()
     expect(api.generate).not.toHaveBeenCalled()
@@ -157,13 +165,44 @@ describe('Copy module boundaries', () => {
     view.unmount()
     runtime.dispose()
   })
+  test('a second card can be selected after the first: selection uses approval, not single selection', async () => {
+    const scenario = makeScenario('copy-ready')
+    scenario.workspace.copies[0].approvedCandidateIds = []
+    const api = {
+      getWorkspace: vi.fn(async () => structuredClone(scenario.workspace)),
+      approveCopy: vi.fn(async (_campaignId, copyId) => {
+        const set = scenario.workspace.copies[0]
+        set.approvedCandidateIds = [...(set.approvedCandidateIds ?? []), copyId]
+        if (!scenario.workspace.campaign.selectedCopyId) {
+          set.selectedCandidateId = copyId
+          scenario.workspace.campaign.selectedCopyId = set.id
+        }
+        scenario.workspace.campaign.revision += 1
+      }),
+      // The server allows single selection only from draft, so a second one fails from copy_ready.
+      selectCopy: vi.fn(async () => { throw Object.assign(new Error('Action select_copy is not allowed from copy_ready.'), { status: 409 }) }),
+    }
+    const runtime = createCampaignRuntime({ ...scenario, api })
+    const coordinator = createWorkflowCoordinator({ runtime })
+    const view = render(<ModuleHost runtime={runtime} moduleId="copy" actions={coordinator.actions.copy} active />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Select option 1' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Deselect option 1' })).toHaveAttribute('aria-pressed', 'true'))
+    await userEvent.click(screen.getByRole('button', { name: 'Select option 2' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Deselect option 2' })).toHaveAttribute('aria-pressed', 'true'))
+    expect(screen.getByRole('button', { name: 'Deselect option 1' })).toHaveAttribute('aria-pressed', 'true')
+    expect(api.approveCopy).toHaveBeenCalledTimes(2)
+    expect(api.selectCopy).not.toHaveBeenCalled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    view.unmount(); runtime.dispose()
+  })
+
 })
 
 test('selected copy offers explicit continuation without triggering generation', async () => {
   const scenario = makeScenario('composed')
   const navigate = vi.fn(), generate = vi.fn()
   render(<ModuleHarness moduleId="copy" scenario={scenario} actions={{ generate }} onNavigate={navigate} />)
-  fireEvent.click(await screen.findByRole('button', { name: 'Continue to Visuals' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Continue to visuals' }))
   expect(navigate).toHaveBeenCalledWith('visuals')
   expect(generate).not.toHaveBeenCalled()
 })

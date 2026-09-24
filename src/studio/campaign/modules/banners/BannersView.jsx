@@ -177,18 +177,18 @@ export function BannersView({ input, inputKey, assets, pending, readOnly, access
     <Stack gap={6}>
       {heading && <Heading level={2}>Banners</Heading>}
       <SelectionTotal designs={selected} sizes={ratioIds} />
-      {!readOnly && (canSubmit || confirming ? <Dialog title="Verify your banners" trigger="Send to Figma" open={confirming} onOpenChange={open => { if (!submitting) { setError(''); setConfirming(open) } }}>
+      {!readOnly && (canSubmit || confirming ? <Dialog title="Verify your banners" trigger="Prepare banners" open={confirming} onOpenChange={open => { if (!submitting) { setError(''); setConfirming(open) } }}>
         <Stack gap={4}>
           <SelectionTotal designs={selected} sizes={ratioIds} />
           <Heading level={3} variant="h5">Designs &amp; content</Heading>
           {selected.map(design => { const item = describe(design); return <Stack gap={1} key={designKey(design)}><Text variant="h7">{item.title}</Text><Text>{item.copy}</Text><Text variant="small" tone="secondary">{item.visual}</Text></Stack> })}
           <Divider /><Heading level={3} variant="h5">Sizes &amp; formats</Heading>
           {ratioIds.map(id => <Text key={id}>{catalog.find(format => format.id === id) ? sizeLabel(catalog.find(format => format.id === id)) : id}</Text>)}
-          <Text>{input.hasVideos ? 'Next, choose the videos to include in Review before creating the immutable package. ' : 'We’ll prepare an immutable PNG review package. '}Import the PNGs into Figma, then add the Figma link in Review. Designer checks and approval are still required.</Text>
+          <Text>{input.hasVideos ? 'Next, choose the videos to include in Review before creating the immutable package. ' : 'We’ll render every design in every size as an immutable PNG package. '}Next, check the banners and accept them, or ask a designer for help in Figma.</Text>
           {error && <Alert title={error} tone="danger" announce />}{validationIssues}
           <Inline><Button disabled={submitting} onClick={() => setConfirming(false)}>Back to selection</Button><Button variant="primary" disabled={submitting} busy={submitting} onClick={confirm}>{submitting ? 'Preparing review…' : savedSubmission.current ? 'Retry review preparation' : 'Confirm and prepare review'}</Button></Inline>
         </Stack>
-      </Dialog> : <Button disabled icon="Send">Send to Figma</Button>)}
+      </Dialog> : <Button disabled>Prepare banners</Button>)}
       {readOnly && accessReason === 'Select a current image first.' && <div role="status" aria-label="Banner selection unavailable"><Alert title="Choose a visual in Visuals to unlock banner and format selection." action={<Button onClick={onChooseVisuals} disabled={!onChooseVisuals}>Choose a visual</Button>} /></div>}
       <Tabs label="Banner selection" value={tab} onChange={setTab} items={[{ id: 'design', label: 'Design', content: designPanel }, { id: 'sizes', label: 'Sizes & formats', content: sizesPanel }]} />
       {selected.length > 0 && <Panel title={plural(selected.length, 'selected design')}>

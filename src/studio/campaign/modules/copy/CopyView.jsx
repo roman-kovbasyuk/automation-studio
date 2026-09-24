@@ -27,7 +27,7 @@ function CopyPreview({ copy, input, assets, onClose }) {
 
 /** Domain-only view: no workspace, HTTP client, revision, or sibling state. */
 export function CopyView({ input, inputKey, setDirty = () => {}, access, operation, actions, assets, onNext, reconcile, resolveGeneration, navigate,
-  nextLabel = 'Continue to Visuals', heading = true }) {
+  nextLabel = 'Continue to visuals', heading = true }) {
   const [actionError, setActionError] = useState(null)
   const [localAction, setLocalAction] = useState(null)
   const [optimisticRemoved, setOptimisticRemoved] = useState(() => new Set())
@@ -60,6 +60,10 @@ export function CopyView({ input, inputKey, setDirty = () => {}, access, operati
   const visibleOptions = useMemo(() => lockedOptions.filter(copy => !optimisticRemoved.has(copy.id)), [lockedOptions, optimisticRemoved])
   const displayed = useExitPresence(visibleOptions)
   const selectedCount = options.filter(copy => copy.approved || copy.selected).length
+  // Selection is multi-select (approved candidates). Select and deselect use the same command so a
+  // second card can be chosen after the first; the single-selection command is only a fallback.
+  const selectCopy = actions.approve ?? actions.select
+  const deselectCopy = actions.approve ? id => actions.approve(id, { revoke: true }) : actions.deselect
   const preview = options.find(copy => copy.id === previewId)
   const atLimit = options.length >= 30
   const hasAnalysis = !!input.analysis || sets.length > 0
@@ -127,8 +131,8 @@ export function CopyView({ input, inputKey, setDirty = () => {}, access, operati
             {!copyLocked && editingId !== copy.id && <Inline gap={2} role="group" aria-label={`Actions for option ${copy.number}`}>
               <Button size="small" aria-label={copy.selected ? `Deselect option ${copy.number}` : `Select option ${copy.number}`}
                 aria-pressed={copy.selected} variant={copy.selected ? 'primary' : 'secondary'} icon={copy.selected ? 'check' : 'plus'}
-                disabled={readOnly || needsDecision || pending || uncertain || !!editingId || !(copy.selected ? (actions.approve ?? actions.deselect) : actions.select)}
-                onClick={() => attempt(copy.selected ? 'deselect' : 'select', copy.selected ? (actions.approve ? id => actions.approve(id, { revoke: true }) : actions.deselect) : actions.select, copy.id)}>{copy.selected ? 'Selected' : 'Select copy'}</Button>
+                disabled={readOnly || needsDecision || pending || uncertain || !!editingId || !(copy.selected ? deselectCopy : selectCopy)}
+                onClick={() => attempt(copy.selected ? 'deselect' : 'select', copy.selected ? deselectCopy : selectCopy, copy.id)}>{copy.selected ? 'Selected' : 'Select copy'}</Button>
               <Button size="small" variant="quiet" aria-label={`Edit option ${copy.number}`} icon="edit" disabled={readOnly || pending || uncertain || !!editingId || !actions.edit}
                 onClick={() => { setEditingId(copy.id); setDirty(true) }}>Edit</Button>
               <Button size="small" variant="quiet" aria-label={`Preview option ${copy.number}`} icon="eye" onClick={() => setPreviewId(copy.id)}>Preview</Button>
@@ -146,7 +150,7 @@ export function CopyView({ input, inputKey, setDirty = () => {}, access, operati
         <Button onClick={() => attempt('generate', actions.generate)} icon="Sparkles"
           disabled={readOnly || pending || atLimit || !actions.generate || uncertain || !!editingId}
           busy={pending && (localAction?.kind === 'generate' || operation.actionId === 'generate')}>
-          Generate More Options
+          Generate more options
         </Button>
         {onNext && <Button variant="primary" icon="arrowRight" disabled={!selectedCount || pending || uncertain || !!editingId} onClick={onNext}>{nextLabel}</Button>}
         {onNext && !selectedCount && <Button variant="quiet" disabled={pending || uncertain || !!editingId} onClick={onNext}>Explore universal visuals</Button>}

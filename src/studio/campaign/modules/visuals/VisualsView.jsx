@@ -150,7 +150,7 @@ export function VisualsView({ input, assets, videoJobs = [], videoActions = {}, 
         <TextAction onClick={() => setVideoDirectionId(job.directionId)}>Video options</TextAction>
       </ActionCard>)}
     </section>}
-    {input.selectedDirectionId && <AppButton onClick={onNext}>Continue to banners</AppButton>}
+    {input.selectedDirectionId && <AppButton variant="primary" icon="arrowRight" onClick={onNext}>Continue to banners</AppButton>}
     {contextOpen && <PreviewDialog title="Add visual context" onClose={() => setContextOpen(false)}>
       <p className="bs-visual-context__help">Add a few words to steer the visual mood, setting, and people.</p>
       <div className="bs-visual-context__tags" aria-label="Suggested visual context">
