@@ -89,8 +89,10 @@ export function MaterialsStep({ draft, limits, onChange, onInspect, onContinue, 
     </section>
     {costApproval && <aside className="bs-brand-cost-gate" role="alert"><div><strong>Approve analysis cost</strong><p>{costApproval.provider} · {costApproval.model} · Estimated ${costApproval.estimatedUsd.toFixed(2)}. This is an estimate, and publishing remains a separate action.</p></div><AppButton variant="primary" onClick={() => analyse(costApproval.approvalFingerprint)}>Approve and analyze</AppButton></aside>}
     <footer className="bs-brand-step-actions">
+      {!draft.sources.length && !readOnly && <p className="bs-note" id="brand-analyse-hint">Add a file or Figma link to analyze it, or set up the brand manually.</p>}
       <AppButton onClick={() => onContinue('review')}>Set up manually</AppButton>
-      <AppButton variant="primary" onClick={() => analyse()} busy={busy} disabled={busy || !draft.sources.length}>Analyze materials</AppButton>
+      <AppButton variant="primary" onClick={() => analyse()} busy={busy} disabled={busy || !draft.sources.length}
+        aria-describedby={!draft.sources.length ? 'brand-analyse-hint' : undefined}>Analyze materials</AppButton>
     </footer>
   </section>
 }

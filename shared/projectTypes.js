@@ -59,7 +59,8 @@ export const projectTypeSections = [
         formats: ['Presentations'],
         icon: 'Presentation',
         illustration: '/assets/asset-illustrations/deck-red.svg',
-        available: true
+        // Decks are the next asset type (D7); generation and PPTX export arrive with milestone M3.
+        available: false
       }
     ]
   },

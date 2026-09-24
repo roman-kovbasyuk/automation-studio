@@ -4,7 +4,7 @@ import { AppButton, SelectField } from '../components/design-system/compatibilit
 import { SectionHeading } from './primitives.jsx'
 import { GenericTemplateArt, DESIGN_SYSTEMS } from './NovartisTemplateGallery.jsx'
 import { TemplateGroup } from './TemplateGroup.jsx'
-import { TEMPLATE_GROUPS, normalizeCatalog, readCatalogSelection, selectCatalog } from './templateCatalog.js'
+import { PUBLISHED_BRAND_PREFIX, TEMPLATE_GROUPS, normalizeCatalog, readCatalogSelection, selectCatalog } from './templateCatalog.js'
 import './template-library.css'
 
 const designSystemOptions = DESIGN_SYSTEMS.map(system => ({
@@ -23,8 +23,28 @@ function previewForEntry(entry) {
   return <GenericTemplateArt template={{ name: entry.name, manifest: value }} />
 }
 
-export function TemplateLibrary({ templates = [], onChoose, onEditTemplate, onDeleteTemplate, onAddTemplate, canChoose = true }) {
+// Brand systems published in the workspace, listed after the client reference kits.
+function usePublishedBrandOptions(loadBrandSystems) {
+  const [options, setOptions] = useState([])
+  useEffect(() => {
+    if (!loadBrandSystems) return undefined
+    let active = true
+    loadBrandSystems().then(result => {
+      if (!active) return
+      setOptions((result?.brands ?? []).filter(brand => brand.state === 'published').map(brand => ({
+        value: `${PUBLISHED_BRAND_PREFIX}${brand.id}`,
+        label: brand.activeVersion?.snapshot?.name ?? brand.draft?.name ?? 'Brand system',
+      })))
+    }).catch(() => { if (active) setOptions([]) })
+    return () => { active = false }
+  }, [loadBrandSystems])
+  return options
+}
+
+export function TemplateLibrary({ templates = [], onChoose, onEditTemplate, onDeleteTemplate, onAddTemplate, canChoose = true, loadBrandSystems }) {
   const [selection, setSelection] = useState(selectionFromLocation)
+  const publishedBrandOptions = usePublishedBrandOptions(loadBrandSystems)
+  const systemOptions = useMemo(() => [...designSystemOptions, ...publishedBrandOptions], [publishedBrandOptions])
   const [searchOpen, setSearchOpen] = useState(() => Boolean(selectionFromLocation().query))
   const [message, setMessage] = useState('')
   const [pendingKey, setPendingKey] = useState(null)
@@ -100,8 +120,8 @@ export function TemplateLibrary({ templates = [], onChoose, onEditTemplate, onDe
         {searchOpen ? <div className="bs-template-toolbar__search">
           <SearchField label="Search templates" value={selection.query} onChange={query => update({ query })} placeholder="Search templates" />
         </div> : <AppButton variant="secondary" icon="search" iconOnly aria-label="Search templates" onClick={() => setSearchOpen(true)} />}
-        <div className="bs-template-toolbar__field"><SelectField label="Design system" aria-label="Design system" value={selection.systemId} options={designSystemOptions} onChange={event => update({ systemId: event.target.value, groupId: 'all' })} /></div>
-        <div className="bs-template-toolbar__field"><SelectField label="Template type" aria-label="Template type" value={activeGroupId} options={[{ value: 'all', label: 'All templates…' }, ...catalog.groups.map(group => ({ value: group.id, label: group.label }))]} onChange={event => update({ groupId: event.target.value })} /></div>
+        <div className="bs-template-toolbar__field"><SelectField label="Design system" aria-label="Design system" value={selection.systemId} options={systemOptions} onChange={event => update({ systemId: event.target.value, groupId: 'all' })} /></div>
+        <div className="bs-template-toolbar__field"><SelectField label="Template type" aria-label="Template type" value={activeGroupId} options={[{ value: 'all', label: 'All templates' }, ...catalog.groups.map(group => ({ value: group.id, label: group.label }))]} onChange={event => update({ groupId: event.target.value })} /></div>
         <div className="bs-template-toolbar__field"><SelectField label="Sort by" aria-label="Sort by" value={selection.sort} options={[{ value: 'last-used', label: 'Last used' }, { value: 'name', label: 'Name A–Z' }]} onChange={event => update({ sort: event.target.value })} /></div>
       </div>
     </div>

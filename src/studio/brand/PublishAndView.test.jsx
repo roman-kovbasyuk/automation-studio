@@ -38,7 +38,8 @@ describe('brand publication UI', () => {
   test('links each missing requirement back to its review section', () => {
     render(<PublishStep draft={createEmptyBrandDraft('Northstar')} saveState="Saved" onBack={vi.fn()} onEdit={vi.fn()} onPublish={vi.fn()} />)
     expect(screen.getByRole('button', { name: 'Publish design system' })).toBeDisabled()
-    expect(screen.getByRole('link', { name: /Choose and approve a usable primary logo/i })).toHaveAttribute('href', '#brand-review-logos')
+    expect(screen.getByRole('link', { name: /Choose a primary logo/i })).toHaveAttribute('href', '#brand-review-logos')
+    expect(screen.getByText(/items need attention/)).toBeInTheDocument()
   })
 
   test('publishes a complete, saved draft without any template dependency', async () => {

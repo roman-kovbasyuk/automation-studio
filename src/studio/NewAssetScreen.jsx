@@ -15,7 +15,8 @@ export function ProjectTypeIcon({ type }) {
   return <Icon size={16} aria-hidden="true" data-project-type={id} className="bs-project-type-icon" />
 }
 
-export function NewAssetScreen({ onChoose }) {
+// Only asset types that work offer a start action; the rest say plainly that they are not available.
+export function NewAssetScreen({ onChoose, templateCounts = {} }) {
   return (
     <section id="asset-template-groups" className="bs-new-asset" aria-labelledby="new-asset-title">
       <header className="bs-new-asset__header">
@@ -24,12 +25,13 @@ export function NewAssetScreen({ onChoose }) {
       </header>
       <div className="bs-new-asset__grid" role="list" aria-label="Creation types">
         {assetTemplateSections.flatMap(({ label: categoryLabel, slug, items }) =>
-          items.map(({ id, label, illustration, formats, available = true }) => <ActionCard
+          items.map(({ id, label, illustration, formats, available = false }) => <ActionCard
             key={id} role="listitem" label={categoryLabel} aria-label={label} data-template-group={id} data-template-section={slug}>
             <div className="bs-new-asset__content">
               <img src={illustration} alt="" width="128" height="128" />
               <h3>{label}</h3>
-              <span>{formats.length} {formats.length === 1 ? 'template' : 'templates'}</span>
+              <span>{!available ? 'Not available yet' : Number.isInteger(templateCounts[id])
+                ? `${templateCounts[id]} ${templateCounts[id] === 1 ? 'template' : 'templates'}` : formats.join(' · ')}</span>
               <div className="bs-new-asset__action">{available && <AppButton variant="primary" onClick={() => onChoose(id)}>Create with AI</AppButton>}</div>
             </div>
           </ActionCard>)

@@ -23,7 +23,8 @@ export function getBrandReadiness(draft) {
   const add = (field, message, section) => errors.push({ field, message, section })
   const assets = new Map(draft.assets.map((asset) => [asset.id, asset]))
   const primaryLogo = assets.get(draft.logoRoles.primary)
-  if (!primaryLogo || primaryLogo.kind !== 'logo' || !primaryLogo.approved) add('logoRoles.primary', 'Choose and approve a usable primary logo.', 'logos')
+  if (!primaryLogo || primaryLogo.kind !== 'logo') add('logoRoles.primary', 'Choose a primary logo.', 'logos')
+  else if (!primaryLogo.approved) add('logoRoles.primary', 'Mark the primary logo as approved for use.', 'logos')
   for (const role of ['secondary', 'symbol', 'light', 'dark']) {
     const value = draft.logoRoles[role]
     if (!value) add(`logoRoles.${role}`, `Assign ${role} or mark it Not applicable.`, 'logos')

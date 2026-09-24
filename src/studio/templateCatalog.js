@@ -44,7 +44,15 @@ export function formatLastUsed(lastUsedAt, locale = undefined) {
   return `Last used ${new Intl.RelativeTimeFormat(locale, { numeric: 'auto' }).format(-Math.max(0, Math.round((Date.now() - date.getTime()) / 86400000)), 'day')}`
 }
 
+// Published brand design systems are selected as `brand:<id>` and matched by the brand identity a
+// template version carries. Unbranded layouts work with every brand, so they appear under each one.
+export const PUBLISHED_BRAND_PREFIX = 'brand:'
+
 function belongsToSystem(template, systemId) {
+  if (String(systemId).startsWith(PUBLISHED_BRAND_PREFIX)) {
+    const brand = template?.manifest?.brand ?? template?.brand
+    return !brand || brand.systemId === String(systemId).slice(PUBLISHED_BRAND_PREFIX.length)
+  }
   const values = [template?.brand?.name, template?.manifest?.brand?.name, template?.manifest?.brand?.systemId]
     .filter(Boolean).map(normalizeText)
   if (!values.length) return true
@@ -89,7 +97,7 @@ export function normalizeCatalog({ templates = [], systemId = 'folkeuniversitete
   const entries = templates.filter(template => belongsToSystem(template, systemId)).map(template => entryFromTemplate(template, systemId))
   // Reference cards keep an empty published catalog useful while allowing API
   // data to be the sole source of truth as soon as a system has entries.
-  const builtins = entries.length
+  const builtins = entries.length || String(systemId).startsWith(PUBLISHED_BRAND_PREFIX)
     ? []
     : (BUILTIN_ENTRIES[systemId] ?? BUILTIN_ENTRIES.folkeuniversitetet).map(item => entryFromBuiltin(item, systemId))
   const byKey = new Map([...builtins, ...entries].map(entry => [entry.key, entry]))

@@ -7,7 +7,7 @@ describe('new asset template groups', () => {
   test('presents every requested asset family as a template group', async () => {
     const onChoose = vi.fn()
     const user = userEvent.setup()
-    render(<NewAssetScreen onChoose={onChoose} />)
+    render(<NewAssetScreen onChoose={onChoose} templateCounts={{ banners: 10 }} />)
 
     expect(screen.getByRole('region', { name: 'What are you making?' })).toHaveAttribute('id', 'asset-template-groups')
     expect(screen.queryByRole('heading', { level: 2, name: 'Ads' })).not.toBeInTheDocument()
@@ -16,9 +16,11 @@ describe('new asset template groups', () => {
     for (const asset of ['Campaign banners', 'Reels', 'Landing page', 'Website page', 'Slidedeck', 'Business cards', 'Email signature', 'Icon Badge set']) {
       expect(screen.getByRole('heading', { level: 3, name: asset })).toBeVisible()
     }
-    expect(screen.getAllByText('2 templates')).toHaveLength(2)
-    expect(screen.getAllByText('1 template')).toHaveLength(6)
-    expect(screen.getAllByRole('button', { name: 'Create with AI' })).toHaveLength(6)
+    // Only banners work today: one start action and the real template count; every other type says so.
+    expect(screen.getByText('10 templates')).toBeVisible()
+    expect(screen.getAllByText('Not available yet')).toHaveLength(7)
+    expect(screen.getAllByRole('button', { name: 'Create with AI' })).toHaveLength(1)
+    expect(within(screen.getByRole('heading', { name: 'Reels' }).closest('article')).queryByRole('button')).toBeNull()
     const unavailableCard = screen.getByRole('heading', { name: 'Business cards' }).closest('article')
     expect(unavailableCard).toHaveClass('a-surface')
     expect(within(unavailableCard).queryByText('Coming soon')).not.toBeInTheDocument()

@@ -148,6 +148,7 @@ export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, pro
   const [adminLeavePath, setAdminLeavePath] = useState(null)
   const adminLeaveFocus = useRef(null)
   const markAdminBusy = useCallback(value => { adminBusyRef.current = value }, [])
+  const loadBrandSystems = useCallback(() => api.listBrandSystems ? api.listBrandSystems() : Promise.resolve({ brands: [] }), [api])
   const inFlight = useRef(false)
   const loadId = useRef(0)
   const mainRef = useRef(null)
@@ -659,7 +660,7 @@ export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, pro
             }}
           />
           {notice && (
-            <div className="bs-feedback-space" role="status"><Alert tone="success" onDismiss={() => setNotice('')}>{notice}</Alert></div>
+            <div className="bs-feedback-space" role="status"><Alert tone="success" announce={false} title={notice} onDismiss={() => setNotice('')} /></div>
           )}
           {pending && (
             <div className="bs-feedback-space"><AITaskStatus status="running" label={`${pending}…`} /></div>
@@ -682,6 +683,7 @@ export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, pro
             <Suspense fallback={<div className="bs-loading" role="status" aria-label="Loading templates"><Skeleton lines={3} /></div>}>
               <TemplateLibrary
                 templates={templates}
+                loadBrandSystems={loadBrandSystems}
                 canChoose={editor && !pending}
                 onChoose={(id) => {
                   setRequestedTemplate(id)
@@ -692,7 +694,7 @@ export function ConnectedStudio({ api, demo = false, authMethods, onSignOut, pro
               />
             </Suspense>
           ) : route.view === 'new' && !route.asset ? (
-            <NewAssetScreen onChoose={(asset) => {
+            <NewAssetScreen templateCounts={{ banners: templates.length }} onChoose={(asset) => {
               if (asset === 'banners') navigate('/')
               else if (asset === 'presentations') navigate('/mvp/templates?category=presentations#presentation-templates')
               else navigate(`/mvp/new?asset=${encodeURIComponent(asset)}`)

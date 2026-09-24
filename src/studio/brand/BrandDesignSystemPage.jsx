@@ -39,15 +39,24 @@ function BrandLibraryCard({ brand, api, onNavigate }) {
   </VendorActionCard>
 }
 
+// Server messages such as "Route not found" are not written for people; explain the situation instead.
+function libraryErrorMessage(error) {
+  if (error?.status === 404 || error?.code === 'NOT_FOUND') return 'Brand design systems are not available in this workspace yet.'
+  if (error?.status === 403) return 'You do not have access to brand design systems.'
+  return 'Brand systems could not be loaded. Check your connection and try again.'
+}
+
 function BrandList({ api, actor, onNavigate }) {
   const [brands, setBrands] = useState(null)
   const [error, setError] = useState(null)
+  const [attempt, setAttempt] = useState(0)
   const canManage = actor?.role === 'designer' || actor?.role === 'admin'
   useEffect(() => {
     let active = true
+    setError(null)
     api.listBrandSystems().then((result) => { if (active) setBrands(result.brands) }).catch((value) => { if (active) setError(value) })
     return () => { active = false }
-  }, [api])
+  }, [api, attempt])
   return <Container maxWidth={1180}>
     <Stack gap={8}>
       <section id="brand-system-library" className="bs-brand-library-section" aria-labelledby="brand-library-title">
@@ -55,10 +64,10 @@ function BrandList({ api, actor, onNavigate }) {
       <div><h1 id="brand-library-title">Brand design systems</h1><p>The foundations behind your templates. One place for every brand.</p></div>
       {canManage && <AppButton variant="primary" onClick={() => onNavigate('/mvp/system/new/materials')}><Plus size={18} /> New brand system</AppButton>}
     </header>
-    {error ? <div role="alert"><p>{error.message || 'Brand systems could not be loaded.'}</p><AppButton onClick={() => onNavigate('/mvp/system')}>Back to library</AppButton></div> :
+    {error ? <div role="alert"><p>{libraryErrorMessage(error)}</p><AppButton onClick={() => { setBrands(null); setAttempt(value => value + 1) }}>Try again</AppButton></div> :
       brands === null ? <p role="status">Loading brand systems…</p> : brands.length ? <Grid gap={6} minItemWidth="360px">
         {brands.map(brand => <BrandLibraryCard key={brand.id} brand={brand} api={api} onNavigate={onNavigate} />)}
-      </Grid> : <EmptyState title="No brand system yet" description="Start with the material you already have." />}
+      </Grid> : <EmptyState title="No brand system yet" description={canManage ? 'Start with the material you already have.' : 'A designer or admin adds brand systems. Templates use them once they are published.'} />}
       </section>
     </Stack>
   </Container>
@@ -80,7 +89,7 @@ function NewBrand({ api, onNavigate }) {
   return <Container maxWidth={1000}>
     <Surface tone="surface"><div className="bs-brand-new-content">
       <section id="brand-materials" className="bs-brand-new-layout" aria-labelledby="brand-new-title">
-        <div><span>Step 1 of 3</span><h1 id="brand-new-title">Materials</h1><p>Name this brand system to create its private draft, then add files, Figma links, and context on this same routed step.</p></div>
+        <div><span>Step 1 of 3</span><h1 id="brand-new-title">Materials</h1><p>Name the brand to create a private draft. You can then add files, Figma links and context on this page.</p></div>
         <form onSubmit={create}><TextField label="Brand name" autoFocus value={name} maxLength={200} onChange={(event) => setName(event.target.value)} />
           {error && <p role="alert">{error.message || 'The brand could not be created.'}</p>}
           <AppButton variant="primary" type="submit" busy={busy} disabled={!name.trim()}>Create private draft <ArrowRight size={18} /></AppButton>

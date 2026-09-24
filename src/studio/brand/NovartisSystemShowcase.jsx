@@ -88,10 +88,10 @@ function BentoBoard({ snapshot, onReadAsset }) {
         {TYPE_SPECIMEN_WEIGHTS.map(weight => <span className="bs-system-bento__type-line" style={{ fontWeight: weight }} key={weight} aria-hidden="true">{heading.family || 'Inter'}<sup>®</sup></span>)}
       </div>
     </div>
-    <div className="bs-system-bento__cell bs-system-bento__cell--accent bs-system-bento__cell--metric" aria-label="Illustrative metric typography specimen">
-      <span className="bs-system-bento__metric-label" style={{ fontFamily: brandFontStack(body), fontWeight: body.weight }}>New users</span>
-      <strong className="bs-system-bento__metric-value" style={{ fontFamily: brandFontStack(heading), fontWeight: heading.weight }}>57K</strong>
-      <span className="bs-system-bento__metric-change" style={{ fontFamily: brandFontStack(heading), fontWeight: heading.weight }}>+10%</span>
+    <div className="bs-system-bento__cell bs-system-bento__cell--accent bs-system-bento__cell--metric" aria-label="Heading typeface specimen">
+      <span className="bs-system-bento__metric-label" style={{ fontFamily: brandFontStack(body), fontWeight: body.weight }}>Heading</span>
+      <strong className="bs-system-bento__metric-value" style={{ fontFamily: brandFontStack(heading), fontWeight: heading.weight }} aria-hidden="true">Aa</strong>
+      <span className="bs-system-bento__metric-change" style={{ fontFamily: brandFontStack(body), fontWeight: body.weight }}>{heading.family || 'Inter'} {heading.weight}</span>
     </div>
     <div className="bs-system-bento__cell bs-system-bento__cell--surface">
       {logo ? <BrandAssetPreview asset={logo} onReadAsset={onReadAsset} alt={`${snapshot.name} logo`} /> : <strong>{snapshot.name}</strong>}
@@ -162,7 +162,7 @@ function foundationItems(snapshot, onReadAsset) {
       </Panel>,
     },
     {
-      id: 'spacing', label: 'Spacing', icon: Ruler, description: 'A compact rhythm for layouts and components.', content: <Panel title="Spacing" description="Use the same rhythm from the Bento board to template compositions." headingLevel={3}>
+      id: 'spacing', label: 'Spacing', icon: Ruler, description: 'A compact rhythm for layouts and components.', content: <Panel title="Spacing" description="Use the same spacing rhythm in page layouts and template compositions." headingLevel={3}>
         <div className="bs-foundation-spacing" aria-label="Spacing scale"><div><span>4</span><i style={{ width: '12%' }} /></div><div><span>8</span><i style={{ width: '24%' }} /></div><div><span>16</span><i style={{ width: '48%' }} /></div><div><span>24</span><i style={{ width: '72%' }} /></div><div><span>32</span><i style={{ width: '96%' }} /></div></div>
       </Panel>,
     },
