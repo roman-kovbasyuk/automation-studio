@@ -14,6 +14,13 @@ import { createAssetService } from '../../server/services/assetService.js'
 import { createDeliveryService } from '../../server/services/deliveryService.js'
 import { createGenerationService } from '../../server/services/generationService.js'
 import { createReviewService } from '../../server/services/reviewService.js'
+import { createFigmaHandoffService } from '../../server/services/figmaHandoffService.js'
+import { createFigmaPairingService } from '../../server/services/figmaPairingService.js'
+import { createFigmaSubmissionService } from '../../server/services/figmaSubmissionService.js'
+import { createVideoGenerationService } from '../../server/services/videoGenerationService.js'
+import { createBrandDesignSystemService } from '../../server/services/brandDesignSystemService.js'
+import { createBrandDesignSystemProvider } from '../../server/providers/brandDesignSystemProvider.js'
+import { createTemplateBrandService } from '../../server/services/templateBrandService.js'
 import { createVersionService } from '../../server/services/versionService.js'
 import { createVisualUploadService } from '../../server/services/visualUploadService.js'
 import { createWorkflowService } from '../../server/services/workflowService.js'
@@ -126,8 +133,8 @@ export async function startIsolatedStudio({ connectionString = process.env.TEST_
       provider: 'mock', model: 'mock-v1', region: 'europe-west6', dailyBudgetMicrounits: 1_000_000_000,
       perStepRegenerationLimit: 100, generationDisabled: false,
     } })
-    const { legacyStudioTemplates, taggedStudioTemplates, studioTemplates } = await import('../../shared/studioTemplates.js')
-    for (const manifest of [...legacyStudioTemplates, ...taggedStudioTemplates, ...studioTemplates]) {
+    const { legacyStudioTemplates, taggedStudioTemplates, sizedStudioTemplates, studioTemplates } = await import('../../shared/studioTemplates.js')
+    for (const manifest of [...legacyStudioTemplates, ...taggedStudioTemplates, ...sizedStudioTemplates, ...studioTemplates]) {
       await workflowService.createTemplateVersion({
         actor: actors.admin, input: { id: manifest.id, name: manifest.name, version: manifest.version, manifest },
       })
@@ -143,6 +150,11 @@ export async function startIsolatedStudio({ connectionString = process.env.TEST_
       return user && { id: user.id, email: user.email, role: user.role, workspaceId: 'default', displayName: user.display_name, disabled: user.disabled, disabledAt: user.disabled_at }
     }
     const generationReadinessService = createGenerationReadinessService({ workflowService })
+    const reviewService = createReviewService({ pool })
+    // Brand design systems use the mock brand provider here, like generation; publishing refreshes templates.
+    const templateBrandService = createTemplateBrandService({ pool, assetStore })
+    const brandDesignSystemService = createBrandDesignSystemService({ pool, assetStore, onPublish: templateBrandService.refresh,
+      provider: createBrandDesignSystemProvider({ provider: 'mock', model: 'mock-v1', region: 'europe-west6' }) })
     app = buildApp({
       runtimeConfig:{firebase:{}},
       briefSourceService:createBriefSourceService({pool,assetStore}),briefingService:createBriefingService({pool}),
@@ -154,7 +166,14 @@ export async function startIsolatedStudio({ connectionString = process.env.TEST_
       assetService: createAssetService({ pool, assetStore }),
       visualUploadService: createVisualUploadService({ pool, assetStore }),
       versionService: createVersionService({ pool, assetStore }),
-      reviewService: createReviewService({ pool }), deliveryService: createDeliveryService({ pool, assetStore }),
+      reviewService, deliveryService: createDeliveryService({ pool, assetStore }),
+      // Review loads the Figma handoff state with the review history, so the UI needs these routes to
+      // get past Review. Video has no provider here: listing works, generating reports it is not connected.
+      figmaHandoffService: createFigmaHandoffService({ pool, assetStore }),
+      figmaPairingService: createFigmaPairingService({ pool }),
+      figmaSubmissionService: createFigmaSubmissionService({ pool, assetStore, reviewService }),
+      videoGenerationService: createVideoGenerationService({ pool, assetStore, providerFactory: () => null }),
+      brandDesignSystemService, templateBrandService,
       adminRepository: createAdminRepository(pool),
       assetWorkflowService: createAssetWorkflowService({ pool }),
     })

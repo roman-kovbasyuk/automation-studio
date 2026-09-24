@@ -20,7 +20,7 @@ npm install
 | Application | `npm run dev` | 5173 | Vite. Proxies `/api` to port 3010, so start the local API first. |
 | Offline prototype | `npm run dev:prototype` | 5190 | Browser-only fixtures. API and external network calls are blocked. |
 | Documentation | `npm run dev:docs` | 5180 | VitePress rendering `docs/`. |
-| Admin preview | `node scripts/testing/start-admin-preview.mjs` | 5181 | Isolated schema in `banner_studio_test`; removed on exit. |
+| Isolated full stack | `node scripts/testing/start-admin-preview.mjs` | 5181 (`ADMIN_PREVIEW_PORT` to change) | The real application and API against a new schema in `banner_studio_test`, with the mock AI and mock brand providers. Safe to click through end to end: Brief to downloaded ZIP, including designer review, the Figma routes and brand design systems. Switch role with `?demoRole=marketer`, `designer` or `admin`. Stop it with Ctrl+C: a hard kill leaves its schema behind. |
 | Production server | `npm start` | 8080 in Docker | Requires the variables in `.env.example`. Run `npm run migrate` first. |
 
 `npm run dev`, `npm run dev:api` and `npm run preview` run `npm run design-system:check` first.
@@ -64,7 +64,7 @@ Development PostgreSQL can be started with `docker compose up` after setting `PO
 | Build application and docs | `npm run build` |
 | Verify build and container | `npm run verify:production` |
 
-The full suite is not green; see [known issues](known-issues.md).
+The full suite passes locally with `TEST_DATABASE_URL=postgresql:///banner_studio_test`. CI runs it against a PostgreSQL service, together with `npm run test:workflow`.
 
 ## Demo data scripts
 
