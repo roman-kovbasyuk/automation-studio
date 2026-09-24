@@ -2,6 +2,8 @@
 
 **Status:** Current · **Audited:** 17 September 2026 · **Installed package:** `brutalist-design-system` `0.1.0-atomic.0`, commit `50c322c` (84 exports)
 
+> **Re-checked 24 September 2026 against `0.1.3`:** 85 runtime exports, of which 43 are imported by 50 non-test application files (count of named imports; the reachability method below was not re-run). The findings below are from the 17 September audit. Since then `Alert` accepts body content, and the review screen's alerts use its public `title`, `description` and `action` props.
+
 How much of the application UI uses Brutalist, where local code remains, and what to do about it. Follows [design system integration](../specs/design-system-integration.md).
 
 ## Method and limits

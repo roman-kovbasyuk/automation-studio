@@ -1,6 +1,6 @@
 # Design-system gap list
 
-**Status:** Current · **Reviewed against:** `brutalist-design-system` `0.1.2`, the workspace package in `packages/brutalist-design-system` · **Updated:** 17 September 2026
+**Status:** Current · **Reviewed against:** `brutalist-design-system` `0.1.3`, the workspace package in `packages/brutalist-design-system` · **Updated:** 24 September 2026
 
 Patterns the application needs that the installed Brutalist package does not provide, the fallback used meanwhile, and what would replace it. The process is defined in [design system integration](../specs/design-system-integration.md); the evidence for each entry is in the [adoption audit](adoption-audit.md).
 

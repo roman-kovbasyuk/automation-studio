@@ -52,8 +52,11 @@ export function StatusBadge({ tone, status, children, showIcon }) {
   const value = status ?? (tone === 'info' || tone === 'warning' ? 'pending' : tone) ?? 'neutral'
   return <PublicStatusBadge status={value} showIcon={showIcon}>{children}</PublicStatusBadge>
 }
-export function Alert({ children, title, description, tone, announce = true, action }) {
-  return <Stack gap={3} role={announce ? tone === 'danger' ? 'alert' : 'status' : undefined}><PublicAlert title={title} description={description} tone={tone === 'warning' || tone === 'info' ? 'neutral' : tone} action={action} />{children}</Stack>
+// Children render inside the alert surface (Brutalist 0.1.3), never below an empty box.
+// onDismiss becomes the same Dismiss action the campaign page uses.
+export function Alert({ children, title, description, tone, announce = true, action, onDismiss }) {
+  const dismiss = onDismiss && <Button size="compact" variant="quiet" onClick={onDismiss}>Dismiss</Button>
+  return <Stack gap={3} role={announce ? tone === 'danger' ? 'alert' : 'status' : undefined}><PublicAlert title={title} description={description} tone={tone === 'warning' || tone === 'info' ? 'neutral' : tone} action={action ?? dismiss}>{children}</PublicAlert></Stack>
 }
 export function AITaskStatus({ status, label }) {
   return status === 'running' ? <Spinner label={label} /> : <PublicAlert title={label} tone={status === 'error' ? 'danger' : status === 'success' ? 'success' : 'neutral'} announce />

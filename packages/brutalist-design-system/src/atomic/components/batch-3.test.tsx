@@ -140,6 +140,16 @@ test('Alert has a canonical header and description with opt-in announcements', (
   expect(screen.getByRole('alert')).toHaveTextContent('Add a CTA before export.')
 })
 
+test('Alert places children inside its surface and omits an empty heading without a title', () => {
+  const { container } = render(<C.Alert tone="info"><p>Waiting for the designer to check this version.</p></C.Alert>)
+  const surface = container.querySelector('.c-alert')
+  expect(surface).toContainElement(screen.getByText('Waiting for the designer to check this version.'))
+  expect(surface?.querySelector('h3')).toBeNull()
+  render(<C.Alert title="Two checks need attention" tone="warning"><ul><li>Contrast is low.</li></ul></C.Alert>)
+  expect(screen.getByRole('heading', { name: 'Two checks need attention' })).toBeInTheDocument()
+  expect(screen.getByText('Contrast is low.').closest('.c-alert')).not.toBeNull()
+})
+
 test('Alert supports reference surface variants and a prominent danger icon', () => {
   const { container } = render(<C.Alert title="Brief needs attention" description="Add a CTA before export." tone="danger" variant="filled" size="large" />)
   const alert = container.querySelector('.c-alert')

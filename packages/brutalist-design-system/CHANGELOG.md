@@ -2,6 +2,10 @@
 
 Before 1.0, patch versions add capabilities and minor versions contain breaking changes (Automation Studio decision D25). Breaking changes record the owner's approval.
 
+## 0.1.3 — 24 September 2026
+
+- `Alert` accepts `children` as body content shown inside the alert below the description, for a short list, a link or a small form. `title` is now optional, and no empty heading is rendered without one. Existing uses are unchanged.
+
 ## 0.1.2 — 17 September 2026
 
 - Added `TagInput`: free-text tags added with Enter, styled as a dashed, tag-shaped entry control inline with the existing tags that grows into the rest of its row, so its placeholder can carry a full sentence (closes gap R7). Typed text is trimmed, deduplicated case-insensitively and length-limited; Backspace on an empty entry removes the last tag; blur commits a pending entry.
