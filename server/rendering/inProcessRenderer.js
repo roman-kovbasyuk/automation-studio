@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { readFileSync } from 'node:fs'
 import { create as createFont } from 'fontkit'
+import { fitTextToBox, textLineHeight } from '../../shared/textFit.js'
 import sharp from 'sharp'
 import { hashCanonical } from '../../shared/canonicalJson.js'
 import { templateManifestSchema } from '../../shared/templateManifest.js'
@@ -104,7 +105,7 @@ export function svgGlyphLayer({ width, height, lines, fill = '#111827' }) {
 }
 
 function textLayer({ lines, placement, fontSize, font, fill = '#111827' }) {
-  const lineHeight = Math.ceil(fontSize * 1.2)
+  const lineHeight = textLineHeight(fontSize)
   const shapedLines = lines.map((line, index) => ({
     ...shapeLine(font, line, fontSize),
     baseline: fontSize + index * lineHeight,
@@ -127,42 +128,27 @@ export function createInProcessRenderer({ resolvedFontFiles = fontFiles } = {}) 
     return width
   }
 
-  async function wrapText(value, slot, placement) {
-    const lines = []
-    const normalized = value.replaceAll('\r\n', '\n').replaceAll('\r', '\n')
-    for (const paragraph of normalized.split('\n')) {
-      const words = paragraph.trim().split(/[\t\f\v ]+/).filter(Boolean)
-      if (words.length === 0) {
-        lines.push('')
-        continue
-      }
-      let line = ''
-      for (const word of words) {
-        if (measure(word, slot.fontSize, slot.fontWeight, slot.fontFamily) > placement.width) {
-          fail('unbreakable_overflow', `Slot ${slot.id} contains a word wider than its placement`)
+  // Fits a text slot with the shared rule the browser preview also uses: the largest size between
+  // fontSize and minFontSize whose lines fit. Glyph outlines are verified at the chosen size.
+  function fitSlot(value, slot, placement) {
+    const font = families[slot.fontFamily][slot.fontWeight]
+    const result = fitTextToBox({
+      value, slot, placement,
+      measure: (text, fontSize) => measure(text, fontSize, slot.fontWeight, slot.fontFamily),
+      verify: (lines, fontSize) => {
+        const lineHeight = textLineHeight(fontSize)
+        for (const [index, line] of lines.entries()) {
+          const shaped = shapeLine(font, line, fontSize)
+          const baseline = fontSize + index * lineHeight
+          if (baseline - shaped.maxY < 0 || baseline - shaped.minY > placement.height) {
+            return { code: 'outline_overflow', message: `Slot ${slot.id} glyph outline exceeds its placement height` }
+          }
         }
-        const candidate = line ? `${line} ${word}` : word
-        if (measure(candidate, slot.fontSize, slot.fontWeight, slot.fontFamily) <= placement.width) line = candidate
-        else {
-          lines.push(line)
-          line = word
-        }
-      }
-      lines.push(line)
-    }
-    if (lines.length > slot.maxLines) fail('line_overflow', `Slot ${slot.id} exceeds its line limit`)
-    if (lines.length * Math.ceil(slot.fontSize * 1.2) > placement.height) {
-      fail('line_overflow', `Slot ${slot.id} text exceeds its placement height`)
-    }
-    const lineHeight = Math.ceil(slot.fontSize * 1.2)
-    for (const [index, line] of lines.entries()) {
-      const shaped = shapeLine(families[slot.fontFamily][slot.fontWeight], line, slot.fontSize)
-      const baseline = slot.fontSize + index * lineHeight
-      if (baseline - shaped.maxY < 0 || baseline - shaped.minY > placement.height) {
-        fail('outline_overflow', `Slot ${slot.id} glyph outline exceeds its placement height`)
-      }
-    }
-    return lines
+        return null
+      },
+    })
+    if (!result.ok) fail(result.code, result.message)
+    return result
   }
 
   async function compileInput(input, { createComposites }) {
@@ -239,17 +225,17 @@ export function createInProcessRenderer({ resolvedFontFiles = fontFiles } = {}) 
           fail('unsupported_font', `Slot ${slot.id} font is unsupported`)
         }
         if (slot.fontSize < slot.minFontSize) fail('minimum_font_size', `Slot ${slot.id} is below its minimum font size`)
-        const lines = await wrapText(value, slot, placement)
+        const { lines, fontSize } = fitSlot(value, slot, placement)
         if (createComposites) {
           composites.push({
-            input: textLayer({ lines, placement, fontSize: slot.fontSize, font: families[slot.fontFamily][slot.fontWeight], fill: manifest.presentation?.slotColors[slot.id] }),
+            input: textLayer({ lines, placement, fontSize, font: families[slot.fontFamily][slot.fontWeight], fill: manifest.presentation?.slotColors[slot.id] }),
             left: placement.x,
             top: placement.y,
           })
         }
         compiledSlots.push({
           id: slot.id, type: slot.type, lines, placement,
-          font: { family: slot.fontFamily, weight: slot.fontWeight, size: slot.fontSize },
+          font: { family: slot.fontFamily, weight: slot.fontWeight, size: fontSize },
         })
       }
 

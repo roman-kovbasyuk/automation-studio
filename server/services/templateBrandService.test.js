@@ -37,15 +37,15 @@ describe('template brand assignment', () => {
     const originals = structuredClone(h.rows())
     const ids = originals.map(row => row.id)
     const result = await h.service.assign({ actor, brandId: 'msd', templateIds: ids })
-    expect(result).toHaveLength(3)
+    expect(result).toHaveLength(studioTemplates.length)
     for (const row of result) {
       expect(row.manifest.brand).toMatchObject({ systemId: 'msd', versionId: 'v1' })
       expect(row.manifestHash).toBe(hashCanonical(row.manifest))
       expect(row.version).not.toBe(originals[0].version)
     }
-    expect(h.rows().slice(0, 3)).toEqual(originals)
+    expect(h.rows().slice(0, studioTemplates.length)).toEqual(originals)
     await h.service.assign({ actor, brandId: 'msd', templateIds: ids })
-    expect(h.templateRepo.createVersion).toHaveBeenCalledTimes(3)
+    expect(h.templateRepo.createVersion).toHaveBeenCalledTimes(studioTemplates.length)
     expect(h.store.get).toHaveBeenCalledTimes(1)
   })
   test('publishing a new brand version refreshes all assigned layouts, without touching another brand', async () => {
@@ -73,7 +73,7 @@ describe('template brand assignment', () => {
     const h = harness()
     h.store.get.mockResolvedValue(Buffer.from('corrupt image'))
     await expect(h.service.assign({ actor, brandId: 'msd', templateIds: ['editorial-split'] })).rejects.toMatchObject({ code: 'brand_asset_unavailable' })
-    expect(h.rows()).toHaveLength(3)
+    expect(h.rows()).toHaveLength(studioTemplates.length)
     expect(h.templateRepo.createVersion).not.toHaveBeenCalled()
   })
 })

@@ -7,7 +7,9 @@ What a template is, how it references a brand, how it is resolved and rendered, 
 ## Current state
 
 - `templates` rows hold an ID, semantic version and manifest (`shared/templateManifest.js`): ratios with safe areas; text, CTA and image slots with character, line and font-size limits and per-ratio placements; optional presentation (background, slot colours, shapes, graphics); optional brand binding (colour and font roles).
-- Three banner templates exist (`editorial-split`, `product-spotlight`, `bold-announcement`). Assigning a brand creates a **new version of the shared template** with the brand's values resolved in (version 1.2.1 carries MSD).
+- Ten banner templates exist in `shared/studioTemplates.js`: `editorial-split`, `product-spotlight` and `bold-announcement` (current version 1.2.0), and `side-story`, `caption-band`, `type-first`, `color-block`, `postcard`, `minimal-strip` and `layered-blocks` (1.0.0, added 24 September 2026). Every layout supports all seven banner sizes and the optional tag slot. Assigning a brand creates a **new version of the shared template** with the brand's values resolved in (version 1.2.1 carries MSD).
+- Text fits by shrinking, as the `textFits` check describes: each text slot is drawn at the largest size between `fontSize` and `minFontSize` (in steps of 2 px) at which it wraps into `maxLines` and fits its placement. The rule lives in `shared/textFit.js` and is shared by the PNG renderer and the browser preview, so both choose the same size and line breaks. Current versions set headline floors per layout (the smallest size at which 80-character headlines fit every size), body 22 px and tag 14 px; the CTA keeps its size. Versions whose minimums equal their sizes render exactly as before. Version 1.3.0 of the first three layouts adds fitting and moves decoration clear of text.
+- Layouts are data only: the renderer, the browser preview and the Figma package need no layout-specific code. A new layout keeps to the shared rules: text on the background or the first (surface) shape, the last shape backing the call to action, the top-left pixel left as background, and the lower right corner of the image kept clear for the brand logo.
 - Five MSD slide layouts exist in code (`shared/msdPresentationTemplates.js`) with AI content contracts and a fit validator, outside the template table.
 - The in-process renderer (`server/rendering/inProcessRenderer.js`) draws text as glyph paths with fontkit and composites with sharp into PNG. Preview and export share resolved manifests.
 
@@ -103,7 +105,7 @@ This replaces creating per-brand template versions in `templateBrandService`. Ex
 ## Migration from today
 
 1. Add `outputKind`, `set`, `brandScope`, `status`, slot roles and bindings to template versions (new manifest schema version).
-2. Convert the three banner templates to role bindings with `brandScope: any` (their geometry is unchanged).
+2. Convert the ten banner templates to role bindings with `brandScope: any` (their geometry is unchanged).
 3. Convert the five MSD slide layouts into published `slide` templates in set `msd-core-direction` with `brandScope: [MSD]`, adding placeholder definitions to their image slots.
 4. Create the Folkeuniversitetet slide template set (`brandScope: [Folkeuniversitetet]`) with placeholders on every image slot, before the deck milestone (TPL-4).
 5. Stop creating per-brand template versions; resolve at composition.

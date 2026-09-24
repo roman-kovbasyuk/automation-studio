@@ -123,8 +123,8 @@ export async function startDemoServer({ port = 3010 } = {}) {
     const workflowService = createWorkflowService({ pool, providerRegistry, personalAiService, personalSettingsService })
     const admin = { id: 'studio-demo-admin', role: 'admin' }
     await initializeDemoGenerationSettings(workflowService, admin)
-    const { legacyStudioTemplates, taggedStudioTemplates, studioTemplates } = await import('../shared/studioTemplates.js')
-    for (const manifest of [...legacyStudioTemplates, ...taggedStudioTemplates, ...studioTemplates]) {
+    const { legacyStudioTemplates, taggedStudioTemplates, sizedStudioTemplates, studioTemplates } = await import('../shared/studioTemplates.js')
+    for (const manifest of [...legacyStudioTemplates, ...taggedStudioTemplates, ...sizedStudioTemplates, ...studioTemplates]) {
       const existing = await workflowService.getTemplateVersion({ actor: admin, templateId: manifest.id, version: manifest.version })
       if (!existing) await workflowService.createTemplateVersion({ actor: admin, input: { id: manifest.id, name: manifest.name, version: manifest.version, manifest } })
     }

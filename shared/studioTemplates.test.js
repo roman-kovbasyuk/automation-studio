@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { describe, expect, test } from 'vitest'
 import sharp from 'sharp'
-import { studioTemplates, studioTemplateSamples } from './studioTemplates.js'
+import { sizedStudioTemplates, studioTemplates, studioTemplateSamples } from './studioTemplates.js'
 import { templateManifestSchema } from './templateManifest.js'
 import { createInProcessRenderer } from '../server/rendering/inProcessRenderer.js'
 
@@ -33,6 +33,39 @@ describe('production studio template family', () => {
       expect(result.byteSize).toBeGreaterThan(30000)
     }
   }, 30000)
+
+  // Copy at the limits the AI copy schema allows, including long words, must fit every size of every
+  // current template: headline, body and tag shrink to fit between fontSize and minFontSize.
+  const longestCopy = [
+    { headline: 'Quiet mornings, focused afternoons and calmer commutes with Aura headphones now', body: 'Build momentum through short, focused sessions designed for busy commuters who want calm, clear sound all day, plus comfort that lasts from first stop to last.', cta: 'Start listening today', tag: '20% off during launch week, online only' },
+    { headline: 'Unforgettable, uncompromising noise-cancellation for extraordinary commutes', body: 'Internationally acclaimed acoustical engineering meets uncompromising all-day wearability.', cta: 'Discover everything', tag: 'Complimentary international shipping' },
+    { headline: 'Make progress with Launch Aura noise-cancelling headphones for city commuters w…', body: 'Internationally acclaimed acoustical engineering meets uncompromising all-day wearability for commuters.', cta: 'Start learning' },
+  ]
+  test.each(studioTemplates.map(manifest => [manifest.name, manifest]))('%s fits the longest allowed copy in every size', async (_name, manifest) => {
+    for (const copy of longestCopy) {
+      for (const [slotId, value] of Object.entries(copy)) expect(value.length).toBeLessThanOrEqual(manifest.slots.find(slot => slot.id === slotId).maxCharacters)
+      for (const ratio of manifest.ratios) {
+        const slots = await renderer.compileSlotProvenance({ manifest, ratio: ratio.id, slots: { ...copy, image: { bytes: image, mimeType: 'image/png' } } })
+        for (const slot of slots.filter(item => item.font)) {
+          const definition = manifest.slots.find(item => item.id === slot.id)
+          expect(slot.font.size).toBeGreaterThanOrEqual(definition.minFontSize)
+          expect(slot.font.size).toBeLessThanOrEqual(definition.fontSize)
+        }
+      }
+    }
+  }, 30000)
+
+  test('fitted text is recorded in the render manifest, and published 1.2.0 manifests keep their fixed size', async () => {
+    const copy = { ...longestCopy[0], image: { bytes: image, mimeType: 'image/png' } }
+    const current = studioTemplates.find(manifest => manifest.id === 'editorial-split')
+    const fitted = await renderer.renderComposition({ manifest: current, ratio: 'square', slots: copy })
+    const headline = fitted.renderManifest.slots.find(slot => slot.id === 'headline')
+    expect(headline.font.size).toBeLessThan(current.slots.find(slot => slot.id === 'headline').fontSize)
+    expect(headline.lines.length).toBeLessThanOrEqual(4)
+    const published = sizedStudioTemplates.find(manifest => manifest.id === 'editorial-split')
+    expect(published.version).toBe('1.2.0')
+    await expect(renderer.renderComposition({ manifest: published, ratio: 'square', slots: copy })).rejects.toMatchObject({ code: 'line_overflow' })
+  })
 
   test.each(['url(https://invalid.test)', '#ffffff" onload="alert(1)', 'red', '#fff'])('rejects unsafe presentation color %s', (fill) => {
     const manifest = structuredClone(studioTemplates[0])

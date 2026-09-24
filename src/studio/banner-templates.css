@@ -28,6 +28,8 @@
   overflow-wrap: normal;
 }
 .studio-banner [class*='studio-banner__'] { transform-box: fill-box; transform-origin: center; }
+/* Lines already broken by the shared fitting rule; never re-wrap them. */
+.studio-banner__line { display: block; white-space: pre; }
 .studio-banner[data-animated='true'] .studio-banner__image {
   animation: studio-banner-photo 900ms var(--ease-standard, cubic-bezier(0.23, 1, 0.32, 1)) both;
 }
