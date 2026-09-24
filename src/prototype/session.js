@@ -11,7 +11,7 @@ function defaultId() {
   return `prototype-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
-export async function createPrototypeSession({ store, seed = createPrototypeSeed(), clock = () => Date.now(), idFactory = defaultId, latencyMs = 450 } = {}) {
+export async function createPrototypeSession({ store, seed = createPrototypeSeed(), clock = () => Date.now(), idFactory = defaultId, latencyMs = 450, bannerRenderer } = {}) {
   const ownedStore = store ?? await openPrototypeStore({ seed })
   const initial = await ownedStore.read()
   if (!initial?.schemaVersion) await ownedStore.reset(seed)
@@ -20,6 +20,12 @@ export async function createPrototypeSession({ store, seed = createPrototypeSeed
     state.figmaHandoffs ??= {}
     state.jobs ??= {}
     state.receipts ??= {}
+    // Templates are reference data: add any published version the code has that saved data lacks,
+    // so new layouts appear without a reset. Existing versions stay for saved compositions.
+    state.templates ??= []
+    for (const template of seed.templates ?? []) {
+      if (!state.templates.some(item => item.id === template.id && item.version === template.version)) state.templates.push(clonePrototypeValue(template))
+    }
     for (const workspace of Object.values(state.workspaces ?? {})) {
       const briefing = workspace.campaign?.brief?.briefing
       if (briefing?.schemaVersion === 2 && !briefing.answers) briefing.answers = emptyBriefAnswers()
@@ -39,7 +45,7 @@ export async function createPrototypeSession({ store, seed = createPrototypeSeed
   const actor = (await ownedStore.read()).actor
   const jobs = createPrototypeJobs({ store: ownedStore, scenarios, clock, idFactory })
   const workspaceApi = createWorkspaceApi({ store: ownedStore, scenarios, idFactory, actor })
-  const flowApi = createFlowApi({ store: ownedStore, scenarios, jobs, idFactory, actor })
+  const flowApi = createFlowApi({ store: ownedStore, scenarios, jobs, idFactory, actor, ...(bannerRenderer ? { bannerRenderer } : {}) })
   const api = Object.freeze({ ...workspaceApi, ...flowApi })
   let disposed = false
   return {
@@ -58,9 +64,9 @@ export async function createPrototypeSession({ store, seed = createPrototypeSeed
   }
 }
 
-export async function createSessionFixture({ scenario = 'draft', latencyMs = 0 } = {}) {
+export async function createSessionFixture({ scenario = 'draft', latencyMs = 0, bannerRenderer, storedValue } = {}) {
   const seed = createPrototypeSeed()
-  const store = createMemoryPrototypeStore({ value: seed })
-  const session = await createPrototypeSession({ store, seed, latencyMs })
+  const store = createMemoryPrototypeStore({ value: storedValue ?? seed })
+  const session = await createPrototypeSession({ store, seed, latencyMs, bannerRenderer })
   return { ...session, scenario }
 }

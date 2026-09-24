@@ -1,6 +1,7 @@
 import { clonePrototypeValue } from '../store.js'
 import { emptyBriefAnswers } from '../../../shared/briefingContracts.js'
 import { createEmptyBrandDraft } from '../../../shared/brandDesignSystem.js'
+import { placeholderLogoBlob, placeholderSceneBlob } from '../placeholderImage.js'
 
 const requestId = () => `prototype-${Date.now().toString(36)}`
 const failure = (message, code = 'prototype_request_failed', status = 422) => Object.assign(new Error(message), { code, status })
@@ -19,6 +20,18 @@ function normalizeBrandRecord(value) {
     draft: { ...draft, currentStep: value?.status === 'published' ? 'publish' : 'materials' },
     createdAt: value?.createdAt || timestamp(), updatedAt: value?.updatedAt || timestamp(),
   }
+}
+
+const versionParts = version => String(version).split('.').map(part => Number.parseInt(part, 10) || 0)
+function isNewer(left, right) {
+  const a = versionParts(left), b = versionParts(right)
+  for (let index = 0; index < 3; index += 1) if (a[index] !== b[index]) return a[index] > b[index]
+  return false
+}
+export function latestTemplates(templates) {
+  const latest = new Map()
+  for (const template of templates) if (!latest.has(template.id) || isNewer(template.version, latest.get(template.id).version)) latest.set(template.id, template)
+  return [...latest.values()]
 }
 
 function revisionGuard(campaign, revision) {
@@ -45,6 +58,10 @@ export function createWorkspaceApi({ store, scenarios, idFactory = () => crypto.
   const currentActor = () => {
     const role = scenarios.getActor()
     return { ...actor, role, id: role === 'designer' ? 'prototype-designer' : 'prototype-marketer' }
+  }
+  async function readStoredAsset(id) {
+    if (!id || typeof store.getAsset !== 'function') return null
+    return (await store.getAsset(id)) ?? null
   }
   async function readWorkspace(id) {
     const state = await store.read()
@@ -95,7 +112,9 @@ export function createWorkspaceApi({ store, scenarios, idFactory = () => crypto.
       await store.update(state => { const workspace = state.workspaces[id]; if (!workspace) throw failure('Project not found.', 'not_found', 404); revisionGuard(workspace.campaign, revision); delete state.workspaces[id] })
       return null
     },
-    async listTemplates() { const state = await store.read(); return { templates: clonePrototypeValue(state.templates ?? []), requestId: requestId() } },
+    // Like the service's listLatest: the newest published version of each template. Older versions stay
+    // available through getTemplateVersion for saved compositions.
+    async listTemplates() { const state = await store.read(); return { templates: clonePrototypeValue(latestTemplates(state.templates ?? [])), requestId: requestId() } },
     async getTemplateVersion(id, version) {
       const state = await store.read(); const template = (state.templates ?? []).find(item => item.id === id && (!version || item.version === version))
       if (!template) throw failure('Template not found.', 'not_found', 404)
@@ -104,8 +123,9 @@ export function createWorkspaceApi({ store, scenarios, idFactory = () => crypto.
     async listBrandSystems() { const state = await store.read(); return { brands: clonePrototypeValue((state.brands ?? []).map(normalizeBrandRecord)), requestId: requestId() } },
     async getBrandSystem(id) { const state = await store.read(); const brand = (state.brands ?? []).find(item => item.id === id); if (!brand) throw failure('Brand system not found.', 'not_found', 404); return { ...clonePrototypeValue(normalizeBrandRecord(brand)), requestId: requestId() } },
     async getBrandSystemConfig() { return { systems: [], requestId: requestId() } },
-    async getBrandAssetBlob() { return new Blob(['prototype brand asset'], { type: 'image/png' }) },
-    async getAssetBlob(id) { return assets.get(id) ?? new Blob([`prototype asset ${id}`], { type: 'image/png' }) },
+    async getBrandAssetBlob(brandId, assetId) { return (await readStoredAsset(assetId)) ?? placeholderLogoBlob(`${brandId}:${assetId}`) },
+    // Stored uploads win; anything else (simulated generation) gets a real, decodable scene.
+    async getAssetBlob(id) { return assets.get(id) ?? (await readStoredAsset(id)) ?? placeholderSceneBlob(id) },
   }
   return Object.freeze(api)
 }

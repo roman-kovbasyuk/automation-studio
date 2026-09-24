@@ -1,5 +1,8 @@
 import { hashCanonical } from '../../../shared/canonicalJson.js'
 import { clonePrototypeValue } from '../store.js'
+import { placeholderSceneBlob } from '../placeholderImage.js'
+import { checkBannerFit, renderBannerPng } from '../renderBanner.js'
+import { blobBytes, createZip } from '../zip.js'
 
 const stamp = () => new Date().toISOString()
 const fail = (message, code = 'prototype_request_failed', status = 422) => Object.assign(new Error(message), { code, status })
@@ -21,11 +24,29 @@ function selectedCopy(workspace) {
   return set?.candidates.find(item => item.id === set.selectedCandidateId) ?? set?.candidates[0] ?? null
 }
 
+const semverParts = version => String(version).split('.').map(part => Number.parseInt(part, 10) || 0)
+const newerVersion = (left, right) => { const a = semverParts(left), b = semverParts(right); for (let i = 0; i < 3; i += 1) if (a[i] !== b[i]) return a[i] > b[i]; return false }
+function findTemplate(state, design) {
+  const versions = (state.templates ?? []).filter(item => item.id === design.templateId)
+  return versions.find(item => item.version === design.templateVersion) ?? versions.reduce((latest, item) => !latest || newerVersion(item.version, latest.version) ? item : latest, null)
+}
+const findCopy = (workspace, copyId) => workspace.copies.filter(set => !set.stale).flatMap(set => set.candidates).find(copy => copy.id === copyId) ?? null
+// The service fills the tag slot from the copy's offer.
+const copySlots = copy => ({ headline: copy.headline ?? '', body: copy.body ?? '', cta: copy.cta ?? '', tag: copy.offer ?? '' })
+function designLabel(index, template, ratioId) {
+  const ratio = template.manifest.ratios.find(item => item.id === ratioId)
+  return `Design ${index + 1}, ${template.manifest.name}, ${ratioId}${ratio ? ` (${ratio.width}×${ratio.height})` : ''}`
+}
+async function sha256Hex(blob) {
+  const digest = await crypto.subtle.digest('SHA-256', await blobBytes(blob))
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('')
+}
+
 function defaultBriefAnswers(workspace) {
   return { summary: workspace.campaign.brief.notes || 'A calm campaign for everyday focus.', audience: workspace.campaign.brief.audience || 'Commuters', copyMode: 'create_new', ageGroups: [], gender: 'all', reach: null, goal: null, goalCustom: '', visualTags: [] }
 }
 
-export function createFlowApi({ store, scenarios, jobs, idFactory = () => crypto.randomUUID(), actor }) {
+export function createFlowApi({ store, scenarios, jobs, idFactory = () => crypto.randomUUID(), actor, bannerRenderer = { check: checkBannerFit, render: renderBannerPng } }) {
   const currentActor = () => {
     const role = scenarios.getActor()
     return { ...actor, role, id: role === 'designer' ? 'prototype-designer' : 'prototype-marketer' }
@@ -116,20 +137,113 @@ export function createFlowApi({ store, scenarios, jobs, idFactory = () => crypto
     async selectDirection(id, input, revision) { await store.update(state => { const w = findWorkspace(state, id); if (w.campaign.revision !== revision) throw fail('This project changed.', 'revision_conflict', 409); const direction = w.directions.find(item => item.id === input.directionId && item.previewAssetId); if (!direction) throw fail('Visual direction is unavailable.', 'direction_unavailable', 409); w.campaign.selectedDirectionId = direction.id; w.campaign.status = 'direction_selected'; bump(w) }); return { requestId: responseId() } },
     async uploadVisual(id, input, revision) { const assetId = `upload-${idFactory()}`; const data = input.data ? Uint8Array.from(atob(input.data), char => char.charCodeAt(0)) : new Uint8Array([1]); await store.putAsset(assetId, new Blob([data], { type: input.mimeType || 'image/png' })); await store.update(state => { const w = findWorkspace(state, id); if (w.campaign.revision !== revision) throw fail('This project changed.', 'revision_conflict', 409); const direction = w.directions.find(item => item.id === input.target?.directionId); if (!direction) throw fail('Visual direction is unavailable.', 'direction_unavailable', 409); direction.previewAssetId = assetId; direction.status = 'ready'; bump(w) }); return { asset: { id: assetId, kind: 'direction', sha256: 'e'.repeat(64) }, requestId: responseId() } },
     async saveComposition(id, input, revision) { let composition; await store.update(state => { const w = findWorkspace(state, id); if (w.campaign.revision !== revision) throw fail('This project changed.', 'revision_conflict', 409); composition = { id: idFactory(), templateId: input.templateId, templateVersion: input.templateVersion, ratioIds: input.ratioIds, slotValues: input.slotValues, validation: { valid: true, errors: [] }, stale: false }; w.composition = composition; w.campaign.compositionId = composition.id; w.campaign.status = 'composed'; bump(w) }); return { composition: clonePrototypeValue(composition), campaign: (await store.read()).workspaces[id].campaign, requestId: responseId() } },
-    async saveBannerBatch(id, input, revision) { return this.saveComposition(id, { templateId: input.designs?.[0]?.templateId ?? 'editorial-split', templateVersion: input.designs?.[0]?.templateVersion ?? '1.2.0', ratioIds: input.ratioIds, slotValues: {} }, revision) },
-    async createVersion(id, input, revision) { const activeActor = currentActor(); let version; await store.update(state => { const w = findWorkspace(state, id); if (w.campaign.revision !== revision) throw fail('This project changed.', 'revision_conflict', 409); const copy = selectedCopy(w); const direction = w.directions.find(item => item.id === w.campaign.selectedDirectionId) || w.directions.find(item => item.previewAssetId); if (!copy || !direction || !w.composition) throw fail('Select copy, visual and composition first.', 'version_requirements', 422); const template = state.templates.find(item => item.id === w.composition.templateId) || state.templates[0]; const snapshot = { selectedCopy: copy, selectedDirection: direction, composition: w.composition, assets: [{ id: direction.previewAssetId, kind: 'direction', sha256: 'e'.repeat(64) }], templateManifest: template.manifest, templateManifestHash: hashCanonical(template.manifest) }; version = { id: idFactory(), campaignId: id, versionNumber: w.campaign.currentVersionNumber + 1, snapshot, contentHash: hashCanonical(snapshot), createdBy: activeActor.id, createdAt: stamp() }; w.versions.push(version); w.campaign.currentVersionNumber = version.versionNumber; w.campaign.openVersionId = version.id; w.campaign.status = 'in_review'; state.reviewHistories[version.id] = { version, status: 'in_review', events: [{ id: idFactory(), campaignId: id, versionId: version.id, actorRole: activeActor.role, actorId: activeActor.id, eventType: 'sent', payload: {}, createdAt: stamp() }] }; bump(w) }); return { version: clonePrototypeValue(version), campaign: (await store.read()).workspaces[id].campaign, requestId: responseId() } },
+    async saveBannerBatch(id, input, revision) {
+      const state = await store.read(); const w = findWorkspace(state, id)
+      if (w.campaign.revision !== revision) throw fail('This project changed.', 'revision_conflict', 409)
+      const designs = input.designs ?? [], ratioIds = input.ratioIds ?? []
+      if (!designs.length || !ratioIds.length) throw fail('Choose at least one design and one size.', 'invalid_composition', 400)
+      // Mirror the service's preflight: every design must fit every requested size before saving.
+      for (const [index, design] of designs.entries()) {
+        const template = findTemplate(state, design), copy = findCopy(w, design.copyId)
+        if (!template || !copy) throw fail('A selected design is no longer available. Choose it again.', 'invalid_composition', 400)
+        for (const ratioId of ratioIds) {
+          try { await bannerRenderer.check({ manifest: template.manifest, ratioId, slots: copySlots(copy) }) }
+          catch (error) { throw fail(`${designLabel(index, template, ratioId)}: ${error.message}. Use shorter copy, choose a different design, or remove this size.`, 'invalid_composition', 400) }
+        }
+      }
+      let composition
+      await store.update(state => {
+        const w = findWorkspace(state, id); if (w.campaign.revision !== revision) throw fail('This project changed.', 'revision_conflict', 409)
+        composition = { id: idFactory(), templateId: designs[0].templateId, templateVersion: designs[0].templateVersion, designs: clonePrototypeValue(designs), ratioIds: [...ratioIds], slotValues: {}, validation: { valid: true, errors: [] }, stale: false }
+        w.composition = composition; w.campaign.compositionId = composition.id; w.campaign.status = 'composed'; bump(w)
+      })
+      return { composition: clonePrototypeValue(composition), campaign: (await store.read()).workspaces[id].campaign, requestId: responseId() }
+    },
+    async createVersion(id, input, revision) {
+      const activeActor = currentActor()
+      const state = await store.read(); const w = findWorkspace(state, id)
+      if (w.campaign.revision !== revision) throw fail('This project changed.', 'revision_conflict', 409)
+      const composition = w.composition
+      const designs = composition?.designs ?? (composition ? [{ templateId: composition.templateId, templateVersion: composition.templateVersion, copyId: selectedCopy(w)?.id, directionId: w.campaign.selectedDirectionId }] : [])
+      if (!composition || !designs.length) throw fail('Select copy, visual and composition first.', 'version_requirements', 422)
+      // Render every design in every size, like the service's immutable review package.
+      const renders = []
+      for (const [designIndex, design] of designs.entries()) {
+        const template = findTemplate(state, design), copy = findCopy(w, design.copyId) ?? selectedCopy(w)
+        const direction = w.directions.find(item => item.id === design.directionId && item.previewAssetId) ?? w.directions.find(item => item.id === w.campaign.selectedDirectionId) ?? w.directions.find(item => item.previewAssetId)
+        if (!template || !copy || !direction?.previewAssetId) throw fail('Select copy, visual and composition first.', 'version_requirements', 422)
+        const image = (await store.getAsset(direction.previewAssetId)) ?? placeholderSceneBlob(direction.previewAssetId)
+        for (const ratioId of composition.ratioIds) {
+          let rendered
+          try { rendered = await bannerRenderer.render({ manifest: template.manifest, ratioId, slots: { ...copySlots(copy), image } }) }
+          catch (error) { throw fail(`${designLabel(designIndex, template, ratioId)}: ${error.message}`, 'render_failed', 422) }
+          const assetId = `render-${idFactory()}`
+          await store.putAsset(assetId, rendered.blob)
+          renders.push({ id: assetId, kind: 'review_png', sha256: await sha256Hex(rendered.blob), width: rendered.width, height: rendered.height, designIndex, ratioId, templateId: template.id })
+        }
+      }
+      let version
+      await store.update(state => {
+        const w = findWorkspace(state, id); if (w.campaign.revision !== revision) throw fail('This project changed.', 'revision_conflict', 409)
+        const copy = findCopy(w, designs[0].copyId) ?? selectedCopy(w)
+        const direction = w.directions.find(item => item.id === designs[0].directionId) ?? w.directions.find(item => item.id === w.campaign.selectedDirectionId) ?? w.directions.find(item => item.previewAssetId)
+        const template = findTemplate(state, designs[0])
+        const snapshot = { selectedCopy: copy, selectedDirection: direction, composition: w.composition, assets: [{ id: direction.previewAssetId, kind: 'direction', sha256: 'e'.repeat(64) }, ...renders], templateManifest: template.manifest, templateManifestHash: hashCanonical(template.manifest) }
+        version = { id: idFactory(), campaignId: id, versionNumber: w.campaign.currentVersionNumber + 1, snapshot, contentHash: hashCanonical(snapshot), createdBy: activeActor.id, createdAt: stamp() }
+        w.versions.push(version); w.campaign.currentVersionNumber = version.versionNumber; w.campaign.openVersionId = version.id; w.campaign.status = 'in_review'
+        state.reviewHistories[version.id] = { version, status: 'in_review', events: [{ id: idFactory(), campaignId: id, versionId: version.id, actorRole: activeActor.role, actorId: activeActor.id, eventType: 'sent', payload: {}, createdAt: stamp() }] }
+        bump(w)
+      })
+      return { version: clonePrototypeValue(version), campaign: (await store.read()).workspaces[id].campaign, requestId: responseId() }
+    },
     async getReview(versionId) { const state = await store.read(); if (state.reviewHistories?.[versionId]) return clonePrototypeValue(state.reviewHistories[versionId]); const w = Object.values(state.workspaces ?? {}).find(item => item.versions.some(version => version.id === versionId)); return w ? clonePrototypeValue(state.reviewHistories?.[w.campaign.openVersionId] ?? null) : null },
     async getFigmaHandoff(versionId) { const state = await store.read(); return { handoff: clonePrototypeValue(state.figmaHandoffs?.[versionId] ?? null), requestId: responseId() } },
     async getFigmaSubmission() { return { submission: null, requestId: responseId() } },
     async sendToFigma(versionId) { const handoff = { status: 'sent', url: 'https://www.figma.com/file/prototype/review', versionId, sentAt: stamp() }; await store.update(state => { state.figmaHandoffs[versionId] = handoff }); return { handoff, requestId: responseId() } },
-    async review(versionId, action, input = {}, revision) { const activeActor = currentActor(); let result; await store.update(state => { const w = Object.values(state.workspaces).find(item => item.versions.some(version => version.id === versionId)); if (!w) throw fail('Version not found.', 'not_found', 404); if (w.campaign.revision !== revision) throw fail('This project changed.', 'revision_conflict', 409); const event = { id: idFactory(), campaignId: w.campaign.id, versionId, actorRole: activeActor.role, actorId: activeActor.id, eventType: action === 'mark-ready' ? 'ready' : action === 'request-changes' ? 'changes_requested' : action === 'reject' ? 'rejected' : action, payload: input, createdAt: stamp() }; const history = state.reviewHistories[versionId] ?? { version: w.versions.find(item => item.id === versionId), events: [] }; history.events.push(event); history.status = action === 'mark-ready' ? 'ready' : action === 'approve' ? 'approved' : action === 'request-changes' || action === 'reject' ? 'changes_requested' : history.status ?? 'in_review'; state.reviewHistories[versionId] = history; if (action === 'mark-ready') w.campaign.status = 'ready'; if (action === 'approve') w.campaign.status = 'approved'; if (action === 'request-changes') w.campaign.status = 'changes_requested'; if (action === 'reject') w.campaign.status = 'changes_requested'; bump(w); result = event }); return { event: result, requestId: responseId() } },
+    async review(versionId, action, input = {}, revision) { const activeActor = currentActor(); let result; await store.update(state => { const w = Object.values(state.workspaces).find(item => item.versions.some(version => version.id === versionId)); if (!w) throw fail('Version not found.', 'not_found', 404); if (w.campaign.revision !== revision) throw fail('This project changed.', 'revision_conflict', 409); const event = { id: idFactory(), campaignId: w.campaign.id, versionId, actorRole: activeActor.role, actorId: activeActor.id, eventType: action === 'mark-ready' ? 'ready' : action === 'request-changes' ? 'changes_requested' : action === 'reject' ? 'rejected' : action === 'approve' ? 'approved' : action === 'accept' ? 'accepted' : action, payload: input, createdAt: stamp() }; const history = state.reviewHistories[versionId] ?? { version: w.versions.find(item => item.id === versionId), events: [] }; history.events.push(event); history.status = action === 'mark-ready' ? 'ready' : action === 'approve' || action === 'accept' ? 'approved' : action === 'request-changes' || action === 'reject' ? 'changes_requested' : history.status ?? 'in_review'; state.reviewHistories[versionId] = history; if (action === 'mark-ready') w.campaign.status = 'ready'; if (action === 'approve' || action === 'accept') { w.campaign.status = 'approved'; w.campaign.openVersionId = null } if (action === 'request-changes') w.campaign.status = 'changes_requested'; if (action === 'reject') w.campaign.status = 'changes_requested'; bump(w); result = event }); return { event: result, requestId: responseId() } },
     async reopen(id, revision) { await store.update(state => { const w = findWorkspace(state, id); if (w.campaign.revision !== revision) throw fail('This project changed.', 'revision_conflict', 409); w.campaign.status = 'composed'; w.campaign.openVersionId = null; bump(w) }); return { requestId: responseId() } },
-    async deliver(versionId) { const activeActor = currentActor(); let delivery; await store.update(state => { const w = Object.values(state.workspaces).find(item => item.versions.some(version => version.id === versionId)); if (!w) throw fail('Version not found.', 'not_found', 404); const version = w.versions.find(item => item.id === versionId); const asset = { id: `zip-${idFactory()}`, kind: 'delivery_zip', sha256: 'f'.repeat(64) }; delivery = { id: idFactory(), campaignId: w.campaign.id, versionId, contentHash: version.contentHash, asset, byteSize: 2048, createdBy: activeActor.id, createdAt: stamp() }; w.delivery = delivery; w.campaign.status = 'delivered'; state.reviewHistories[versionId] = { ...(state.reviewHistories[versionId] ?? { version, events: [] }), status: 'delivered', events: [...(state.reviewHistories[versionId]?.events ?? []), { id: idFactory(), campaignId: w.campaign.id, versionId, actorRole: activeActor.role, actorId: activeActor.id, eventType: 'delivered', payload: {}, createdAt: stamp() }] }; bump(w) }); return { delivery: clonePrototypeValue(delivery), requestId: responseId() } },
+    async deliver(versionId) {
+      const activeActor = currentActor()
+      const state = await store.read()
+      const w = Object.values(state.workspaces).find(item => item.versions.some(version => version.id === versionId)); if (!w) throw fail('Version not found.', 'not_found', 404)
+      const version = w.versions.find(item => item.id === versionId)
+      const renders = version.snapshot.assets.filter(asset => asset.kind === 'review_png')
+      if (!renders.length) throw fail('This version has no rendered banners. Reopen the project and prepare the banners again.', 'delivery_assets_missing', 409)
+      // A real ZIP: every approved PNG plus a manifest, like the service's delivery package.
+      const files = []
+      for (const [index, asset] of renders.entries()) {
+        const blob = await store.getAsset(asset.id)
+        if (!blob) throw fail('A rendered banner is missing. Reopen the project and prepare the banners again.', 'delivery_assets_missing', 409)
+        files.push({ name: `banners/banner-${String(index + 1).padStart(3, '0')}.png`, bytes: await blobBytes(blob) })
+      }
+      const manifest = { schemaVersion: 1, source: 'offline prototype', campaignId: w.campaign.id, title: w.campaign.title, versionNumber: version.versionNumber, contentHash: version.contentHash,
+        files: renders.map((asset, index) => ({ file: files[index].name, templateId: asset.templateId, ratioId: asset.ratioId, width: asset.width, height: asset.height, sha256: asset.sha256 })) }
+      files.push({ name: 'delivery-manifest.json', bytes: new TextEncoder().encode(JSON.stringify(manifest, null, 2)) })
+      const zip = createZip(files)
+      const assetId = `zip-${idFactory()}`
+      await store.putAsset(assetId, zip)
+      const asset = { id: assetId, kind: 'delivery_zip', sha256: await sha256Hex(zip) }
+      let delivery
+      await store.update(state => {
+        const w = Object.values(state.workspaces).find(item => item.versions.some(version => version.id === versionId))
+        delivery = { id: idFactory(), campaignId: w.campaign.id, versionId, contentHash: version.contentHash, asset, byteSize: zip.size, createdBy: activeActor.id, createdAt: stamp() }
+        w.delivery = delivery; w.campaign.status = 'delivered'
+        state.reviewHistories[versionId] = { ...(state.reviewHistories[versionId] ?? { version, events: [] }), status: 'delivered', events: [...(state.reviewHistories[versionId]?.events ?? []), { id: idFactory(), campaignId: w.campaign.id, versionId, actorRole: activeActor.role, actorId: activeActor.id, eventType: 'delivered', payload: {}, createdAt: stamp() }] }
+        bump(w)
+      })
+      return { delivery: clonePrototypeValue(delivery), requestId: responseId() }
+    },
     async getDelivery(versionId) { const state = await store.read(); const w = Object.values(state.workspaces).find(item => item.versions.some(version => version.id === versionId)); return clonePrototypeValue(w?.delivery) },
     async planVideo(id, input) { return { id: idFactory(), estimatedCostMicrounits: 0, durationSeconds: input?.durationSeconds ?? 5, requestId: responseId() } },
     async generateVideo() { return { job: { id: idFactory(), status: 'succeeded', step: 'video', result: { video: null } }, requestId: responseId() } },
     async listVideoJobs() { return { jobs: [], requestId: responseId() } },
     async cancelVideoJob() { return { ok: true, requestId: responseId() } },
-    async downloadDelivery(id) { return new Blob([`Prototype sample delivery ${id}`], { type: 'application/zip' }) },
+    async downloadDelivery(id) {
+      const state = await store.read()
+      const zipId = state.workspaces?.[id]?.delivery?.asset?.id
+      const zip = zipId ? await store.getAsset(zipId) : null
+      if (!zip) throw fail('Build the delivery package first.', 'delivery_missing', 404)
+      return zip
+    },
   }
 }
