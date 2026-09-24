@@ -66,7 +66,7 @@ it('records Banners selection save before review preparation', async () => {
   render(<ModuleHarness moduleId="banners" scenario={makeScenario('composed')} record={record} onNavigate={vi.fn()} />)
 
   await user.click(await screen.findByRole('button', { name: 'Select all designs' }))
-  await user.click(screen.getByRole('button', { name: 'Send to Figma' }))
+  await user.click(screen.getByRole('button', { name: 'Prepare banners' }))
   await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Confirm and prepare review' }))
 
   await vi.waitFor(() => expect(record.mock.calls.filter(([event]) => event.action).map(([event]) => event.action)).toEqual(['saveBatch', 'prepareReview']))
@@ -76,7 +76,7 @@ it('shows the embedded review status in Banners once a version is in review', as
   render(<ModuleHarness moduleId="banners" scenario={makeScenario('in-review')} />)
 
   expect(await screen.findByLabelText('Review module')).toBeInTheDocument()
-  expect(screen.getByText('Waiting for the designer to check this version.')).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Accept banners' })).toBeVisible()
 })
 
 it('keeps a custom action override on the real interaction path', async () => {

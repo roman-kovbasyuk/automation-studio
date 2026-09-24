@@ -101,7 +101,9 @@ export function deriveWorkflowState(workspace, actor, reviewHistory = null, figm
     return [id, { id, label: MODULE_LABELS[id], canVisit, canEdit: reason === null, reason, stale,
       ...(generationBlock ? { generationBlock } : {}),
       ...(editDestination ? { editDestination } : {}),
-      ...(id==='review'?{canSendToFigma:editorRoles.has(actor?.role)&&!actor.disabled&&!actor.disabledAt&&!campaign.archivedAt&&!unresolvedJob&&campaign.status==='in_review'&&Boolean(getCurrentReviewHistory(workspace,reviewHistory))}:{}),
+      ...(id==='review'?{canSendToFigma:editorRoles.has(actor?.role)&&!actor.disabled&&!actor.disabledAt&&!campaign.archivedAt&&!unresolvedJob&&campaign.status==='in_review'&&Boolean(getCurrentReviewHistory(workspace,reviewHistory)),
+        // D1: the editor accepts the rendered banners; the server re-checks role, revision and content.
+        canAccept:editorRoles.has(actor?.role)&&!actor.disabled&&!actor.disabledAt&&!campaign.archivedAt&&!unresolvedJob&&campaign.status==='in_review'&&Boolean(getCurrentReviewHistory(workspace,reviewHistory))}:{}),
       ...(id==='visuals'?{canManageVideo:editorRoles.has(actor?.role)&&!actor.disabled&&!actor.disabledAt&&!campaign.archivedAt}:{}),
       complete: id === 'distribute' ? campaign.status === 'delivered' && Boolean(delivery) : index < currentIndex }]
   }))

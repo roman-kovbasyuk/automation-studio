@@ -2,7 +2,7 @@ import { Surface } from 'brutalist-design-system'
 import { StatusBadge, Alert } from "../../../../components/design-system/compatibility.jsx"
 import { FigmaHandoffPanel } from './FigmaHandoffPanel.jsx'
 import { useEffect, useRef, useState } from 'react'
-import { CheckCircle2, Download, ExternalLink, FileCheck2 } from 'lucide-react'
+import { Download, ExternalLink, FileCheck2 } from 'lucide-react'
 import { TextField, TextArea, Checkbox as CheckboxField } from 'brutalist-design-system'
 import { AppButton } from "../../../../components/design-system/compatibility.jsx"
 import { AssetImage, AssetVideo, ErrorNotice, saveBlob } from '../../../primitives.jsx'
@@ -11,7 +11,7 @@ const blankDraft = () => ({ figmaUrl: '', comment: '', checks: { copyAccuracy: f
 const checkLabels = { copyAccuracy: 'Copy is accurate and readable', layoutQuality: 'Layout, image and spacing are correct', exportReadiness: 'All selected formats are ready to export' }
 const labels = { in_review: 'In review', changes_requested: 'Changes requested', ready: 'Ready for approval', approved: 'Approved', delivered: 'Delivered' }
 
-export function ReviewView({ input = {}, access = {}, operation = {}, actions = {}, assets, setDirty = () => {}, expectedInputKey }) {
+export function ReviewView({ input = {}, access = {}, operation = {}, actions = {}, assets, setDirty = () => {}, expectedInputKey, navigate }) {
   const [drafts, setDrafts] = useState({})
   const [videoAssetIds, setVideoAssetIds] = useState([])
   const [actionError, setActionError] = useState(null)
@@ -96,24 +96,32 @@ export function ReviewView({ input = {}, access = {}, operation = {}, actions = 
       <AppButton type="submit" variant="primary" disabled={pending || !draft.figmaUrl.trim() || !Object.values(draft.checks).every(Boolean)}>Mark ready for approval</AppButton>
       <div className="bs-review-reject"><TextArea label="Request a change" maxLength={2000} value={draft.comment} onChange={event => update({ comment: event.target.value })}/>
         <AppButton disabled={pending || !draft.comment.trim()} onClick={() => attempt(actions.requestChanges, draft.comment.trim(), { expectedInputKey })}>Request changes</AppButton></div>
-    </fieldset></form></Surface> : <Alert tone="info"><div className="bs-info"><FileCheck2 size={23} aria-hidden="true"/><p>Waiting for the designer to check this version.</p></div></Alert>)}
+    </fieldset></form></Surface> : (access.canAccept ? <Surface><div className="bs-approval">
+      <p>Check every banner above. Accept them to build the download, or send them to Figma first if a designer should improve them.</p>
+      <AppButton variant="primary" disabled={pending} busy={pending && operation.actionId === 'accept'} onClick={() => attempt(actions.accept, { expectedInputKey })}>Accept banners</AppButton>
+    </div></Surface> : <Alert tone="info" title="Waiting for the requester to accept these banners, or for design help." />))}
     {input.phase === 'in_review' && input.figma?.handoff && access.canEdit && <div className="bs-review-reject">
       <TextArea label="Request a change" maxLength={2000} value={draft.comment} onChange={event => update({ comment: event.target.value })}/>
       <AppButton disabled={pending || !draft.comment.trim()} onClick={() => attempt(actions.requestChanges, draft.comment.trim(), { expectedInputKey })}>Request changes</AppButton>
     </div>}
 
-    {readyEvent && <Alert tone="info"><div className="bs-info"><CheckCircle2 size={22} aria-hidden="true"/><div><strong>Designer checks completed</strong><p>Copy accuracy · Layout quality · Export readiness</p>{readyEvent.payload?.figmaUrl && <a href={readyEvent.payload.figmaUrl} target="_blank" rel="noreferrer">Open Figma review <ExternalLink size={14} aria-hidden="true"/></a>}</div></div></Alert>}
+    {readyEvent && <Alert tone="success" title="Designer checks completed" description="Copy accuracy · Layout quality · Export readiness"
+      action={readyEvent.payload?.figmaUrl && <a href={readyEvent.payload.figmaUrl} target="_blank" rel="noreferrer">Open Figma review <ExternalLink size={14} aria-hidden="true"/></a>} />}
 
     {input.phase === 'ready' && (access.canEdit ? <div className="bs-approval"><AppButton variant="primary" disabled={pending || !readyEvent || (input.figma && (!input.figma.loaded || (input.figma.handoff && !returned)))} onClick={() => attempt(actions.approve, { expectedInputKey, ...(returned ? {submissionId:returned.id,submissionHash:returned.submissionHash} : {}) })}>Approve version {input.version.versionNumber}</AppButton>
       <TextArea label="Or request another round" maxLength={2000} value={draft.comment} onChange={event => update({ comment: event.target.value })}/>
       <AppButton disabled={pending || !draft.comment.trim()} onClick={() => attempt(actions.reject, draft.comment.trim(), { expectedInputKey })}>Return for changes</AppButton></div>
       : <p className="bs-note">A permitted editor who did not mark this version ready must approve it.</p>)}
 
-    {input.phase === 'changes_requested' && <Alert tone="info"><div className="bs-info"><div><strong>Changes requested</strong>{changeEvents.map(event => <p key={event.id}>{event.payload.comment}</p>)}
-      {access.canEdit && <AppButton variant="primary" disabled={pending} onClick={() => attempt(actions.reopen, { expectedInputKey })}>Reopen to edit</AppButton>}</div></div></Alert>}
+    {input.phase === 'changes_requested' && <Alert tone="warning" title="The designer asked for changes"
+      action={access.canEdit && <AppButton variant="primary" disabled={pending} onClick={() => attempt(actions.reopen, { expectedInputKey })}>Reopen to edit</AppButton>}>
+      {changeEvents.map(event => <p key={event.id}>{event.payload.comment}</p>)}</Alert>}
 
-    {input.phase === 'delivered' && <Alert tone="info"><div className="bs-info"><CheckCircle2 size={22} aria-hidden="true"/><p>This approved version has been packaged for distribution.</p></div></Alert>}
+    {input.phase === 'approved' && <Alert tone="success" title={`Version ${input.version.versionNumber} is approved`} description="Build the delivery package to download every banner."
+      action={navigate && <AppButton variant="primary" onClick={() => navigate('distribute')}>Continue to delivery</AppButton>} />}
 
-    {input.history && <details className="bs-history"><summary>Version activity <span>{input.history.events.length} events</span></summary><ol>{input.history.events.map(event => <li key={event.id}><strong>{event.eventType.replaceAll('_', ' ')}</strong><span>{event.actorRole} · {new Date(event.createdAt).toLocaleString()}</span>{event.payload?.comment && <p>{event.payload.comment}</p>}</li>)}</ol></details>}
+    {input.phase === 'delivered' && <Alert tone="success" title="This approved version has been packaged for distribution." />}
+
+    {input.history && <details className="bs-history"><summary>Version activity <span>{input.history.events.length} {input.history.events.length === 1 ? 'event' : 'events'}</span></summary><ol>{input.history.events.map(event => <li key={event.id}><strong>{event.eventType.replaceAll('_', ' ')}</strong><span>{event.actorRole} · {new Date(event.createdAt).toLocaleString()}</span>{event.payload?.comment && <p>{event.payload.comment}</p>}</li>)}</ol></details>}
   </section>
 }

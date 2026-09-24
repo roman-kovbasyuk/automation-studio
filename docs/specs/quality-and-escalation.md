@@ -1,6 +1,6 @@
 # Quality checks and escalation
 
-**Status:** Target (draft for owner review) · **Updated:** 17 September 2026 · **Requirements:** ASSET-4–8, ESC-1–5, NFR-2, NFR-3, NFR-8 · **Decisions:** D1, D3, D17, D18, D28
+**Status:** Accepted by the owner on 24 September 2026 ([D40](../product/decisions.md)). Implemented: requester acceptance of the rendered version (`in_review → approved`, an `accepted` review event) and delivery of accepted versions, with the designer route kept as design help. Not yet built: the check catalog beyond the renderer's fit checks, repair, AI review, escalation records and the designer queue (M2) · **Updated:** 24 September 2026 · **Requirements:** ASSET-4–8, ESC-1–5, NFR-2, NFR-3, NFR-8 · **Decisions:** D1, D3, D17, D18, D28
 
 How assets are checked and repaired, how requesters accept them, how work reaches a designer and comes back, and what is delivered.
 

@@ -74,6 +74,8 @@ export function createReviewCommands(runtime) {
       if(submission&&(submission.id!==input.submissionId||submission.submissionHash!==input.submissionHash))return Promise.resolve({ok:false,code:'figma_submission_changed',message:'Reload the returned artwork before approving.'})
       return reviewAction('approve','ready','approve',input,options)
     },
+    // D1: the requester accepts the rendered banners directly; a designer is optional.
+    accept: (options = {}) => reviewAction('accept', 'in_review', 'accept', {}, options),
     reject: (comment, options = {}) => reviewAction('reject', 'ready', 'reject', { comment }, options,
       validFeedback, { code: 'feedback_required', message: 'Describe the requested change.' }),
     reopen: (options = {}) => runtime.execute('review', 'reopen', async ({ api, workspace, idempotencyKey }) => {

@@ -1,6 +1,6 @@
 # Known issues and technical debt
 
-**Status:** Current · **Updated:** 17 September 2026
+**Status:** Current · **Updated:** 24 September 2026
 
 Issues found in the codebase review of 16 September 2026. **Before build** means the issue should be fixed in milestone M0 of the [roadmap](../product/roadmap.md), before proof-of-concept work starts. Each entry names its evidence so it can be verified.
 
@@ -19,7 +19,6 @@ These are expected gaps between the current code and the [target model](../produ
 
 | Gap | Evidence | Decision |
 | --- | --- | --- |
-| Designer review is mandatory before delivery | `shared/workflowRules.js` transitions | D1 |
 | Brands are copied into new global template versions; campaigns have no brand | `server/services/templateBrandService.js`, `templates` table | D2 |
 | No brand information in AI prompts | `server/providers/geminiProvider.js` | D2 |
 | Brand model lacks voice, wording rules, image style and mandatory lines | `shared/contracts.js` brand schemas | D2 |
@@ -27,7 +26,6 @@ These are expected gaps between the current code and the [target model](../produ
 | No automatic quality decision or escalation | — | D3 |
 | Flow logic is hard-coded; recipes are not used | `src/studio/campaign/workflowCoordinator.js` | D8 |
 | Recipe node editor is disconnected from projects | `server/assetWorkflows/`, `src/studio/admin/` | D4, D8 |
-| Create screen offers asset types that do not work | `shared/projectTypes.js` (only `banners` is `available`) | D6, D7 |
 
 ## Codebase hygiene
 
@@ -36,8 +34,9 @@ These are expected gaps between the current code and the [target model](../produ
 | Client brands are hard-coded alongside the brand database | `shared/msdBrand.js`, `shared/novartisBrand.js`, `shared/folkeuniversitetetBrand.js` | With M1 |
 | Design tool records describe components removed in M0 | `.impeccable/surfaces` records for the Banners, Brief and Visuals modules reference `SelectionTile`, `MediaWorkflowCard`, `TextAction`, `FactGrid` and removed stylesheets | Refresh with the design tool during DS1 |
 | Personal AI providers are wired but cannot run project generation | Project briefs accept only Vertex AI EU or the mock provider (D37); `personalProviderFactory` in `server/bootstrap.js` and `scripts/dev-studio.mjs` | Decide with M1: remove, or keep for brand tools only |
-| After approving a version, the review step offers no action to continue to delivery | The workflow step navigation is the only way to Distribute | With the project page shell (M2) |
 | Dependency audit warnings | 12 remaining after M0: the `firebase-admin` chain (8 moderate, production) needs `firebase-admin` 14; `vite`, `esbuild` and VitePress are development-only with no fix yet | `firebase-admin` 14 follow-up (D34) |
+
+Resolved on 24 September 2026: the requester accepts rendered banners without a designer (D40); the review step now offers **Continue to delivery** after approval; the create screen offers a start action only for banners and marks the other types *Not available yet*; banner text shrinks to fit between each slot's `fontSize` and `minFontSize`, so copy within the AI limits fits every layout and size; alerts show their content inside the alert (Brutalist 0.1.3).
 
 Resolved in M0: unreachable source files, the development script tags in `index.html`, inconsistent product naming, the outdated eight-stage list, the diagram script reading an archived document, the GitHub Pages workflow, the design tool record for the removed MVP, the failing test suite and the high-severity `postcss` and `lodash-es` findings.
 

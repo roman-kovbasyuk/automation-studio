@@ -163,6 +163,14 @@ const transitions = [
     }),
   },
   {
+    // D1: designer review is an escalation path. The requester accepts the rendered version.
+    action: 'accept',
+    from: 'in_review',
+    to: 'approved',
+    roles: marketerRoles,
+    guard: ({ campaign }) => validVersion(campaign.currentVersion),
+  },
+  {
     action: 'reject',
     from: 'ready',
     to: 'changes_requested',

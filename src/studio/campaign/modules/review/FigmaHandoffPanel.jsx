@@ -28,9 +28,9 @@ export function FigmaHandoffPanel({figma,phase,canSend,pending,send,refresh}){
         const result=await send({fileKey});if(result?.ok===false)setError(result.message)
       }catch(caught){setError(caught.message)}
     }}>
-      <h3>Review in Figma</h3><p>Send this version as editable text, images and layouts.</p>
+      <h3>Design help in Figma</h3><p>Optional. Send this version as editable text, images and layouts so a designer can improve it.</p>
       <TextField label="Figma destination" type="url" required value={destination} onChange={event=>setDestination(event.target.value)} disabled={pending}/>
-      <AppButton type="submit" variant="primary" disabled={pending} busy={pending}>Send banners to Figma</AppButton>
+      <AppButton type="submit" disabled={pending} busy={pending}>Send banners to Figma</AppButton>
     </form>}
     {handoff&&<div className="bs-info"><div>
       <strong role="status">{handoff.state==='imported'?'Banners added to Figma, design will review shortly':handoff.state==='importing'?'Adding banners to Figma…':handoff.state==='import_failed'?'The Figma import needs to be resumed.':'Ready to import into Figma'}</strong>

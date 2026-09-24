@@ -6,7 +6,7 @@ These instructions apply to every AI coding agent working in this repository. `C
 
 Automation Studio produces on-brand content automatically. A company's **brand** is the foundation of every asset; **templates** are built on the brand; in each **project** (one asset type), a **recipe** turns a brief into finished assets through four stages — **Brief → Copy → Visuals → Assets**; **designers** are involved only through **escalation** when automatic quality is not good enough. Banners (PNG) are the first asset type, decks (editable PowerPoint) the second.
 
-The code is behind this model. It still implements a banner-only "campaign" flow with mandatory designer review. Read [known issues](docs/engineering/known-issues.md) before assuming the target exists.
+The code is behind this model. It still implements a banner-only "campaign" flow; the requester accepts rendered banners and designer review is optional (D40). Read [known issues](docs/engineering/known-issues.md) before assuming the target exists.
 
 ## Read first
 
@@ -62,7 +62,7 @@ The existing banner flow lives in `src/studio/campaign/`. Until it is migrated t
 - The runtime has six internal module IDs (Brief, Copy, Visuals, Banners, Review, Distribute) and five visible modules; Review is an internal projection shown inside Banners. `moduleContracts.js` separates internal from visible IDs. The target maps Banners, Review and Distribute to the single **Assets** stage.
 - Each module owns its functionality, local state and explicit input/output contract. The page owns layout and navigation; `workflowCoordinator.js` connects module outputs. Contract changes must be checked against dependent modules and chain tests.
 - Never key a module by campaign revision or replace the module tree during a mutation refresh. Preserve local drafts and send their captured input key through named commands. Keep backend authorization and artifact integrity authoritative.
-- Do not change review permissions, approval requirements or delivery behaviour without an accepted specification. Decision D1 (designer review as escalation) requires its own specification before implementation.
+- Do not change review permissions, approval requirements or delivery behaviour without an accepted specification. Requester acceptance (D40) implements the accepted slice of D1; the rest of [quality and escalation](docs/specs/quality-and-escalation.md) (checks, repair, AI review, escalation records) is planned for M2.
 - The live campaign page is `src/studio/campaign/CampaignPage.jsx`. Legacy Stage exports are compatibility adapters, not the live workflow controller. Unused prototype code in `src/mvp/`, `src/domain/`, `src/data/` and parts of `src/screens/` is scheduled for removal; do not build on it.
 
 See [campaign modules](docs/engineering/campaign-modules.md) for the module boundary, playground and verification commands.

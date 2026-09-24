@@ -1,6 +1,7 @@
 import { hashCanonical } from '../../shared/canonicalJson.js'
 import { randomUUID } from 'node:crypto'
 import {
+  acceptVersionRequestSchema,
   approveVersionRequestSchema,
   campaignRecordSchema,
   campaignVersionRecordSchema,
@@ -129,6 +130,12 @@ function verifiedStatus(events, version, assetHashes) {
       && !sameHashes(canonicalHashes(approved.payload.assetHashes), assetHashes.all)))) {
     fail(409, 'invalid_review_history', 'Approval history does not match the immutable version')
   }
+  const accepted = events.find((event) => event.eventType === 'accepted')
+  if (accepted && (accepted.payload.contentHash !== version.contentHash
+    || (accepted.payload.assetHashes
+      && !sameHashes(canonicalHashes(accepted.payload.assetHashes), assetHashes.all)))) {
+    fail(409, 'invalid_review_history', 'Acceptance history does not match the immutable version')
+  }
   try {
     return deriveReviewStatus(events)
   } catch (error) {
@@ -173,6 +180,11 @@ const commands = {
   },
   approve: {
     roles: ['marketer', 'admin'], schema: approveVersionRequestSchema, eventType: 'approved', close: true,
+    payload: ({ version }) => ({ contentHash: version.contentHash }),
+  },
+  // D1: the requester accepts the rendered version they sent; no designer or Figma round trip needed.
+  accept: {
+    roles: ['marketer', 'admin'], schema: acceptVersionRequestSchema, eventType: 'accepted', close: true,
     payload: ({ version }) => ({ contentHash: version.contentHash }),
   },
 }
@@ -276,6 +288,7 @@ export function createReviewService({
           ready: 'in_review',
           rejected: 'in_review',
           approved: 'ready',
+          accepted: 'in_review',
         }[outcome.body.event.eventType] ?? null
         await notificationService.enqueueEvent({
           actor,
@@ -299,6 +312,7 @@ export function createReviewService({
     markReady: (input) => executeVersionCommand({ ...input, action: 'mark_ready' }),
     reject: (input) => executeVersionCommand({ ...input, action: 'reject' }),
     approve: (input) => executeVersionCommand({ ...input, action: 'approve' }),
+    accept: (input) => executeVersionCommand({ ...input, action: 'accept' }),
 
     async reopen({ actor, campaignId, expectedRevision, idempotencyKey, input }) {
       requireActor(actor, ['marketer', 'admin'])

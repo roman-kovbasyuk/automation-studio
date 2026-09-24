@@ -25,7 +25,7 @@ function mapAsset(row) {
 
 function mapEvent(row) {
   if (!row) return null
-  const payload = ['sent', 'ready', 'approved', 'delivered'].includes(row.event_type)
+  const payload = ['sent', 'ready', 'approved', 'accepted', 'delivered'].includes(row.event_type)
     && Array.isArray(row.immutable_asset_hashes)
     ? { ...row.payload, assetHashes: row.immutable_asset_hashes }
     : row.payload

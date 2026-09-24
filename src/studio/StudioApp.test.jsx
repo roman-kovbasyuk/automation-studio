@@ -165,7 +165,7 @@ describe('connected studio workflow', () => {
     const header = document.querySelector('.bs-topbar')
     expect(header).not.toBeNull()
     await within(header).findByText('Autumn launch')
-    expect(within(header).getByText('In design review')).toBeVisible()
+    expect(within(header).getByText('In review')).toBeVisible()
   })
   test('renames an editable campaign title inline without rendering a form field', async () => {
     history.replaceState({}, '', '/mvp/campaign/campaign-1')
@@ -187,7 +187,8 @@ describe('connected studio workflow', () => {
     let finishReload
     api.getWorkspace.mockImplementationOnce(async () => structuredClone(workspace)).mockImplementationOnce(() => new Promise(resolve => { finishReload = () => resolve(structuredClone(workspace)) }))
     workspace.copies = [{ id: 's1', stale: false, selectedCandidateId: null, candidates: [{ id: 'c1', headline: 'Listen your way', body: 'A quieter commute.', cta: 'Shop now', offer: '' }] }]
-    api.selectCopy = vi.fn(async () => { workspace.campaign.revision += 1; workspace.campaign.selectedCopyId = 's1'; workspace.copies[0].selectedCandidateId = 'c1'; workspace.copies[0].approvedCandidateIds = ['c1']; return workspace.campaign })
+    // Selecting a card approves it (multi-select); the first approval also becomes the selection.
+    api.approveCopy = vi.fn(async () => { workspace.campaign.revision += 1; workspace.campaign.selectedCopyId = 's1'; workspace.copies[0].selectedCandidateId = 'c1'; workspace.copies[0].approvedCandidateIds = ['c1']; return workspace.campaign })
     render(<ConnectedStudio api={api} />)
     const cardHeading = await screen.findByRole('heading', { name: 'Listen your way' })
     fireEvent.click(screen.getByRole('button', { name: 'Select option 1' }))
@@ -197,7 +198,7 @@ describe('connected studio workflow', () => {
     await act(async () => finishReload())
     await waitFor(() => expect(screen.getByRole('button', { name: 'Deselect option 1' })).toHaveAttribute('aria-pressed', 'true'))
     expect(screen.getByRole('heading', { name: 'Listen your way' })).toBe(cardHeading)
-    expect(api.selectCopy).toHaveBeenCalledOnce()
+    expect(api.approveCopy).toHaveBeenCalledOnce()
     expect(screen.queryByRole('button', { name: 'Select option 1' })).not.toBeInTheDocument()
   })
   test('does not save an inline title canceled with Escape', async () => {

@@ -5,6 +5,9 @@ const allowedSequences = new Map([
   ['sent,ready,rejected', 'changes_requested'],
   ['sent,ready,approved', 'approved'],
   ['sent,ready,approved,delivered', 'delivered'],
+  // D1: accepted by the requester without a designer.
+  ['sent,accepted', 'approved'],
+  ['sent,accepted,delivered', 'delivered'],
 ])
 
 export class InvalidReviewHistoryError extends Error {

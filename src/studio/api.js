@@ -8,7 +8,7 @@ export class StudioApiError extends Error {
 
 const segment = (value) => encodeURIComponent(value)
 const generationPaths = { brief: 'analyse-brief', brief_analysis: 'analyse-brief', copy: 'copy-generations', directions: 'direction-generations', image: 'image-generations' }
-const reviewActions = new Set(['request-changes', 'mark-ready', 'reject', 'approve'])
+const reviewActions = new Set(['request-changes', 'mark-ready', 'reject', 'approve', 'accept'])
 
 export function createStudioApi({ getToken, getHeaders, fetchImpl = globalThis.fetch, baseUrl = '' } = {}) {
   async function request(method, path, { body, revision, idempotencyKey, signal, blob = false } = {}) {

@@ -71,7 +71,7 @@ See [local development](local-development.md) for setup and safety notes.
 | Recipe files drive the stages | Stage order and rules are hard-coded in `workflowCoordinator.js`, `shared/workflowRules.js` and services |
 | Brand pinned per project; templates reference brands | Brand is copied into new global template versions; campaigns have no brand |
 | Brand guidance in AI prompts | Prompts receive no brand information |
-| Automatic checks decide acceptance; designer on escalation | Designer review is mandatory: `composed → in_review → ready → approved → delivered` |
+| Automatic checks decide acceptance; designer on escalation | The requester accepts the rendered version (`composed → in_review → approved → delivered`, D40); the designer route (`in_review → ready → approved`) remains as design help. Checks beyond text fit, repair and escalation records are not built |
 | Deck projects delivering one PowerPoint file | Five MSD slide templates and AI content contracts exist; no deck generation or PPTX export |
 
 ## Build and hosting

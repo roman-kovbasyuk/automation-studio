@@ -1,6 +1,6 @@
 # Decision log
 
-**Status:** Current · **Updated:** 17 September 2026
+**Status:** Current · **Updated:** 24 September 2026
 
 Each decision records what was decided, when and what it replaces. A decision is not proof of implementation; check [known issues](../engineering/known-issues.md) and the code for the current state.
 
@@ -42,6 +42,8 @@ Each decision records what was decided, when and what it replaces. A decision is
 | D37 | **AI is at the centre of every creation flow.** Without AI the application has no purpose, so there is no non-AI mode: the source briefing flag is removed and the confirmed AI briefing is the only way to create a project. Production requires the managed AI connection (Vertex AI EU); development and tests use explicit mock providers. The interface checks AI readiness before work starts and explains when it is unavailable. | 17 Sep 2026 | `BRIEFING_ENABLED` switch and its 503 *briefing unavailable* path |
 | D38 | **Remove the in-app banner template editor.** It can no longer be opened from the application; template authoring returns with the template model. | 17 Sep 2026 | Draft-only banner template editor on the Templates page |
 | D39 | **Brief review is AI-prefilled and reviewed on one page.** One analysis fills the settings it has a basis for (age range from 18 to 65+, gender, goal, reach, the copy question and visual keywords) and marks them as suggested, never inferring age or gender from stereotypes. The requester reviews them in up to three sections shown together (Copy found, Settings and Visual context) and confirms once with **Proceed to copy**. A confirmed brief saves changes automatically, except a change that would write new copy, which needs that explicit action. Found copy is always kept, with optional new copy. Image prompts must use the keywords and audience settings. See [Brief review](../specs/brief-review.md). | 17 Sep 2026 | The single review form; choosing between keeping found copy and creating new copy |
+| D40 | **The requester accepts rendered banners.** An editor (marketer or admin) accepts the current rendered version directly: `in_review → approved`, recorded as an `accepted` review event bound to the version's content and asset hashes and enforced by the database (migration `055_requester_acceptance.sql`). The designer route (a designer marks the version ready, someone else approves) stays available as design help. The owner accepted the [quality and escalation](../specs/quality-and-escalation.md) specification for this slice on 24 September 2026; its further checks, repair, AI review and escalation records follow in M2. | 24 Sep 2026 | Mandatory designer review before delivery |
+| D41 | **Banner text shrinks to fit, and the catalog has ten layouts.** Each text slot uses the largest size between `fontSize` and `minFontSize` at which it fits (`shared/textFit.js`, shared by the PNG renderer and the browser preview). Current layouts set per-layout headline floors, body 22 px and tag 14 px; the call to action keeps its size. Ten layouts support all seven sizes; version 1.3.0 of the first three adds fitting and moves decoration clear of text. See [template model](../specs/template-model.md). | 24 Sep 2026 | Fixed text sizes that rejected copy within the AI limits; three layouts |
 
 ## Provisional decisions
 

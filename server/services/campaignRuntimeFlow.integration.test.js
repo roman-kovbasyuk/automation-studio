@@ -81,6 +81,9 @@ describe('campaign runtime through real HTTP and PostgreSQL', () => {
     await analyzeAndConfirm(session)
     let state = await workspace(session.runtime)
     const copies = state.copies[0].candidates.slice(0, 2)
+    // Headlines shrink to fit, so the only copy a template must still reject is copy that cannot fit
+    // at any allowed size: here a single word wider than the headline box.
+    expectOk(await session.actions.copy.edit(copies[0].id, { headline: 'Noisecancellingheadphonesforeverycitycommuter', body: copies[0].body, offer: copies[0].offer ?? '', cta: copies[0].cta }))
     for (const copy of copies) expectOk(await session.actions.copy.approve(copy.id))
     expectOk(await session.actions.visuals.generate('selected_copy'))
     state = await workspace(session.runtime)
@@ -95,7 +98,7 @@ describe('campaign runtime through real HTTP and PostgreSQL', () => {
     expect(rejected).toMatchObject({ status: 400, code: 'invalid_composition', details: [{
       path: 'designs[0].ratios.square.headline', designId: expect.any(String), designIndex: 0,
       templateId: designs[0].templateId, templateVersion: designs[0].templateVersion,
-      copyId: copies[0].id, directionId: direction.id, ratioId: 'square', slotId: 'headline', code: 'line_overflow',
+      copyId: copies[0].id, directionId: direction.id, ratioId: 'square', slotId: 'headline', code: 'unbreakable_overflow',
       message: expect.stringContaining('Use shorter copy, choose a different design, or remove this size.'),
     }] })
     await session.runtime.refresh()
@@ -103,7 +106,7 @@ describe('campaign runtime through real HTTP and PostgreSQL', () => {
     expect(state.campaign.revision).toBe(before.campaign.revision)
     expect(state.composition).toEqual(before.composition)
     expect(state.versions).toEqual(before.versions)
-    const fittingCopy = copies.reduce((shortest, candidate) => candidate.headline.length < shortest.headline.length ? candidate : shortest)
+    const fittingCopy = copies[1]
     const fittingDirection = state.directions.find(item => item.copy?.id === fittingCopy.id && item.status === 'ready')
     expectOk(await session.actions.visuals.select(fittingDirection.id))
     state = await workspace(session.runtime)
@@ -119,6 +122,55 @@ describe('campaign runtime through real HTTP and PostgreSQL', () => {
     expect(state.versions[0].snapshot.selectedCopy.headline).toBe(fittingCopy.headline)
     session.runtime.dispose()
   }, 30_000)
+
+  test('the requester accepts the rendered banners and delivers them without a designer (D1)', async () => {
+    const { studio, templates, campaign } = await setup()
+    const session = await connect(studio, templates, campaign.id)
+    await analyzeAndConfirm(session)
+    let state = await workspace(session.runtime)
+    const copy = state.copies[0].candidates[0]
+    expectOk(await session.actions.copy.approve(copy.id))
+    expectOk(await session.actions.visuals.generate('selected_copy'))
+    state = await workspace(session.runtime)
+    const direction = state.directions.find(item => item.copy?.id === copy.id && item.status === 'ready')
+    expectOk(await session.actions.visuals.select(direction.id))
+    state = await workspace(session.runtime)
+    const template = templates.find(item => item.id === 'caption-band')
+    const receipt = await session.actions.banners.saveBatch({ designs: [{ templateId: template.id, templateVersion: template.version,
+      copySetId: state.copies[0].id, copyId: copy.id, directionId: direction.id }], ratioIds: ['square', 'story'] })
+    expect(receipt.ok).toBe(true)
+    expectOk(await session.actions.banners.prepareReview({ expectedInputKey: receipt.reviewInputKey }))
+    state = await workspace(session.runtime)
+    expect(state.campaign.status).toBe('in_review')
+    const version = state.versions.at(-1)
+
+    // A designer cannot accept on the requester's behalf; the server refuses it too.
+    const designer = await connect(studio, templates, campaign.id, 'designer')
+    expect(designer.runtime.getSnapshot('review').access.canAccept).toBe(false)
+    await expect(designer.api.review(version.id, 'accept', {}, state.campaign.revision, 'designer-accept')).rejects.toMatchObject({ status: 403 })
+    designer.runtime.dispose()
+
+    await session.runtime.refresh({ review: true })
+    expect(session.runtime.getSnapshot('review').access.canAccept).toBe(true)
+    expectOk(await session.actions.review.accept())
+    state = await workspace(session.runtime)
+    expect(state.campaign.status).toBe('approved')
+    expectOk(await session.actions.distribute.build())
+    state = await workspace(session.runtime)
+    expect(state.campaign.status).toBe('delivered')
+    const history = await session.api.getReview(version.id)
+    expect(history.events.map(event => event.eventType)).toEqual(['sent', 'accepted', 'delivered'])
+    expect(history.events[1]).toMatchObject({ actorRole: 'marketer', payload: { contentHash: version.contentHash } })
+    const bytes = await blobBytes(await session.actions.distribute.download())
+    expect(createHash('sha256').update(bytes).digest('hex')).toBe(state.delivery.asset.sha256)
+    const files = unzip(bytes), manifest = JSON.parse(files.get('delivery-manifest.json'))
+    expect([...files.keys()].filter(name => name.endsWith('.png'))).toHaveLength(2)
+    expect(manifest.versionId).toBe(version.id)
+    expect(manifest.approval.actorId).toBe(studio.actor('marketer').id)
+    // Accepting again, or approving an accepted version, is refused.
+    await expect(session.api.review(version.id, 'accept', {}, state.campaign.revision, 'accept-again')).rejects.toMatchObject({ status: 409 })
+    session.runtime.dispose()
+  })
 
   test('complete six-module flow preserves v1, scopes review history, and delivers v2', async () => {
     const { studio, api, templates, campaign } = await setup()

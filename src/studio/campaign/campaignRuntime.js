@@ -249,7 +249,10 @@ export function createCampaignRuntime({ api, actor, templates = [], workspace: i
       return resultError(failure('generation_unresolved', 'A generation is pending or needs reconciliation.'))
     }
     const snapshot = snapshots[moduleId]
-    if (!replay && !(snapshot.access.canEdit || (moduleId==='review' && actionId==='sendToFigma' && snapshot.access.canSendToFigma))) return resultError(failure('not_allowed', snapshot.access.reason))
+    // The review module is the designer's to edit while in review; the requester may still send it to
+    // Figma or accept it (D1). The server remains authoritative for both.
+    if (!replay && !(snapshot.access.canEdit || (moduleId==='review' && ((actionId==='sendToFigma' && snapshot.access.canSendToFigma)
+      || (actionId==='accept' && snapshot.access.canAccept))))) return resultError(failure('not_allowed', snapshot.access.reason))
     if (!replay && expectedInputKey !== undefined && snapshot.inputKey !== expectedInputKey) {
       const error = failure('source_changed', 'The source changed. Review it before applying this draft.')
       showError(moduleId, actionId, error)

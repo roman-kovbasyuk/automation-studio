@@ -9,7 +9,7 @@ Automation Studio produces on-brand content automatically.
 
 Banners are the first asset type and decks the second.
 
-> **Status (16 September 2026):** preparing a proof of concept. The current code implements a banner-only flow with mandatory designer review; the target model is described in the [documentation](docs/index.md). See the [roadmap](docs/product/roadmap.md).
+> **Status (24 September 2026):** preparing a proof of concept. The current code implements a banner-only flow: brief, copy, visuals, ten banner layouts in seven sizes, and a downloadable package that the requester accepts (a designer is optional); the target model is described in the [documentation](docs/index.md). See the [roadmap](docs/product/roadmap.md).
 
 ## Quick start
 

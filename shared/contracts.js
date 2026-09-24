@@ -476,6 +476,8 @@ export const markVersionReadyRequestSchema = z.strictObject({
   checklistAnswers: reviewChecklistSchema,
 })
 export const approveVersionRequestSchema = z.union([z.strictObject({}), z.strictObject({ submissionId: z.string().min(1).max(256), submissionHash: z.string().regex(/^[a-f0-9]{64}$/) })])
+// D1: the requester accepts the current rendered version without a designer.
+export const acceptVersionRequestSchema = z.strictObject({})
 export const reopenCampaignRequestSchema = z.strictObject({})
 
 const reviewEventBase = {
@@ -522,6 +524,12 @@ const approvedReviewEventSchema = z.strictObject({
   eventType: z.literal('approved'),
   payload: z.strictObject({ contentHash: assetHashSchema, assetHashes: z.array(assetHashSchema).optional() }),
 })
+const acceptedReviewEventSchema = z.strictObject({
+  ...reviewEventBase,
+  actorRole: z.enum(['marketer', 'admin']),
+  eventType: z.literal('accepted'),
+  payload: z.strictObject({ contentHash: assetHashSchema, assetHashes: z.array(assetHashSchema).optional() }),
+})
 const deliveredReviewEventSchema = z.strictObject({
   ...reviewEventBase,
   actorRole: z.enum(['marketer', 'admin']),
@@ -539,6 +547,7 @@ export const reviewEventRecordSchema = z.discriminatedUnion('eventType', [
   readyReviewEventSchema,
   rejectedReviewEventSchema,
   approvedReviewEventSchema,
+  acceptedReviewEventSchema,
   deliveredReviewEventSchema,
 ])
 

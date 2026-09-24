@@ -59,7 +59,7 @@ const latestMigrationNames = [
   '043_figma_handoffs.sql', '044_figma_plugin_sessions.sql', '045_figma_submissions.sql', '046_project_types.sql',
   '047_asset_workflows.sql', '048_copy_review_reopen.sql', '049_campaign_brief_sources.sql', '050_brief_source_upload_budget.sql',
   '051_brief_confirmations.sql', '052_brief_source_attachments.sql', '053_canonical_workflow_migrations.sql',
-  '054_generation_job_resolution.sql',
+  '054_generation_job_resolution.sql', '055_requester_acceptance.sql',
 ]
 
 function makePool({ max = 4 } = {}) {

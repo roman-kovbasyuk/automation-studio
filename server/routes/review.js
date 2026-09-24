@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  acceptVersionRequestSchema,
   approveVersionRequestSchema,
   markVersionReadyRequestSchema,
   rejectVersionRequestSchema,
@@ -44,6 +45,10 @@ export function registerReviewRoutes(app, { requireRole, reviewService }) {
   versionCommand(app, {
     path: '/api/v1/versions/:versionId/approve', roles: ['marketer', 'admin'],
     schema: approveVersionRequestSchema, method: 'approve', requireRole, reviewService,
+  })
+  versionCommand(app, {
+    path: '/api/v1/versions/:versionId/accept', roles: ['marketer', 'admin'],
+    schema: acceptVersionRequestSchema, method: 'accept', requireRole, reviewService,
   })
 
   app.post('/api/v1/campaigns/:campaignId/reopen', { preHandler: requireRole('marketer', 'admin') }, async (request, reply) => {

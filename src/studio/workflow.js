@@ -28,4 +28,4 @@ export function routeFromLocation(path, search = '') {
   }
   return { view: 'campaigns' }
 }
-export const statusLabel = (status = '') => ({ copy_ready:'Copy ready', direction_selected:'Visual selected', composed:'Banners composed', in_review:'In design review', changes_requested:'Changes requested', ready:'Ready for approval', approved:'Approved', delivered:'Delivered', draft:'Draft' }[status] ?? status)
+export const statusLabel = (status = '') => ({ copy_ready:'Copy ready', direction_selected:'Visual selected', composed:'Banners composed', in_review:'In review', changes_requested:'Changes requested', ready:'Ready for approval', approved:'Approved', delivered:'Delivered', draft:'Draft' }[status] ?? status)

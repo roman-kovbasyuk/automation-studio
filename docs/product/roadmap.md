@@ -8,9 +8,9 @@ The next goal is a **proof of concept**: banner sets and decks produced automati
 
 | Area | Current state |
 | --- | --- |
-| Banner projects | Built as a hard-coded six-module "campaign" flow with real Gemini integration. Designer review is mandatory. |
+| Banner projects | Built as a hard-coded six-module "campaign" flow with real Gemini integration. The requester accepts rendered banners; designer review is optional design help (D40). |
 | Brands | Versioned brand systems with AI-assisted extraction. Colors, typography and logo only. Rendering supports only Inter and Arimo. |
-| Templates | Three banner layouts; the brand is copied into new template versions. Five MSD slide layouts exist as data with AI content contracts, but no deck generation or export. No Folkeuniversitetet slide templates. |
+| Templates | Ten banner layouts, each in all seven banner sizes; the brand is copied into new template versions. Five MSD slide layouts exist as data with AI content contracts, but no deck generation or export. No Folkeuniversitetet slide templates. |
 | Recipes | A node-graph editor with simulation only. Not connected to projects. Frozen by D4. |
 | Quality | Some automatic validation (text overflow, crops, sizes). No quality decision or escalation logic. |
 | Documentation | Consolidated in `docs/`; PRD and specifications drafted on 17 September 2026. |

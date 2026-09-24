@@ -21,6 +21,8 @@ describe('deriveReviewStatus', () => {
     [['sent', 'ready', 'rejected'], 'changes_requested'],
     [['sent', 'ready', 'approved'], 'approved'],
     [['sent', 'ready', 'approved', 'delivered'], 'delivered'],
+    [['sent', 'accepted'], 'approved'],
+    [['sent', 'accepted', 'delivered'], 'delivered'],
   ])('derives %s as %s from append-only history', (types, expected) => {
     const events = types.map((type, index) => event(
       `event-${index}`,
@@ -55,5 +57,14 @@ describe('deriveReviewStatus', () => {
     [event('event-1', 'sent', new Date()), event('event-2', 'ready', new Date(Date.now() + 1)), event('event-3', 'changes_requested', new Date(Date.now() + 2))],
   ])('fails closed for an impossible event sequence', (events) => {
     expect(() => deriveReviewStatus(events)).toThrowError(expect.objectContaining({ code: 'invalid_review_history' }))
+  })
+
+  test.each([
+    [['sent', 'ready', 'accepted']],
+    [['sent', 'accepted', 'approved']],
+    [['sent', 'accepted', 'accepted']],
+  ])('rejects the impossible acceptance sequence %s', (types) => {
+    const events = types.map((type, index) => event(`event-${index}`, type, new Date(`2026-09-04T10:00:0${index}.000Z`)))
+    expect(() => deriveReviewStatus(events)).toThrow('Review event history is invalid')
   })
 })

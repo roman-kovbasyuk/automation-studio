@@ -100,6 +100,15 @@ const cases = [
     input: {},
   },
   {
+    // D1: the requester accepts the rendered version without a designer.
+    action: 'accept',
+    from: 'in_review',
+    to: 'approved',
+    actor: marketer,
+    campaign: { currentVersion: versionAt() },
+    input: {},
+  },
+  {
     action: 'reopen',
     from: 'changes_requested',
     to: 'composed',
@@ -158,6 +167,16 @@ describe('transitionCampaign', () => {
     expect(result).toMatchObject({ ok: false, code: 'guard_failed', status: 409 })
   })
 
+  test('only an editor accepts, and only an in-review version', () => {
+    const inReview = campaignAt('in_review', { currentVersion: versionAt() })
+    expect(transitionCampaign({ campaign: inReview, action: 'accept', actor: designer, input: {} })).toMatchObject({ ok: false, code: 'forbidden', status: 403 })
+    expect(transitionCampaign({ campaign: inReview, action: 'accept', actor: admin, input: {} })).toMatchObject({ ok: true, campaign: { status: 'approved' } })
+    const ready = campaignAt('ready', { currentVersion: versionAt({ readyActorId: designer.id }) })
+    expect(transitionCampaign({ campaign: ready, action: 'accept', actor: marketer, input: {} }).ok).toBe(false)
+    expect(allowedActions({ campaign: inReview, actor: marketer })).toContain('accept')
+    expect(allowedActions({ campaign: inReview, actor: designer })).not.toContain('accept')
+  })
+
   test('prevents the ready actor from approving the version', () => {
     const result = transitionCampaign({
       campaign: campaignAt('ready', { currentVersion: versionAt({ readyActorId: marketer.id }) }),
@@ -183,7 +202,8 @@ describe('transitionCampaign', () => {
   test('lists only actions allowed by status and role', () => {
     expect(allowedActions({ campaign: campaignAt('in_review'), actor: designer }))
       .toEqual(['request_changes', 'mark_ready'])
-    expect(allowedActions({ campaign: campaignAt('in_review'), actor: marketer })).toEqual([])
+    // D1: the requester may accept the in-review version; designer actions stay designer-only.
+    expect(allowedActions({ campaign: campaignAt('in_review'), actor: marketer })).toEqual(['accept'])
   })
 
   test('allows a marketer to replace the composition after a closed round is reopened', () => {
@@ -203,7 +223,7 @@ describe('transitionCampaign', () => {
 
   test('gives Admin marketer actions but never designer actions', () => {
     expect(allowedActions({ campaign: campaignAt('draft'), actor: admin })).toEqual(['select_copy'])
-    expect(allowedActions({ campaign: campaignAt('in_review'), actor: admin })).toEqual([])
+    expect(allowedActions({ campaign: campaignAt('in_review'), actor: admin })).toEqual(['accept'])
   })
 
   test('rejects an invalid actor role at the workflow boundary', () => {

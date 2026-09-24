@@ -6,15 +6,37 @@ import { makeScenario } from '../../testing/workspaceFixtures.js'
 import ReviewModule from './ReviewModule.jsx'
 
 const assets = { getAssetBlob: vi.fn(async () => new Blob([], { type: 'image/png' })) }
-function renderScenario(name, { actor, actions = {}, scenario = makeScenario(name), setDirty = vi.fn() } = {}) {
+function renderScenario(name, { actor, actions = {}, scenario = makeScenario(name), setDirty = vi.fn(), navigate } = {}) {
   if (actor) scenario.actor = actor
   const input = projectModuleInput('review', scenario.workspace, scenario)
   const access = deriveWorkflowState(scenario.workspace, scenario.actor, scenario.reviewHistory).modules.review
   return { ...render(<ReviewModule port={{ input, inputKey: moduleInputKey('review', input), access,
-    operation: { kind: 'idle', actionId: null, error: null }, actions, assets, setDirty }} />), scenario, setDirty }
+    operation: { kind: 'idle', actionId: null, error: null }, actions, assets, setDirty, navigate }} />), scenario, setDirty }
 }
 
 describe('Review module phases', () => {
+  test('the requester checks the banners and accepts them without a designer (D1)', async () => {
+    const accept = vi.fn(async () => ({ ok: true }))
+    renderScenario('in-review', { actions: { accept } })
+    expect(screen.queryByLabelText('Figma review link')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Accept banners' }))
+    await waitFor(() => expect(accept).toHaveBeenCalledWith({ expectedInputKey: expect.any(String) }))
+  })
+
+  test('a designer reviews in review and is not offered acceptance', () => {
+    renderScenario('in-review', { actor: { id: 'designer-2', role: 'designer' }, actions: { accept: vi.fn(), markReady: vi.fn() } })
+    expect(screen.queryByRole('button', { name: 'Accept banners' })).toBeNull()
+    expect(screen.getByLabelText('Figma review link')).toBeInTheDocument()
+  })
+
+  test('an approved version says so and offers the way to delivery', () => {
+    const navigate = vi.fn()
+    renderScenario('approved', { navigate })
+    expect(screen.getByText('Version 1 is approved')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to delivery' }))
+    expect(navigate).toHaveBeenCalledWith('distribute')
+  })
+
   test('prepare offers valid editors version creation without adding a host-owned h2', () => {
     renderScenario('composed', { actions: { createVersion: vi.fn() } })
     expect(screen.getByRole('button', { name: 'Create version and send to review' })).toBeEnabled()
@@ -44,11 +66,11 @@ describe('Review module phases', () => {
     expect(screen.getByLabelText('Request a change')).toBeDisabled()
   })
 
-  test('marketer waits during designer review while a permitted marketer can approve ready work', () => {
+  test('the requester can accept in review, and a permitted marketer can approve designer-checked work', () => {
     const approve = vi.fn()
-    const waiting = renderScenario('in-review')
-    expect(screen.getByText(/Waiting for the designer/)).toBeVisible()
-    waiting.unmount()
+    const inReview = renderScenario('in-review')
+    expect(screen.getByRole('button', { name: 'Accept banners' })).toBeVisible()
+    inReview.unmount()
     renderScenario('ready', { actions: { approve } })
     fireEvent.click(screen.getByRole('button', { name: 'Approve version 1' }))
     expect(approve).toHaveBeenCalledWith(expect.objectContaining({ expectedInputKey: expect.any(String) }))
@@ -57,7 +79,7 @@ describe('Review module phases', () => {
   test('changes require feedback and expose reopening only to an editor', () => {
     const reopen = vi.fn()
     renderScenario('changes-requested', { actions: { reopen } })
-    expect(screen.getByText('Make the headline clearer.', { selector: '.bs-info p' })).toBeVisible()
+    expect(within(screen.getByRole('heading', { name: 'The designer asked for changes' }).closest('.c-alert')).getByText('Make the headline clearer.')).toBeVisible()
     expect(within(screen.getByText(/Version activity/).closest('details')).getByText('Make the headline clearer.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Reopen to edit' }))
     expect(reopen).toHaveBeenCalled()

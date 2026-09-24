@@ -184,13 +184,16 @@ function verifyReviewChain({ campaign, version, events, assetSets, expectedStatu
   const sent = events[0]
   const ready = events.find((event) => event.eventType === 'ready')
   const approved = events.find((event) => event.eventType === 'approved')
+  const accepted = events.find((event) => event.eventType === 'accepted')
+  const boundToVersion = (event) => event?.payload.contentHash === version.contentHash
+    && same(hashes(event.payload.assetHashes), assetSets.all)
+  // Either a designer marked the version ready and the requester approved it, or the requester
+  // accepted it directly (D1). deriveReviewStatus has already fixed the exact event sequence.
+  const designerRoute = !accepted && boundToVersion(ready) && ready.payload.readyActorId === ready.actorId && boundToVersion(approved)
+  const requesterRoute = !ready && !approved && boundToVersion(accepted)
   if (sent?.eventType !== 'sent' || sent.payload.contentHash !== version.contentHash
     || !same(hashes(sent.payload.assetHashes), assetSets.review)
-    || !ready || ready.payload.contentHash !== version.contentHash
-    || ready.payload.readyActorId !== ready.actorId
-    || !same(hashes(ready.payload.assetHashes), assetSets.all)
-    || !approved || approved.payload.contentHash !== version.contentHash
-    || !same(hashes(approved.payload.assetHashes), assetSets.all)) {
+    || !(designerRoute || requesterRoute)) {
     fail(409, 'invalid_review_history', 'Approval history does not match the immutable version')
   }
   if (expectedStatus === 'delivered') {
@@ -202,7 +205,7 @@ function verifyReviewChain({ campaign, version, events, assetSets, expectedStatu
       fail(409, 'invalid_delivery_history', 'Delivery history does not match the stored ZIP')
     }
   }
-  return { ready, approved, delivered: expectedStatus === 'delivered' ? events.at(-1) : null }
+  return { ready, approved: approved ?? accepted, delivered: expectedStatus === 'delivered' ? events.at(-1) : null }
 }
 
 function verifiedVideoAssets(assets, version) {

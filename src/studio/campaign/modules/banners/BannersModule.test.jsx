@@ -33,7 +33,8 @@ it('renders the Figma review state inside Banners', () => {
   render(<BannersModule port={{ input: projectModuleInput('banners', scenario.workspace, scenario), inputKey: 'source',
     access: { canEdit: false }, operation: { kind: 'idle' }, actions: {}, assets: reviewPort.assets,
     setDirty: vi.fn(), navigate: vi.fn(), reviewPort }} />)
-  expect(screen.getByText('Waiting for the designer to check this version.')).toBeVisible()
+  // D1: the requester checks the embedded review and can accept it without a designer.
+  expect(screen.getByRole('button', { name: 'Accept banners' })).toBeVisible()
 })
 
 it('reports dirty changes without re-announcing when the host replaces its callback', () => {
